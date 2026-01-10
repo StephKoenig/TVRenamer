@@ -1,7 +1,5 @@
 package org.tvrenamer.controller.util;
 
-import org.tvrenamer.model.MoveObserver;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.model.MoveObserver;
 
 /**
  *
@@ -20,7 +19,10 @@ import java.util.logging.Logger;
  *
  */
 public class FileUtilities {
-    private static final Logger logger = Logger.getLogger(FileUtilities.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        FileUtilities.class.getName()
+    );
 
     public static void loggingOff() {
         logger.setLevel(Level.SEVERE);
@@ -50,8 +52,9 @@ public class FileUtilities {
         try {
             Files.delete(file);
         } catch (AccessDeniedException ade) {
-            logger.warning("Could not delete file \"" + file
-                           + "\"; access denied");
+            logger.warning(
+                "Could not delete file \"" + file + "\"; access denied"
+            );
             return false;
         } catch (IOException ioe) {
             logger.log(Level.WARNING, "Error deleting file " + file, ioe);
@@ -105,19 +108,29 @@ public class FileUtilities {
      *    presumably null, but could return a Path if, somehow, the source file
      *    appears to have been moved despite the apparent failure
      */
-    private static Path unexpectedMoveResult(final Path srcFile, final Path destFile,
-                                             final Path actualDest)
-    {
+    private static Path unexpectedMoveResult(
+        final Path srcFile,
+        final Path destFile,
+        final Path actualDest
+    ) {
         if (Files.exists(srcFile)) {
             // This implies that the original file was not touched.  Java may have
             // done an incomplete copy.
             if (Files.exists(destFile)) {
-                logger.warning("may have done an incomplete copy of " + srcFile
-                               + " to " + destFile);
+                logger.warning(
+                    "may have done an incomplete copy of " +
+                        srcFile +
+                        " to " +
+                        destFile
+                );
             }
             if (Files.exists(actualDest)) {
-                logger.warning("may have done an incomplete copy of " + srcFile
-                               + " to " + actualDest);
+                logger.warning(
+                    "may have done an incomplete copy of " +
+                        srcFile +
+                        " to " +
+                        actualDest
+                );
             }
             return null;
         }
@@ -127,8 +140,12 @@ public class FileUtilities {
         if (Files.exists(destFile)) {
             // The destination didn't exist before, and now it does.
             // Seems like success?
-            logger.warning(srcFile.toString() + " is gone and " + destFile
-                           + " exists, so rename seemed successful");
+            logger.warning(
+                srcFile.toString() +
+                    " is gone and " +
+                    destFile +
+                    " exists, so rename seemed successful"
+            );
             logger.warning("Nevertheless, something went wrong.");
             return null;
         }
@@ -141,11 +158,15 @@ public class FileUtilities {
             // This indicates the srcFile was moved to a location that is not
             // the same file as the requested destFile.
             // Maybe this happens if destFile was actually a directory?
-            logger.warning("somehow moved file to different destination: " + actualDest);
+            logger.warning(
+                "somehow moved file to different destination: " + actualDest
+            );
         }
         logger.info("craziest possible outcome");
-        logger.info("src file gone, dest file not there, result of move call "
-                    + "not null, but also not there.  Fubar.");
+        logger.info(
+            "src file gone, dest file not there, result of move call " +
+                "not null, but also not there.  Fubar."
+        );
         return actualDest;
     }
 
@@ -180,8 +201,10 @@ public class FileUtilities {
         }
         if (Files.exists(destFile)) {
             if (Files.isDirectory(destFile)) {
-                logger.warning("renameFile does not take a directory; "
-                               + "supply the entire path");
+                logger.warning(
+                    "renameFile does not take a directory; " +
+                        "supply the entire path"
+                );
             } else {
                 logger.warning("will not overwrite existing file: " + destFile);
             }
@@ -194,8 +217,9 @@ public class FileUtilities {
                 return destFile;
             }
         } catch (AccessDeniedException ade) {
-            logger.warning("Could not rename file \"" + srcFile
-                           + "\"; access denied");
+            logger.warning(
+                "Could not rename file \"" + srcFile + "\"; access denied"
+            );
         } catch (IOException ioe) {
             logger.log(Level.WARNING, "Error renaming file " + srcFile, ioe);
         }
@@ -237,7 +261,11 @@ public class FileUtilities {
             FileStore fsA = Files.getFileStore(pathA);
             return fsA.equals(Files.getFileStore(pathB));
         } catch (IOException ioe) {
-            logger.log(Level.WARNING, "IOException trying to get file stores.", ioe);
+            logger.log(
+                Level.WARNING,
+                "IOException trying to get file stores.",
+                ioe
+            );
             return false;
         }
     }
@@ -264,8 +292,11 @@ public class FileUtilities {
             }
             return Files.isSameFile(path1, path2);
         } catch (IOException ioe) {
-            logger.log(Level.WARNING, "exception checking files "
-                       + path1 + " and " + path2, ioe);
+            logger.log(
+                Level.WARNING,
+                "exception checking files " + path1 + " and " + path2,
+                ioe
+            );
             return false;
         }
     }
@@ -288,7 +319,11 @@ public class FileUtilities {
         try {
             Files.createDirectories(dir);
         } catch (IOException ioe) {
-            logger.log(Level.WARNING, "exception trying to create directory " + dir, ioe);
+            logger.log(
+                Level.WARNING,
+                "exception trying to create directory " + dir,
+                ioe
+            );
             return false;
         }
         return Files.exists(dir);
@@ -322,13 +357,16 @@ public class FileUtilities {
      *
      * Based on a version originally implemented in jEdit 4.3pre9
      */
-    public static boolean copyWithUpdates(final Path source, final Path dest,
-                                          final MoveObserver observer)
-    {
+    public static boolean copyWithUpdates(
+        final Path source,
+        final Path dest,
+        final MoveObserver observer
+    ) {
         boolean ok = false;
-        try (OutputStream fos = Files.newOutputStream(dest);
-             InputStream fis = Files.newInputStream(source))
-        {
+        try (
+            OutputStream fos = Files.newOutputStream(dest);
+            InputStream fis = Files.newInputStream(source)
+        ) {
             byte[] buffer = new byte[32768];
             int n;
             long copied = 0L;
@@ -336,7 +374,9 @@ public class FileUtilities {
                 fos.write(buffer, 0, n);
                 copied += n;
                 if (observer != null) {
-                    observer.setProgressStatus(StringUtils.formatFileSize(copied));
+                    observer.setProgressStatus(
+                        StringUtils.formatFileSize(copied)
+                    );
                     observer.setProgressValue(copied);
                 }
                 if (Thread.interrupted()) {
@@ -401,9 +441,9 @@ public class FileUtilities {
      *    process; false otherwise.
      */
     public static boolean isWritableDirectory(final Path path) {
-        return ((path != null)
-                && Files.isDirectory(path)
-                && Files.isWritable(path));
+        return (
+            (path != null) && Files.isDirectory(path) && Files.isWritable(path)
+        );
     }
 
     /**
@@ -442,7 +482,11 @@ public class FileUtilities {
             try {
                 Files.createDirectories(destDir);
             } catch (IOException ioe) {
-                logger.log(Level.SEVERE, "Unable to create directory " + destDir, ioe);
+                logger.log(
+                    Level.SEVERE,
+                    "Unable to create directory " + destDir,
+                    ioe
+                );
                 return false;
             }
         }
@@ -451,13 +495,43 @@ public class FileUtilities {
             return false;
         }
         if (!Files.isDirectory(destDir)) {
-            logger.warning("cannot use specified destination " + destDir
-                           + " because it is not a directory");
+            logger.warning(
+                "cannot use specified destination " +
+                    destDir +
+                    " because it is not a directory"
+            );
             return false;
         }
+
         if (!Files.isWritable(destDir)) {
-            logger.warning("cannot write file to " + destDir);
-            return false;
+            Path probe = null;
+            try {
+                probe = Files.createTempFile(
+                    destDir,
+                    ".tvrenamer-probe",
+                    ".tmp"
+                );
+            } catch (IOException | SecurityException ex) {
+                logger.log(
+                    Level.WARNING,
+                    "cannot write file to " + destDir,
+                    ex
+                );
+
+                return false;
+            } finally {
+                if (probe != null) {
+                    try {
+                        Files.deleteIfExists(probe);
+                    } catch (IOException cleanup) {
+                        logger.log(
+                            Level.FINE,
+                            "unable to delete probe file " + probe,
+                            cleanup
+                        );
+                    }
+                }
+            }
         }
 
         return true;
@@ -475,7 +549,11 @@ public class FileUtilities {
         try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(dir)) {
             return !dirStream.iterator().hasNext();
         } catch (IOException ioe) {
-            logger.log(Level.WARNING, "exception checking directory " + dir, ioe);
+            logger.log(
+                Level.WARNING,
+                "exception checking directory " + dir,
+                ioe
+            );
             return false;
         }
     }
@@ -495,7 +573,11 @@ public class FileUtilities {
         try {
             Files.delete(dir);
         } catch (IOException ioe) {
-            logger.log(Level.WARNING, "exception trying to remove directory " + dir, ioe);
+            logger.log(
+                Level.WARNING,
+                "exception trying to remove directory " + dir,
+                ioe
+            );
             return false;
         }
         return Files.notExists(dir);
