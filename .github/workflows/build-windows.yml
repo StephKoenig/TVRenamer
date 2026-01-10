@@ -1,0 +1,85 @@
+# GitHub Actions workflow: build-windows.yml
+# Trigger: runs on push to the `Build` branch and produces Windows executable artifacts
+name: Build Windows executable (Launch4j)
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  JAVA_VERSION: '8' # set to Java 8 as requested
+
+jobs:
+  build-windows:
+    name: Build on windows-latest
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Install Ant and Launch4j (Chocolatey)
+        shell: powershell
+        run: |
+          Write-Host "Installing ant and launch4j via Chocolatey..."
+          choco install ant -y
+          choco install launch4j -y
+          ant -version
+          Write-Host "Launch4j installation path (if present):"
+          Get-ChildItem 'C:\Program Files\Launch4j' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 5
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ env.JAVA_VERSION }}-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-${{ env.JAVA_VERSION }}-
+
+      - name: Build with Gradle (wrapper or system)
+        shell: powershell
+        run: |
+          # Prefer the Gradle wrapper if present; otherwise install Gradle and use the system gradle.
+          if (Test-Path -Path .\gradlew.bat) {
+            Write-Host "Found gradlew.bat — using Gradle wrapper"
+            & .\gradlew.bat clean build --no-daemon
+          } else {
+            Write-Host "No gradlew.bat found — installing Gradle with Chocolatey and using system gradle"
+            choco install gradle -y
+            gradle --version
+            gradle clean build
+          }
+
+      - name: Run Ant build (if build.xml exists)
+        shell: powershell
+        run: |
+          if (Test-Path -Path ./build.xml) {
+            #Write-Host "build.xml found — running ant -f build.xml"
+            ant -f build.xml
+          } else {
+            #Write-Host "No build.xml found — skipping Ant step"
+          }
+
+      - name: Show produced files (for debugging)
+        shell: powershell
+        run: |
+          Write-Host "Listing likely output locations:"
+          Get-ChildItem -Path . -Recurse -Include '*.exe','*.jar' -ErrorAction SilentlyContinue | Select-Object FullName, Length | Sort-Object FullName
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvrenamer-windows
+          path: |
+            build/libs/**/*.jar
+            build/launch4j/**/*.exe
+            dist/**/*.exe
+            out/**/*.exe
+            **/*.exe
