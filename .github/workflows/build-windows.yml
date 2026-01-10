@@ -61,10 +61,10 @@ jobs:
         shell: powershell
         run: |
           if (Test-Path -Path ./build.xml) {
-            Write-Host "build.xml found — running ant -f build.xml"
+#            Write-Host "build.xml found — running ant -f build.xml"
             ant -f build.xml
           } else {
-            Write-Host "No build.xml found — skipping Ant step"
+#            Write-Host "No build.xml found — skipping Ant step"
           }
 
       - name: Show produced files (for debugging)
