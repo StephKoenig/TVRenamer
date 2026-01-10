@@ -1,0 +1,61 @@
+name: Windows Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Install build tooling
+        shell: powershell
+        run: |
+          choco install ant --yes --no-progress
+          choco install gradle --yes --no-progress
+          choco install launch4j --yes --no-progress
+
+      - name: Configure Launch4j
+        shell: powershell
+        run: |
+          $launch4jPath = 'C:\ProgramData\chocolatey\lib\launch4j\tools\launch4j'
+          "launch4j.path=$launch4jPath" | Out-File -FilePath "launch4j.properties" -Encoding ASCII
+
+      - name: Resolve Ivy dependencies
+        shell: powershell
+        run: ant -f build.xml resolve
+
+      - name: Run Gradle build (if available)
+        shell: powershell
+        run: |
+          if (Test-Path ".\gradlew.bat") {
+            ./gradlew.bat clean build
+          } elseif (Get-Command gradle -ErrorAction SilentlyContinue) {
+            gradle clean build
+          } else {
+            Write-Host "Gradle wrapper or installation not found; skipping Gradle build."
+          }
+
+      - name: Build Windows executables with Ant
+        shell: powershell
+        run: ant -f build.xml dist.win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvrenamer-windows-dist
+          path: dist/**
