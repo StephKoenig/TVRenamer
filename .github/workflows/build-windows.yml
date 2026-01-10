@@ -5,7 +5,7 @@ name: Build Windows executable (Launch4j)
 on:
   push:
     branches:
-      - Master
+      - master
 
 env:
   JAVA_VERSION: '8' # set to Java 8 as requested
