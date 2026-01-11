@@ -58,6 +58,7 @@ launch4j {
     headerType = "gui"
     requires64Bit = true
     jreMinVersion = "17"
+    bundledJrePath = "jre"
 }
 
 tasks.named('processResources') {
