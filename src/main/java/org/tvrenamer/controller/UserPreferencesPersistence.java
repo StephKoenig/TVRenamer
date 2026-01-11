@@ -10,14 +10,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Observable;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class UserPreferencesPersistence {
     private static final Logger logger = Logger.getLogger(UserPreferencesPersistence.class.getName());
 
-    // Use reflection provider so the default constructor is called, thus calling the superclass constructor
+    // Use reflection provider so the default constructor is called, thus calling
+    // the superclass constructor
     // Instantiate the object so the Observable superclass is called corrected
     private static final XStream xstream = new XStream(new PureJavaReflectionProvider());
 
@@ -26,14 +27,18 @@ public class UserPreferencesPersistence {
         xstream.aliasField("moveEnabled", UserPreferences.class, "moveSelected");
         xstream.aliasField("renameEnabled", UserPreferences.class, "renameSelected");
         // Make the fields of Observable transient
-        xstream.omitField(Observable.class, "obs");
-        xstream.omitField(Observable.class, "changed");
+        // Make the fields of PropertyChangeSupport transient
+        xstream.omitField(java.beans.PropertyChangeSupport.class, "listeners");
+        xstream.omitField(java.beans.PropertyChangeSupport.class, "children");
+        xstream.omitField(java.beans.PropertyChangeSupport.class, "source");
+        xstream.omitField(java.beans.PropertyChangeSupport.class, "propertyChangeSupportSerializedDataVersion");
     }
 
     /**
      * Save the preferences object to the path.
+     * 
      * @param prefs the preferences object to save
-     * @param path the path to save it to
+     * @param path  the path to save it to
      */
     @SuppressWarnings("SameParameterValue")
     public static void persist(UserPreferences prefs, Path path) {
@@ -48,6 +53,7 @@ public class UserPreferencesPersistence {
 
     /**
      * Load the preferences from path.
+     * 
      * @param path the path to read
      * @return the populated preferences object
      */
@@ -58,13 +64,13 @@ public class UserPreferencesPersistence {
                 return (UserPreferences) xstream.fromXML(in);
             } catch (IOException e) {
                 logger.log(Level.SEVERE, "Exception reading preferences file '"
-                           + path.toAbsolutePath().toString(), e);
+                        + path.toAbsolutePath().toString(), e);
                 logger.info("assuming default preferences");
             }
         } else {
             // If file doesn't exist, assume defaults
             logger.fine("Preferences file '" + path.toAbsolutePath().toString()
-                        + "' does not exist - assuming defaults");
+                    + "' does not exist - assuming defaults");
         }
 
         return null;

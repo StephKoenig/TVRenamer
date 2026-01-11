@@ -58,13 +58,11 @@ import java.text.Collator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
 
-public final class ResultsTable implements Observer, AddEpisodeListener {
+public final class ResultsTable implements java.beans.PropertyChangeListener, AddEpisodeListener {
     private static final Logger logger = Logger.getLogger(ResultsTable.class.getName());
     // load preferences
     private static final UserPreferences prefs = UserPreferences.getInstance();
@@ -98,13 +96,13 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
         if (!success) {
             logger.warning(CANT_CREATE_DEST);
             ui.showMessageBox(SWTMessageBoxType.DLG_ERR, ERROR_LABEL, CANT_CREATE_DEST + ": '"
-                              + prefs.getDestinationDirectoryName() + "'. "
-                              + MOVE_NOT_POSSIBLE);
+                    + prefs.getDestinationDirectoryName() + "'. "
+                    + MOVE_NOT_POSSIBLE);
         }
     }
 
     void ready() {
-        prefs.addObserver(this);
+        prefs.addPropertyChangeListener(this);
         swtTable.setFocus();
 
         checkDestinationDirectory();
@@ -172,15 +170,18 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
     }
 
     /**
-     * Fill in the value for the "Proposed File" column of the given row, with the text
-     * we get from the given episode.  This is the only method that should ever set
-     * this text, to ensure that the text of each row is ALWAYS the value returned by
+     * Fill in the value for the "Proposed File" column of the given row, with the
+     * text
+     * we get from the given episode. This is the only method that should ever set
+     * this text, to ensure that the text of each row is ALWAYS the value returned
+     * by
      * getReplacementText() on the associated episode.
      *
      * @param item
-     *    the row in the table to set the text of the "Proposed File" column
+     *             the row in the table to set the text of the "Proposed File"
+     *             column
      * @param ep
-     *    the FileEpisode to use to obtain the text
+     *             the FileEpisode to use to obtain the text
      */
     private void setProposedDestColumn(final TableItem item, final FileEpisode ep) {
         if (swtTable.isDisposed() || item.isDisposed()) {
@@ -250,8 +251,7 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
     }
 
     private void getSeriesListings(final Series series, final TableItem item,
-                                   final FileEpisode episode)
-    {
+            final FileEpisode episode) {
         series.addListingsListener(new ShowListingsListener() {
             @Override
             public void listingsDownloadComplete() {
@@ -280,15 +280,17 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
         if (showDialogBox) {
             boolean updateIsAvailable = UpdateChecker.isUpdateAvailable();
             ui.showMessageBox(SWTMessageBoxType.DLG_ERR, ERROR_LABEL,
-                              updateIsAvailable ? GET_UPDATE_MESSAGE : NEED_UPDATE);
+                    updateIsAvailable ? GET_UPDATE_MESSAGE : NEED_UPDATE);
         }
     }
 
     private TableItem createTableItem(final FileEpisode episode) {
         TableItem item = newTableItem();
 
-        // Initially we add items to the table unchecked.  When we successfully obtain enough
-        // information about the episode to determine how to rename it, the check box will
+        // Initially we add items to the table unchecked. When we successfully obtain
+        // enough
+        // information about the episode to determine how to rename it, the check box
+        // will
         // automatically be activated.
         item.setChecked(false);
         CURRENT_FILE_FIELD.setCellText(item, episode.getFilepath());
@@ -318,33 +320,33 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
                 continue;
             }
             ShowStore.mapStringToShow(showName, new ShowInformationListener() {
-                    @Override
-                    public void downloadSucceeded(Show show) {
-                        episode.setEpisodeShow(show);
-                        display.asyncExec(() -> {
-                            if (tableContainsTableItem(item)) {
-                                setProposedDestColumn(item, episode);
-                                STATUS_FIELD.setCellImage(item, ADDED);
-                            }
-                        });
-                        if (show.isValidSeries()) {
-                            getSeriesListings(show.asSeries(), item, episode);
+                @Override
+                public void downloadSucceeded(Show show) {
+                    episode.setEpisodeShow(show);
+                    display.asyncExec(() -> {
+                        if (tableContainsTableItem(item)) {
+                            setProposedDestColumn(item, episode);
+                            STATUS_FIELD.setCellImage(item, ADDED);
                         }
+                    });
+                    if (show.isValidSeries()) {
+                        getSeriesListings(show.asSeries(), item, episode);
                     }
+                }
 
-                    @Override
-                    public void downloadFailed(FailedShow failedShow) {
-                        episode.setFailedShow(failedShow);
-                        tableItemFailed(item, episode);
-                    }
+                @Override
+                public void downloadFailed(FailedShow failedShow) {
+                    episode.setFailedShow(failedShow);
+                    tableItemFailed(item, episode);
+                }
 
-                    @Override
-                    public void apiHasBeenDeprecated() {
-                        noteApiFailure();
-                        episode.setApiDiscontinued();
-                        tableItemFailed(item, episode);
-                    }
-                });
+                @Override
+                public void apiHasBeenDeprecated() {
+                    noteApiFailure();
+                    episode.setApiDiscontinued();
+                    tableItemFailed(item, episode);
+                }
+            });
         }
     }
 
@@ -356,9 +358,10 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
      * and-delete operation.)
      *
      * @param item
-     *    the item to create a progress label for
+     *             the item to create a progress label for
      * @return
-     *    a Label which is set as an editor for the status field of the given item
+     *         a Label which is set as an editor for the status field of the given
+     *         item
      */
     public Label getProgressLabel(final TableItem item) {
         Label progressLabel = new Label(swtTable, SWT.SHADOW_NONE | SWT.CENTER);
@@ -405,14 +408,16 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
     }
 
     /**
-     * Insert a copy of the row at the given position, and then delete the original row.
-     * Note that insertion does not overwrite the row that is already there.  It pushes
+     * Insert a copy of the row at the given position, and then delete the original
+     * row.
+     * Note that insertion does not overwrite the row that is already there. It
+     * pushes
      * the row, and every row below it, down one slot.
      *
      * @param oldItem
-     *   the TableItem to copy
+     *                         the TableItem to copy
      * @param positionToInsert
-     *   the position where we should insert the row
+     *                         the position where we should insert the row
      */
     private void setSortedItem(final TableItem oldItem, final int positionToInsert) {
         boolean wasChecked = oldItem.getChecked();
@@ -440,9 +445,10 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
      * Sort the table by the given column in the given direction.
      *
      * @param column
-     *    the Column to sort by
+     *                      the Column to sort by
      * @param sortDirection
-     *    the direction to sort by; SWT.UP means sort A-Z, while SWT.DOWN is Z-A
+     *                      the direction to sort by; SWT.UP means sort A-Z, while
+     *                      SWT.DOWN is Z-A
      */
     void sortTable(final Column column, final int sortDirection) {
         Field field = column.field;
@@ -458,10 +464,9 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
                 // Compare the two values and order accordingly
                 int comparison = COLLATOR.compare(value1, value2);
                 if (((comparison < 0) && (sortDirection == SWT.UP))
-                    || (comparison > 0) && (sortDirection == SWT.DOWN))
-                {
+                        || (comparison > 0) && (sortDirection == SWT.DOWN)) {
                     // Insert a copy of row i at position j, and then delete
-                    // row i.  Then fetch the list of items anew, since we
+                    // row i. Then fetch the list of items anew, since we
                     // just modified it.
                     setSortedItem(items[i], j);
                     items = swtTable.getItems();
@@ -477,11 +482,12 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
      * Refreshes the "destination" and "status" field of all items in the table.
      *
      * This is intended to be called after something happens which changes what the
-     * proposed destination would be.  The destination is determined partly by how
+     * proposed destination would be. The destination is determined partly by how
      * we parse the filename, of course, but also based on numerous fields that the
-     * user sets in the Preferences Dialog.  When the user closes the dialog and
-     * saves the changes, we want to immediately update the table for the new choices
-     * specified.  This method iterates over each item, makes sure the model is
+     * user sets in the Preferences Dialog. When the user closes the dialog and
+     * saves the changes, we want to immediately update the table for the new
+     * choices
+     * specified. This method iterates over each item, makes sure the model is
      * updated ({@link FileEpisode}), and then updates the relevant fields.
      *
      * (Doesn't bother updating other fields, because we know nothing in the
@@ -518,7 +524,7 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
         }
         b.setText(label);
 
-        // Enable the button, in case it had been disabled before.  But we may
+        // Enable the button, in case it had been disabled before. But we may
         // disable it again, below.
         b.setEnabled(true);
 
@@ -526,7 +532,7 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
         if (prefs.isMoveSelected()) {
             if (prefs.isMoveEnabled()) {
                 tooltip = INTRO_MOVE_DIR + prefs.getDestinationDirectoryName()
-                    + FINISH_MOVE_DIR;
+                        + FINISH_MOVE_DIR;
                 if (prefs.isRenameSelected()) {
                     tooltip = MOVE_INTRO + AND_RENAME + tooltip;
                 } else {
@@ -544,7 +550,7 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
         }
         b.setToolTipText(tooltip);
 
-        shell.changed(new Control[] {b});
+        shell.changed(new Control[] { b });
         shell.layout(false, true);
     }
 
@@ -587,24 +593,36 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
                 checkDestinationDirectory();
                 setColumnDestText();
                 setActionButtonText(actionButton);
-                // Note: NO break!  We WANT to fall through.
+                // Note: NO break! We WANT to fall through.
             case REPLACEMENT_MASK:
             case SEASON_PREFIX:
             case LEADING_ZERO:
                 refreshDestinations();
-            // Also note, no default case.  We know there are other types of
-            // UserPreference events that we might be notified of.  We're
+                break;
+            case IGNORE_REGEX:
+            case PRELOAD_FOLDER:
+            case ADD_SUBDIRS:
+            case REMOVE_EMPTY:
+            case DELETE_ROWS:
+            case UPDATE_CHECK:
+                // These changes don't require an immediate table update here
+                break;
+            // Also note, no default case. We know there are other types of
+            // UserPreference events that we might be notified of. We're
             // just not interested.
         }
     }
 
-    /* (non-Javadoc)
-     * @see java.util.Observer#update(java.util.Observable, java.lang.Object)
+    /*
+     * (non-Javadoc)
+     * 
+     * @see java.beans.PropertyChangeListener#propertyChange(java.beans.
+     * PropertyChangeEvent)
      */
     @Override
-    public void update(final Observable observable, final Object value) {
-        if (observable instanceof UserPreferences && value instanceof UserPreference) {
-            updateUserPreferences((UserPreference) value);
+    public void propertyChange(java.beans.PropertyChangeEvent evt) {
+        if ("preference".equals(evt.getPropertyName()) && (evt.getNewValue() instanceof UserPreference)) {
+            updateUserPreferences((UserPreference) evt.getNewValue());
         }
     }
 
@@ -623,7 +641,7 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
             failureMessage.append(currentFailures.poll().getFileName());
         }
         ui.showMessageBox(SWTMessageBoxType.DLG_ERR, ERROR_LABEL,
-                          failureMessage.toString());
+                failureMessage.toString());
     }
 
     void finishAllMoves() {
@@ -637,25 +655,30 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
 
     /*
      * The table displays various data; a lot of it changes during the course of the
-     * program.  As we get information from the provider, we automatically update the
+     * program. As we get information from the provider, we automatically update the
      * status, the proposed destination, even whether the row is checked or not.
      *
-     * The one thing we don't automatically update is the location.  That's something
-     * that doesn't change, no matter how much information comes flowing in.  EXCEPT...
-     * that's kind of the whole point of the program, to move files.  So when we actually
+     * The one thing we don't automatically update is the location. That's something
+     * that doesn't change, no matter how much information comes flowing in.
+     * EXCEPT...
+     * that's kind of the whole point of the program, to move files. So when we
+     * actually
      * do move a file, we need to update things in some way.
      *
-     * The program now has the "deleteRowAfterMove" option, which I recommend.  But if
+     * The program now has the "deleteRowAfterMove" option, which I recommend. But
+     * if
      * we do not delete the row, then we need to update it.
      *
-     * We also need to update the internal model we have of which files we're working with.
+     * We also need to update the internal model we have of which files we're
+     * working with.
      *
      * So, here's what we do:
-     *  1) find the text that is CURRENTLY being displayed as the file's location
-     *  2) ask EpisodeDb to look up that file, figure out where it now resides, update its
-     *     own internal model, and then return to us the current location
-     *  3) assuming the file was found, check to see if it was really moved
-     *  4) if it actually was moved, update the row with the most current information
+     * 1) find the text that is CURRENTLY being displayed as the file's location
+     * 2) ask EpisodeDb to look up that file, figure out where it now resides,
+     * update its
+     * own internal model, and then return to us the current location
+     * 3) assuming the file was found, check to see if it was really moved
+     * 4) if it actually was moved, update the row with the most current information
      *
      * We do all this only after checking the row is still valid, and then we do it
      * with the item locked, so it can't change out from under us.
@@ -683,7 +706,7 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
 
     /**
      * A callback that indicates that the {@link FileMover} has finished trying
-     * to move a file, the one displayed in the given item.  We want to take
+     * to move a file, the one displayed in the given item. We want to take
      * an action when the move has been finished.
      *
      * The specific action depends on the user preference, "deleteRowAfterMove".
@@ -691,21 +714,22 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
      * we delete the TableItem from the table.
      *
      * If "deleteRowAfterMove" is false, then the moved file remains in the
-     * table.  There's no reason why its proposed destination should change;
+     * table. There's no reason why its proposed destination should change;
      * nothing that is used to create the proposed destination has changed.
-     * But one thing that has changed is the file's current location.  We call
+     * But one thing that has changed is the file's current location. We call
      * helper method updateTableItemAfterMove to update the table.
      *
      * In a case where, for example, we can't create files in the destination
-     * directory, we may have a lot of failures.  We don't want to give
-     * multiple dialog boxes to the user.  So all we do here is add the failure
+     * directory, we may have a lot of failures. We don't want to give
+     * multiple dialog boxes to the user. So all we do here is add the failure
      * to a queue of failures; when the entire move operation is finished, we'll
      * inform the user of any failures that occurred.
      *
      * @param item
-     *   the item representing the file that we've just finished trying to move
+     *                the item representing the file that we've just finished trying
+     *                to move
      * @param episode
-     *    the related episode
+     *                the related episode
      */
     public void finishMove(final TableItem item, final FileEpisode episode) {
         if (episode.isSuccess()) {
@@ -722,7 +746,8 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
 
     private void setupUpdateStuff(final Composite parentComposite) {
         Link updatesAvailableLink = new Link(parentComposite, SWT.VERTICAL);
-        // updatesAvailableLink.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, true));
+        // updatesAvailableLink.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true,
+        // true));
         updatesAvailableLink.setVisible(false);
         updatesAvailableLink.setText(UPDATE_AVAILABLE);
         updatesAvailableLink.addSelectionListener(new UrlLauncher(TVRENAMER_DOWNLOAD_URL));
@@ -895,7 +920,7 @@ public final class ResultsTable implements Observer, AddEpisodeListener {
             public void keyReleased(KeyEvent e) {
                 super.keyReleased(e);
                 if ((e.keyCode == '\u0008') // backspace
-                    || (e.keyCode == '\u007F')) // delete
+                        || (e.keyCode == '\u007F')) // delete
                 {
                     deleteSelectedTableItems();
                 }

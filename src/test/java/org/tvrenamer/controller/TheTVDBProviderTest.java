@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.Test;
 
 import org.tvrenamer.model.DiscontinuedApiException;
 import org.tvrenamer.model.Episode;
@@ -39,7 +38,6 @@ import org.tvrenamer.model.ShowOption;
 import org.tvrenamer.model.ShowStore;
 import org.tvrenamer.model.TVRenamerIOException;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
