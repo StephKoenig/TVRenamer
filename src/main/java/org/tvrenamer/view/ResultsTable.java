@@ -550,7 +550,7 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         }
         b.setToolTipText(tooltip);
 
-        shell.changed(new Control[] { b });
+        b.requestLayout();
         shell.layout(false, true);
     }
 
