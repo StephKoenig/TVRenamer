@@ -60,6 +60,10 @@ launch4j {
     jreMinVersion = "17"
 }
 
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 // Ensure resources are copied if they are in src/main/resources or similar
 // If source structure is non-standard, we might need to configure sourceSets
 sourceSets {
