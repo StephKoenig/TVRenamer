@@ -47,7 +47,7 @@ launch4j {
     outfile = "TVRenamer.exe"
     downloadUrl = "http://java.com/download"
     headerType = "gui"
-    jreRuntimeBits = "64"
+    requires64Bit = true
     jreMinVersion = "17"
 }
 
