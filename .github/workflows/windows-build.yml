@@ -28,16 +28,6 @@ jobs:
         gradle-version: '8.5'
 
     - name: Build with Gradle
-      run: ./gradlew build
-      # Fallback to system gradle if wrapper not found (we are NOT committing wrapper):
-      # actually standard 'gradle' might work if setup-gradle puts it in path, 
-      # but let's use the wrapper if we can generate it, or just use 'gradle' command.
-      # Since we don't have a wrapper in the repo, we'll rely on the setup-gradle action 
-      # which adds 'gradle' to the path.
-      if: hashFiles('gradlew') != ''
-      
-    - name: Build with Gradle (No Wrapper)
-      if: hashFiles('gradlew') == ''
       run: gradle build createExe --info
 
     - name: Create Custom JRE with jlink

@@ -61,20 +61,7 @@ class CocoaUIEnhancer {
             this.pref = pref;
         }
 
-        /**
-         * Will be called on 32bit SWT.
-         *
-         * @param id
-         *    not used
-         * @param sel
-         *    the selection
-         * @param arg0
-         *    not used
-         * @return an irrelevant value; ignore it
-         */
-        public int actionProc(int id, int sel, int arg0) {
-            return (int) actionProc((long) id, (long) sel, (long) arg0);
-        }
+
 
         /**
          * Will be called on 64bit SWT.
@@ -87,7 +74,7 @@ class CocoaUIEnhancer {
          *    not used
          * @return an irrelevant value; ignore it
          */
-        @SuppressWarnings({"UnusedParameters", "SameReturnValue"})
+        @SuppressWarnings({"UnusedParameters", "SameReturnValue", "unused"})
         public long actionProc(long id, long sel, long arg0) {
             if (sel == sel_aboutMenuItemSelected_) {
                 about.handleEvent(null);
