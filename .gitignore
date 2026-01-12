@@ -4,6 +4,7 @@
 /lib/
 /build/
 /docs/
+*.jar
 
 launch4j.properties
 /package/macosx/
