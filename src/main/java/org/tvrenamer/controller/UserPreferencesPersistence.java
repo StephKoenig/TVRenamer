@@ -23,6 +23,10 @@ public class UserPreferencesPersistence {
     private static final XStream xstream = new XStream(new PureJavaReflectionProvider());
 
     static {
+        // XStream 1.4.18+ requires explicit security permissions
+        xstream.allowTypes(new Class[] { UserPreferences.class });
+        xstream.allowTypesByWildcard(new String[] { "org.tvrenamer.model.**" });
+
         xstream.alias("preferences", UserPreferences.class);
         xstream.aliasField("moveEnabled", UserPreferences.class, "moveSelected");
         xstream.aliasField("renameEnabled", UserPreferences.class, "renameSelected");
