@@ -7,6 +7,8 @@ import org.tvrenamer.view.UIStarter;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -17,29 +19,32 @@ class Launcher {
     private static final Logger logger = Logger.getLogger(Launcher.class.getName());
     private static FileHandler startupFileHandler;
 
-    static void initializeLogger() {
-        // Find logging.properties file inside jar
-        try (InputStream loggingConfigStream = Launcher.class.getResourceAsStream(LOGGING_PROPERTIES)) {
-            if (loggingConfigStream == null) {
-                System.err.println("Warning: logging properties not found.");
-            } else {
-                LogManager.getLogManager().readConfiguration(loggingConfigStream);
-            }
-        } catch (IOException e) {
-            System.err.println("Exception thrown while loading logging config");
-            e.printStackTrace();
-        }
-
-        // Add a file handler to write startup log to current directory
+    static void initializeFileLogger() {
+        // Add a file handler FIRST so we capture all messages
         try {
             String logPath = System.getProperty("user.dir") + "/tvrenamer-startup.log";
             startupFileHandler = new FileHandler(logPath, false);
             startupFileHandler.setFormatter(new SimpleFormatter());
             startupFileHandler.setLevel(Level.ALL);
             Logger.getLogger("").addHandler(startupFileHandler);
+            Logger.getLogger("").setLevel(Level.ALL);
             logger.info("Startup log initialized: " + logPath);
         } catch (IOException e) {
             System.err.println("Could not create startup log file: " + e.getMessage());
+        }
+    }
+
+    static void initializeLoggingConfig() {
+        // Find logging.properties file inside jar
+        try (InputStream loggingConfigStream = Launcher.class.getResourceAsStream(LOGGING_PROPERTIES)) {
+            if (loggingConfigStream == null) {
+                logger.warning("Warning: logging properties not found.");
+            } else {
+                LogManager.getLogManager().readConfiguration(loggingConfigStream);
+                logger.info("Logging properties loaded successfully.");
+            }
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Exception thrown while loading logging config", e);
         }
     }
 
@@ -61,6 +66,13 @@ class Launcher {
         }
     }
 
+    private static void logException(String context, Throwable t) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        t.printStackTrace(pw);
+        logger.severe("EXCEPTION in " + context + ":\n" + sw.toString());
+    }
+
     /**
      * All this application does is run the UI, with no arguments. Configuration
      * comes from the PREFERENCES_FILE (see Constants.java). But in the future,
@@ -70,24 +82,46 @@ class Launcher {
      *             not actually processed, at this time
      */
     public static void main(String[] args) {
-        logger.info("=== TVRenamer Startup ===");
-        logger.info("Version: " + VERSION_NUMBER);
-        logger.info("Java Version: " + System.getProperty("java.version"));
-        logger.info("Working Directory: " + System.getProperty("user.dir"));
+        // Initialize file logging FIRST to capture everything
+        initializeFileLogger();
 
-        logger.fine("Initializing logger...");
-        initializeLogger();
+        // Set up global exception handler to catch any uncaught exceptions
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            logException("Uncaught exception in thread " + thread.getName(), throwable);
+            if (startupFileHandler != null) {
+                startupFileHandler.close();
+            }
+        });
 
-        logger.fine("Creating UIStarter...");
-        UIStarter ui = new UIStarter();
+        try {
+            logger.info("=== TVRenamer Startup ===");
+            logger.info("Version: " + VERSION_NUMBER);
+            logger.info("Java Version: " + System.getProperty("java.version"));
+            logger.info("Java Home: " + System.getProperty("java.home"));
+            logger.info("Working Directory: " + System.getProperty("user.dir"));
+            logger.info("OS: " + System.getProperty("os.name") + " " + System.getProperty("os.arch"));
 
-        logger.fine("Running UI...");
-        int status = ui.run();
+            logger.info("Loading logging configuration...");
+            initializeLoggingConfig();
 
-        logger.fine("UI exited with status: " + status);
-        tvRenamerThreadShutdown();
+            logger.info("Creating UIStarter...");
+            UIStarter ui = new UIStarter();
+            logger.info("UIStarter created successfully.");
 
-        logger.info("=== TVRenamer Exit ===");
-        System.exit(status);
+            logger.info("Running UI...");
+            int status = ui.run();
+
+            logger.info("UI exited with status: " + status);
+            tvRenamerThreadShutdown();
+
+            logger.info("=== TVRenamer Exit ===");
+            System.exit(status);
+        } catch (Throwable t) {
+            logException("main()", t);
+            if (startupFileHandler != null) {
+                startupFileHandler.close();
+            }
+            System.exit(1);
+        }
     }
 }
