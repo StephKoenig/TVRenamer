@@ -64,17 +64,37 @@ tasks.named('processResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-// Create a fat JAR with all dependencies
+// Create a fat JAR with all dependencies EXCEPT SWT (SWT needs special handling)
 tasks.register('fatJar', Jar) {
     archiveClassifier = 'all'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes 'Main-Class': 'org.tvrenamer.controller.Launcher'
+        // Add classpath for SWT which must be loaded separately
+        attributes 'Class-Path': 'swt.jar'
     }
     from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.runtimeClasspath
+            .filter { !it.name.contains('swt') }
+            .collect { it.isDirectory() ? it : zipTree(it) }
     }
     with jar
+}
+
+// Copy SWT jar separately for use with the fat JAR
+tasks.register('copySwtJar', Copy) {
+    from configurations.runtimeClasspath.filter { it.name.contains('swt') }
+    into "${buildDir}/libs"
+    rename { 'swt.jar' }
+}
+
+// Create distribution with proper structure
+tasks.register('createDist', Copy) {
+    dependsOn 'fatJar', 'copySwtJar'
+    from("${buildDir}/libs") {
+        include '*.jar'
+    }
+    into "${buildDir}/dist"
 }
 
 // Ensure resources are copied if they are in src/main/resources or similar
