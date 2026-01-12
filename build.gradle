@@ -58,11 +58,23 @@ launch4j {
     headerType = "gui"
     requires64Bit = true
     jreMinVersion = "17"
-    bundledJrePath = "jre"
 }
 
 tasks.named('processResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Create a fat JAR with all dependencies
+tasks.register('fatJar', Jar) {
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes 'Main-Class': 'org.tvrenamer.controller.Launcher'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
 }
 
 // Ensure resources are copied if they are in src/main/resources or similar
