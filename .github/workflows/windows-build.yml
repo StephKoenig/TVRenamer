@@ -28,7 +28,7 @@ jobs:
         gradle-version: '8.5'
 
     - name: Build with Gradle
-      run: gradle build createExe fatJar --info
+      run: gradle build createExe shadowJar --info
 
     - name: Upload Windows Executable
       uses: actions/upload-artifact@v4
@@ -36,8 +36,8 @@ jobs:
         name: TVRenamer-Windows-Exe
         path: build/launch4j/TVRenamer.exe
 
-    - name: Upload Fat JAR
+    - name: Upload Integrated JAR
       uses: actions/upload-artifact@v4
       with:
-        name: TVRenamer-Fat-JAR
+        name: TVRenamer-JAR
         path: build/libs/*-all.jar
