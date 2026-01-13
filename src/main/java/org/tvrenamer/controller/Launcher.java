@@ -60,6 +60,15 @@ class Launcher {
                 "Logging configuration stream acquired: " +
                     loggingConfigStream.getClass().getName()
             );
+            if (
+                System.getProperty("launch4j.exedir") != null ||
+                System.getProperty("launch4j.executable") != null
+            ) {
+                logger.info(
+                    "Detected Launch4j runtime; skipping logging configuration reload."
+                );
+                return;
+            }
 
             try {
                 Class.forName(
