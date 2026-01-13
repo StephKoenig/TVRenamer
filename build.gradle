@@ -72,28 +72,33 @@ shadowJar {
     // Ensure proper handling of SWT and native libraries
 }
 
-// Ensure resources are copied if they are in src/main/resources or similar
-// If source structure is non-standard, we might need to configure sourceSets
-sourceSets {
+
     main {
         java {
             srcDir 'src/main/java'
-        }
-
-        tasks.named('jar') {
-            enabled = false
-        }
-
-        tasks.named('launch4j') {
-            dependsOn shadowJar
         }
         resources {
             srcDir 'src/main/resources'
         }
     }
+
+
     test {
+
         java {
+
             srcDir 'src/test/java'
+
         }
+
     }
+
+}
+
+tasks.named('jar') {
+    enabled = false
+}
+
+tasks.named('launch4j') {
+    dependsOn(tasks.named('shadowJar'))
 }
