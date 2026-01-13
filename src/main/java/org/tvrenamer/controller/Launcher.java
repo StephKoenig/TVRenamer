@@ -27,20 +27,17 @@ class Launcher {
         try {
             String logPath =
                 System.getProperty("user.dir") + "/tvrenamer-startup.log";
-
-                        startupFileHandler = new FileHandler(logPath, false);
-
-                        startupFileHandler.setFormatter(new SimpleFormatter());
-
-                        startupFileHandler.setLevel(Level.ALL);
-
-                        Logger rootLogger = Logger.getLogger("");
-                        rootLogger.addHandler(startupFileHandler);
-
-                        rootLogger.setLevel(Level.ALL);
-                        logger.info("Startup log initialized: " + logPath);
-                        logger.info("Root logger handler count after startup init: " + rootLogger.getHandlers().length);
-
+            startupFileHandler = new FileHandler(logPath, false);
+            startupFileHandler.setFormatter(new SimpleFormatter());
+            startupFileHandler.setLevel(Level.ALL);
+            Logger rootLogger = Logger.getLogger("");
+            rootLogger.addHandler(startupFileHandler);
+            rootLogger.setLevel(Level.ALL);
+            logger.info("Startup log initialized: " + logPath);
+            logger.info(
+                "Root logger handler count after startup init: " +
+                    rootLogger.getHandlers().length
+            );
         } catch (IOException e) {
             System.err.println(
                 "Could not create startup log file: " + e.getMessage()
@@ -56,66 +53,57 @@ class Launcher {
         ) {
             if (loggingConfigStream == null) {
                 logger.warning("Warning: logging properties not found.");
+                return;
+            }
 
-                        } else {
+            logger.info(
+                "Logging configuration stream acquired: " +
+                    loggingConfigStream.getClass().getName()
+            );
 
-                            logger.info(
-                                "Logging configuration stream acquired: " + loggingConfigStream.getClass().getName()
-                            );
-                            LogManager logManager = LogManager.getLogManager();
+            LogManager logManager = LogManager.getLogManager();
+            Logger rootLogger = Logger.getLogger("");
 
-                            Logger rootLogger = Logger.getLogger("");
+            logger.info(
+                "Root logger handler count before reload: " +
+                    rootLogger.getHandlers().length
+            );
+            logManager.readConfiguration(loggingConfigStream);
+            logger.info("Logging properties loaded successfully.");
+            logger.info(
+                "Root logger level after reload: " + rootLogger.getLevel()
+            );
+            logger.info(
+                "Root logger handler count after reload: " +
+                    rootLogger.getHandlers().length
+            );
 
+            if (startupFileHandler == null) {
+                logger.warning(
+                    "Startup file handler missing after configuration reload."
+                );
+                return;
+            }
 
-                            logger.info(
-                                "Root logger handler count before reload: " + rootLogger.getHandlers().length
-                            );
-                            logManager.readConfiguration(loggingConfigStream);
+            boolean alreadyAttached = false;
+            for (Handler handler : rootLogger.getHandlers()) {
+                if (handler == startupFileHandler) {
+                    alreadyAttached = true;
+                    break;
+                }
+            }
 
-                            logger.info("Logging properties loaded successfully.");
-                            logger.info("Root logger level after reload: " + rootLogger.getLevel());
-                            logger.info(
-                                "Root logger handler count after reload: " + rootLogger.getHandlers().length
-                            );
-                            if (startupFileHandler != null) {
-                                boolean alreadyAttached = false;
+            if (!alreadyAttached) {
+                rootLogger.addHandler(startupFileHandler);
+                logger.info(
+                    "Reattached startup file handler after configuration reload."
+                );
+            }
 
-                                for (Handler handler : rootLogger.getHandlers()) {
-
-                                    if (handler == startupFileHandler) {
-
-                                        alreadyAttached = true;
-
-                                        break;
-
-                                    }
-
-                                }
-
-                                if (!alreadyAttached) {
-
-                                    rootLogger.addHandler(startupFileHandler);
-
-                                    logger.info(
-
-                                        "Reattached startup file handler after configuration reload."
-
-                                    );
-
-                                }
-
-                            } else {
-
-                                logger.warning(
-
-                                    "Startup file handler missing after configuration reload."
-
-                                );
-
-                            }
-
-                        }
-
+            logger.info(
+                "Root logger handler count post-verification: " +
+                    rootLogger.getHandlers().length
+            );
         } catch (IOException e) {
             logger.log(
                 Level.WARNING,
@@ -173,39 +161,34 @@ class Launcher {
             }
         });
 
-
+        try {
+            logger.info("=== TVRenamer Startup ===");
+            logger.info("Version: " + VERSION_NUMBER);
             logger.info("Java Version: " + System.getProperty("java.version"));
-
             logger.info("Java Home: " + System.getProperty("java.home"));
-
             logger.info("Working Directory: " + System.getProperty("user.dir"));
-
             logger.info(
-
                 "OS: " +
-
                     System.getProperty("os.name") +
-
                     " " +
-
                     System.getProperty("os.arch")
-
             );
-
-            logger.info("Launcher class loader: " + Launcher.class.getClassLoader());
             logger.info(
-                "Context class loader: " + Thread.currentThread().getContextClassLoader()
+                "Launcher class loader: " + Launcher.class.getClassLoader()
             );
-            logger.info("java.library.path: " + System.getProperty("java.library.path"));
+            logger.info(
+                "Context class loader: " +
+                    Thread.currentThread().getContextClassLoader()
+            );
+            logger.info(
+                "java.library.path: " + System.getProperty("java.library.path")
+            );
 
             logger.info("Loading logging configuration...");
-
             initializeLoggingConfig();
-
             logger.info("Logging configuration load complete.");
 
             logger.info("Creating UIStarter...");
-
             UIStarter ui = new UIStarter();
             logger.info("UIStarter created successfully.");
 
