@@ -61,7 +61,25 @@ class Launcher {
                     loggingConfigStream.getClass().getName()
             );
 
+            try {
+                Class.forName(
+                    "org.tvrenamer.model.util.StdOutConsoleHandler",
+                    false,
+                    Launcher.class.getClassLoader()
+                );
+                logger.info(
+                    "StdOutConsoleHandler class verified on classpath."
+                );
+            } catch (ClassNotFoundException cnfe) {
+                logException(
+                    "initializeLoggingConfig: missing StdOutConsoleHandler",
+                    cnfe
+                );
+                return;
+            }
+
             LogManager logManager = LogManager.getLogManager();
+
             Logger rootLogger = Logger.getLogger("");
 
             logger.info(
