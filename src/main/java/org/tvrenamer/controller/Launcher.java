@@ -2,49 +2,126 @@ package org.tvrenamer.controller;
 
 import static org.tvrenamer.model.util.Constants.*;
 
-import org.tvrenamer.model.ShowStore;
-import org.tvrenamer.view.UIStarter;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.logging.FileHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import org.tvrenamer.model.ShowStore;
+import org.tvrenamer.view.UIStarter;
 
 class Launcher {
-    private static final Logger logger = Logger.getLogger(Launcher.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        Launcher.class.getName()
+    );
     private static FileHandler startupFileHandler;
 
     static void initializeFileLogger() {
         // Add a file handler FIRST so we capture all messages
         try {
-            String logPath = System.getProperty("user.dir") + "/tvrenamer-startup.log";
-            startupFileHandler = new FileHandler(logPath, false);
-            startupFileHandler.setFormatter(new SimpleFormatter());
-            startupFileHandler.setLevel(Level.ALL);
-            Logger.getLogger("").addHandler(startupFileHandler);
-            Logger.getLogger("").setLevel(Level.ALL);
-            logger.info("Startup log initialized: " + logPath);
+            String logPath =
+                System.getProperty("user.dir") + "/tvrenamer-startup.log";
+
+                        startupFileHandler = new FileHandler(logPath, false);
+
+                        startupFileHandler.setFormatter(new SimpleFormatter());
+
+                        startupFileHandler.setLevel(Level.ALL);
+
+                        Logger rootLogger = Logger.getLogger("");
+                        rootLogger.addHandler(startupFileHandler);
+
+                        rootLogger.setLevel(Level.ALL);
+                        logger.info("Startup log initialized: " + logPath);
+                        logger.info("Root logger handler count after startup init: " + rootLogger.getHandlers().length);
+
         } catch (IOException e) {
-            System.err.println("Could not create startup log file: " + e.getMessage());
+            System.err.println(
+                "Could not create startup log file: " + e.getMessage()
+            );
         }
     }
 
     static void initializeLoggingConfig() {
         // Find logging.properties file inside jar
-        try (InputStream loggingConfigStream = Launcher.class.getResourceAsStream(LOGGING_PROPERTIES)) {
+        try (
+            InputStream loggingConfigStream =
+                Launcher.class.getResourceAsStream(LOGGING_PROPERTIES)
+        ) {
             if (loggingConfigStream == null) {
                 logger.warning("Warning: logging properties not found.");
-            } else {
-                LogManager.getLogManager().readConfiguration(loggingConfigStream);
-                logger.info("Logging properties loaded successfully.");
-            }
+
+                        } else {
+
+                            logger.info(
+                                "Logging configuration stream acquired: " + loggingConfigStream.getClass().getName()
+                            );
+                            LogManager logManager = LogManager.getLogManager();
+
+                            Logger rootLogger = Logger.getLogger("");
+
+
+                            logger.info(
+                                "Root logger handler count before reload: " + rootLogger.getHandlers().length
+                            );
+                            logManager.readConfiguration(loggingConfigStream);
+
+                            logger.info("Logging properties loaded successfully.");
+                            logger.info("Root logger level after reload: " + rootLogger.getLevel());
+                            logger.info(
+                                "Root logger handler count after reload: " + rootLogger.getHandlers().length
+                            );
+                            if (startupFileHandler != null) {
+                                boolean alreadyAttached = false;
+
+                                for (Handler handler : rootLogger.getHandlers()) {
+
+                                    if (handler == startupFileHandler) {
+
+                                        alreadyAttached = true;
+
+                                        break;
+
+                                    }
+
+                                }
+
+                                if (!alreadyAttached) {
+
+                                    rootLogger.addHandler(startupFileHandler);
+
+                                    logger.info(
+
+                                        "Reattached startup file handler after configuration reload."
+
+                                    );
+
+                                }
+
+                            } else {
+
+                                logger.warning(
+
+                                    "Startup file handler missing after configuration reload."
+
+                                );
+
+                            }
+
+                        }
+
         } catch (IOException e) {
-            logger.log(Level.WARNING, "Exception thrown while loading logging config", e);
+            logger.log(
+                Level.WARNING,
+                "Exception thrown while loading logging config",
+                e
+            );
         }
     }
 
@@ -87,24 +164,48 @@ class Launcher {
 
         // Set up global exception handler to catch any uncaught exceptions
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-            logException("Uncaught exception in thread " + thread.getName(), throwable);
+            logException(
+                "Uncaught exception in thread " + thread.getName(),
+                throwable
+            );
             if (startupFileHandler != null) {
                 startupFileHandler.close();
             }
         });
 
-        try {
-            logger.info("=== TVRenamer Startup ===");
-            logger.info("Version: " + VERSION_NUMBER);
+
             logger.info("Java Version: " + System.getProperty("java.version"));
+
             logger.info("Java Home: " + System.getProperty("java.home"));
+
             logger.info("Working Directory: " + System.getProperty("user.dir"));
-            logger.info("OS: " + System.getProperty("os.name") + " " + System.getProperty("os.arch"));
+
+            logger.info(
+
+                "OS: " +
+
+                    System.getProperty("os.name") +
+
+                    " " +
+
+                    System.getProperty("os.arch")
+
+            );
+
+            logger.info("Launcher class loader: " + Launcher.class.getClassLoader());
+            logger.info(
+                "Context class loader: " + Thread.currentThread().getContextClassLoader()
+            );
+            logger.info("java.library.path: " + System.getProperty("java.library.path"));
 
             logger.info("Loading logging configuration...");
+
             initializeLoggingConfig();
 
+            logger.info("Logging configuration load complete.");
+
             logger.info("Creating UIStarter...");
+
             UIStarter ui = new UIStarter();
             logger.info("UIStarter created successfully.");
 
