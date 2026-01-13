@@ -73,15 +73,24 @@ shadowJar {
 }
 
 
-    main {
-        java {
-            srcDir 'src/main/java'
-        }
-        resources {
-            srcDir 'src/main/resources'
-        }
-    }
 
+
+sourceSets {
+    main {
+
+        java {
+
+            srcDir 'src/main/java'
+
+        }
+
+        resources {
+
+            srcDir 'src/main/resources'
+
+        }
+
+    }
 
     test {
 
@@ -94,6 +103,7 @@ shadowJar {
     }
 
 }
+
 
 tasks.named('jar') {
     enabled = false
