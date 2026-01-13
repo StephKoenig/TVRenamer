@@ -68,7 +68,16 @@ class Launcher {
                 "Root logger handler count before reload: " +
                     rootLogger.getHandlers().length
             );
-            logManager.readConfiguration(loggingConfigStream);
+            try {
+                logManager.readConfiguration(loggingConfigStream);
+            } catch (IOException ioe) {
+                logger.log(
+                    Level.WARNING,
+                    "IOException while loading logging config",
+                    ioe
+                );
+                return;
+            }
             logger.info("Logging properties loaded successfully.");
             logger.info(
                 "Root logger level after reload: " + rootLogger.getLevel()
@@ -100,16 +109,14 @@ class Launcher {
                 );
             }
 
-            logger.info(
-                "Root logger handler count post-verification: " +
-                    rootLogger.getHandlers().length
-            );
-        } catch (IOException e) {
-            logger.log(
-                Level.WARNING,
-                "Exception thrown while loading logging config",
-                e
-            );
+            for (Handler handler : rootLogger.getHandlers()) {
+                logger.info(
+                    "Root logger handler after reload: " +
+                        handler.getClass().getName()
+                );
+            }
+        } catch (Throwable t) {
+            logException("initializeLoggingConfig", t);
         }
     }
 
