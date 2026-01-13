@@ -4,6 +4,13 @@ import static org.tvrenamer.model.util.Constants.*;
 import static org.tvrenamer.view.Fields.*;
 import static org.tvrenamer.view.ItemState.*;
 
+import java.text.Collator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Logger;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.custom.TableEditor;
@@ -36,7 +43,6 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.TaskBar;
 import org.eclipse.swt.widgets.TaskItem;
-
 import org.tvrenamer.controller.AddEpisodeListener;
 import org.tvrenamer.controller.FileMover;
 import org.tvrenamer.controller.MoveRunner;
@@ -54,19 +60,18 @@ import org.tvrenamer.model.ShowStore;
 import org.tvrenamer.model.UserPreference;
 import org.tvrenamer.model.UserPreferences;
 
-import java.text.Collator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.logging.Logger;
+public final class ResultsTable
+    implements java.beans.PropertyChangeListener, AddEpisodeListener
+{
 
-public final class ResultsTable implements java.beans.PropertyChangeListener, AddEpisodeListener {
-    private static final Logger logger = Logger.getLogger(ResultsTable.class.getName());
+    private static final Logger logger = Logger.getLogger(
+        ResultsTable.class.getName()
+    );
     // load preferences
     private static final UserPreferences prefs = UserPreferences.getInstance();
-    private static final Collator COLLATOR = Collator.getInstance(Locale.getDefault());
+    private static final Collator COLLATOR = Collator.getInstance(
+        Locale.getDefault()
+    );
 
     private static final int ITEM_NOT_IN_TABLE = -1;
 
@@ -87,7 +92,8 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
     private ProgressBar totalProgressBar;
     private TaskItem taskItem = null;
 
-    private final Queue<FileEpisode> currentFailures = new ConcurrentLinkedQueue<>();
+    private final Queue<FileEpisode> currentFailures =
+        new ConcurrentLinkedQueue<>();
 
     private boolean apiDeprecated = false;
 
@@ -95,21 +101,40 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         boolean success = prefs.ensureDestDir();
         if (!success) {
             logger.warning(CANT_CREATE_DEST);
-            ui.showMessageBox(SWTMessageBoxType.DLG_ERR, ERROR_LABEL, CANT_CREATE_DEST + ": '"
-                    + prefs.getDestinationDirectoryName() + "'. "
-                    + MOVE_NOT_POSSIBLE);
+            ui.showMessageBox(
+                SWTMessageBoxType.DLG_ERR,
+                ERROR_LABEL,
+                CANT_CREATE_DEST +
+                    ": '" +
+                    prefs.getDestinationDirectoryName() +
+                    "'. " +
+                    MOVE_NOT_POSSIBLE
+            );
         }
     }
 
     void ready() {
+        logger.info(
+            "ResultsTable.ready(): registering property change listener"
+        );
         prefs.addPropertyChangeListener(this);
+
+        logger.info("ResultsTable.ready(): setting focus to table");
         swtTable.setFocus();
 
+        logger.info("ResultsTable.ready(): validating destination directory");
         checkDestinationDirectory();
 
+        logger.info(
+            "ResultsTable.ready(): subscribing to episode map and requesting preload"
+        );
         // Load the preload folder into the episode map, which will call
+
         // us back with the list of files once they've been loaded.
+
         episodeMap.subscribe(this);
+
+        logger.info("ResultsTable.ready(): preload requested");
         episodeMap.preload();
     }
 
@@ -136,7 +161,10 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         return new TableItem(swtTable, SWT.NONE);
     }
 
-    private void setComboBoxProposedDest(final TableItem item, final FileEpisode ep) {
+    private void setComboBoxProposedDest(
+        final TableItem item,
+        final FileEpisode ep
+    ) {
         if (swtTable.isDisposed() || item.isDisposed()) {
             return;
         }
@@ -151,7 +179,9 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         }
         options.forEach(combo::add);
         combo.setText(defaultOption);
-        combo.addModifyListener(e -> ep.setChosenEpisode(combo.getSelectionIndex()));
+        combo.addModifyListener(e ->
+            ep.setChosenEpisode(combo.getSelectionIndex())
+        );
         item.setData(combo);
 
         final TableEditor editor = new TableEditor(swtTable);
@@ -183,7 +213,10 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
      * @param ep
      *             the FileEpisode to use to obtain the text
      */
-    private void setProposedDestColumn(final TableItem item, final FileEpisode ep) {
+    private void setProposedDestColumn(
+        final TableItem item,
+        final FileEpisode ep
+    ) {
         if (swtTable.isDisposed() || item.isDisposed()) {
             return;
         }
@@ -230,7 +263,10 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         return (ITEM_NOT_IN_TABLE != getTableItemIndex(item));
     }
 
-    private void listingsDownloaded(final TableItem item, final FileEpisode episode) {
+    private void listingsDownloaded(
+        final TableItem item,
+        final FileEpisode episode
+    ) {
         int epsFound = episode.listingsComplete();
         display.asyncExec(() -> {
             if (tableContainsTableItem(item)) {
@@ -240,7 +276,11 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         });
     }
 
-    private void listingsFailed(final TableItem item, final FileEpisode episode, final Exception err) {
+    private void listingsFailed(
+        final TableItem item,
+        final FileEpisode episode,
+        final Exception err
+    ) {
         episode.listingsFailed(err);
         display.asyncExec(() -> {
             if (tableContainsTableItem(item)) {
@@ -250,22 +290,30 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         });
     }
 
-    private void getSeriesListings(final Series series, final TableItem item,
-            final FileEpisode episode) {
-        series.addListingsListener(new ShowListingsListener() {
-            @Override
-            public void listingsDownloadComplete() {
-                listingsDownloaded(item, episode);
-            }
+    private void getSeriesListings(
+        final Series series,
+        final TableItem item,
+        final FileEpisode episode
+    ) {
+        series.addListingsListener(
+            new ShowListingsListener() {
+                @Override
+                public void listingsDownloadComplete() {
+                    listingsDownloaded(item, episode);
+                }
 
-            @Override
-            public void listingsDownloadFailed(Exception err) {
-                listingsFailed(item, episode, err);
+                @Override
+                public void listingsDownloadFailed(Exception err) {
+                    listingsFailed(item, episode, err);
+                }
             }
-        });
+        );
     }
 
-    private void tableItemFailed(final TableItem item, final FileEpisode episode) {
+    private void tableItemFailed(
+        final TableItem item,
+        final FileEpisode episode
+    ) {
         display.asyncExec(() -> {
             if (tableContainsTableItem(item)) {
                 setProposedDestColumn(item, episode);
@@ -279,8 +327,11 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         apiDeprecated = true;
         if (showDialogBox) {
             boolean updateIsAvailable = UpdateChecker.isUpdateAvailable();
-            ui.showMessageBox(SWTMessageBoxType.DLG_ERR, ERROR_LABEL,
-                    updateIsAvailable ? GET_UPDATE_MESSAGE : NEED_UPDATE);
+            ui.showMessageBox(
+                SWTMessageBoxType.DLG_ERR,
+                ERROR_LABEL,
+                updateIsAvailable ? GET_UPDATE_MESSAGE : NEED_UPDATE
+            );
         }
     }
 
@@ -319,34 +370,37 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
                 logger.fine("no show name found for " + episode);
                 continue;
             }
-            ShowStore.mapStringToShow(showName, new ShowInformationListener() {
-                @Override
-                public void downloadSucceeded(Show show) {
-                    episode.setEpisodeShow(show);
-                    display.asyncExec(() -> {
-                        if (tableContainsTableItem(item)) {
-                            setProposedDestColumn(item, episode);
-                            STATUS_FIELD.setCellImage(item, ADDED);
+            ShowStore.mapStringToShow(
+                showName,
+                new ShowInformationListener() {
+                    @Override
+                    public void downloadSucceeded(Show show) {
+                        episode.setEpisodeShow(show);
+                        display.asyncExec(() -> {
+                            if (tableContainsTableItem(item)) {
+                                setProposedDestColumn(item, episode);
+                                STATUS_FIELD.setCellImage(item, ADDED);
+                            }
+                        });
+                        if (show.isValidSeries()) {
+                            getSeriesListings(show.asSeries(), item, episode);
                         }
-                    });
-                    if (show.isValidSeries()) {
-                        getSeriesListings(show.asSeries(), item, episode);
+                    }
+
+                    @Override
+                    public void downloadFailed(FailedShow failedShow) {
+                        episode.setFailedShow(failedShow);
+                        tableItemFailed(item, episode);
+                    }
+
+                    @Override
+                    public void apiHasBeenDeprecated() {
+                        noteApiFailure();
+                        episode.setApiDiscontinued();
+                        tableItemFailed(item, episode);
                     }
                 }
-
-                @Override
-                public void downloadFailed(FailedShow failedShow) {
-                    episode.setFailedShow(failedShow);
-                    tableItemFailed(item, episode);
-                }
-
-                @Override
-                public void apiHasBeenDeprecated() {
-                    noteApiFailure();
-                    episode.setApiDiscontinued();
-                    tableItemFailed(item, episode);
-                }
-            });
+            );
         }
     }
 
@@ -380,7 +434,9 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
                 final FileEpisode episode = episodeMap.get(fileName);
                 // Skip files not successfully downloaded and ready to be moved
                 if (episode.optionCount() == 0) {
-                    logger.info("checked but not ready: " + episode.getFilepath());
+                    logger.info(
+                        "checked but not ready: " + episode.getFilepath()
+                    );
                     continue;
                 }
                 FileMover pendingMove = new FileMover(episode);
@@ -419,13 +475,22 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
      * @param positionToInsert
      *                         the position where we should insert the row
      */
-    private void setSortedItem(final TableItem oldItem, final int positionToInsert) {
+    private void setSortedItem(
+        final TableItem oldItem,
+        final int positionToInsert
+    ) {
         boolean wasChecked = oldItem.getChecked();
 
         TableItem item = new TableItem(swtTable, SWT.NONE, positionToInsert);
         item.setChecked(wasChecked);
-        CURRENT_FILE_FIELD.setCellText(item, CURRENT_FILE_FIELD.getCellText(oldItem));
-        NEW_FILENAME_FIELD.setCellText(item, NEW_FILENAME_FIELD.getCellText(oldItem));
+        CURRENT_FILE_FIELD.setCellText(
+            item,
+            CURRENT_FILE_FIELD.getCellText(oldItem)
+        );
+        NEW_FILENAME_FIELD.setCellText(
+            item,
+            NEW_FILENAME_FIELD.getCellText(oldItem)
+        );
         STATUS_FIELD.setCellImage(item, STATUS_FIELD.getCellImage(oldItem));
 
         final Object itemData = oldItem.getData();
@@ -463,8 +528,10 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
                 String value2 = field.getItemTextValue(items[j]);
                 // Compare the two values and order accordingly
                 int comparison = COLLATOR.compare(value1, value2);
-                if (((comparison < 0) && (sortDirection == SWT.UP))
-                        || (comparison > 0) && (sortDirection == SWT.DOWN)) {
+                if (
+                    ((comparison < 0) && (sortDirection == SWT.UP)) ||
+                    ((comparison > 0) && (sortDirection == SWT.DOWN))
+                ) {
                     // Insert a copy of row i at position j, and then delete
                     // row i. Then fetch the list of items anew, since we
                     // just modified it.
@@ -531,8 +598,10 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         String tooltip = RENAME_TOOLTIP;
         if (prefs.isMoveSelected()) {
             if (prefs.isMoveEnabled()) {
-                tooltip = INTRO_MOVE_DIR + prefs.getDestinationDirectoryName()
-                        + FINISH_MOVE_DIR;
+                tooltip =
+                    INTRO_MOVE_DIR +
+                    prefs.getDestinationDirectoryName() +
+                    FINISH_MOVE_DIR;
                 if (prefs.isRenameSelected()) {
                     tooltip = MOVE_INTRO + AND_RENAME + tooltip;
                 } else {
@@ -555,7 +624,8 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
     }
 
     private void setColumnDestText() {
-        final TableColumn destinationColumn = NEW_FILENAME_FIELD.getTableColumn();
+        final TableColumn destinationColumn =
+            NEW_FILENAME_FIELD.getTableColumn();
         if (destinationColumn == null) {
             logger.warning("could not get destination column");
         } else if (prefs.isMoveSelected()) {
@@ -593,7 +663,7 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
                 checkDestinationDirectory();
                 setColumnDestText();
                 setActionButtonText(actionButton);
-                // Note: NO break! We WANT to fall through.
+            // Note: NO break! We WANT to fall through.
             case REPLACEMENT_MASK:
             case SEASON_PREFIX:
             case LEADING_ZERO:
@@ -615,13 +685,16 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see java.beans.PropertyChangeListener#propertyChange(java.beans.
      * PropertyChangeEvent)
      */
     @Override
     public void propertyChange(java.beans.PropertyChangeEvent evt) {
-        if ("preference".equals(evt.getPropertyName()) && (evt.getNewValue() instanceof UserPreference)) {
+        if (
+            "preference".equals(evt.getPropertyName()) &&
+            (evt.getNewValue() instanceof UserPreference)
+        ) {
             updateUserPreferences((UserPreference) evt.getNewValue());
         }
     }
@@ -640,8 +713,11 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
             failureMessage.append(NEWLINE_BULLET);
             failureMessage.append(currentFailures.poll().getFileName());
         }
-        ui.showMessageBox(SWTMessageBoxType.DLG_ERR, ERROR_LABEL,
-                failureMessage.toString());
+        ui.showMessageBox(
+            SWTMessageBoxType.DLG_ERR,
+            ERROR_LABEL,
+            failureMessage.toString()
+        );
     }
 
     void finishAllMoves() {
@@ -750,7 +826,9 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         // true));
         updatesAvailableLink.setVisible(false);
         updatesAvailableLink.setText(UPDATE_AVAILABLE);
-        updatesAvailableLink.addSelectionListener(new UrlLauncher(TVRENAMER_DOWNLOAD_URL));
+        updatesAvailableLink.addSelectionListener(
+            new UrlLauncher(TVRENAMER_DOWNLOAD_URL)
+        );
 
         // Show the label if updates are available (in a new thread)
         UpdateChecker.notifyOfUpdate(updateIsAvailable -> {
@@ -767,40 +845,54 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         final FileDialog fd = new FileDialog(shell, SWT.MULTI);
         final Button addFilesButton = new Button(topButtonsComposite, SWT.PUSH);
         addFilesButton.setText("Add files");
-        addFilesButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                String pathPrefix = fd.open();
-                if (pathPrefix != null) {
-                    episodeMap.addFilesToQueue(pathPrefix, fd.getFileNames());
+        addFilesButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    String pathPrefix = fd.open();
+                    if (pathPrefix != null) {
+                        episodeMap.addFilesToQueue(
+                            pathPrefix,
+                            fd.getFileNames()
+                        );
+                    }
                 }
             }
-        });
+        );
 
         final DirectoryDialog dd = new DirectoryDialog(shell, SWT.SINGLE);
-        final Button addFolderButton = new Button(topButtonsComposite, SWT.PUSH);
+        final Button addFolderButton = new Button(
+            topButtonsComposite,
+            SWT.PUSH
+        );
         addFolderButton.setText("Add Folder");
-        addFolderButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                String directory = dd.open();
-                if (directory != null) {
-                    // load all of the files in the dir
-                    episodeMap.addFolderToQueue(directory);
+        addFolderButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    String directory = dd.open();
+                    if (directory != null) {
+                        // load all of the files in the dir
+                        episodeMap.addFolderToQueue(directory);
+                    }
                 }
             }
+        );
 
-        });
-
-        final Button clearFilesButton = new Button(topButtonsComposite, SWT.PUSH);
+        final Button clearFilesButton = new Button(
+            topButtonsComposite,
+            SWT.PUSH
+        );
         clearFilesButton.setText("Clear List");
-        clearFilesButton.addSelectionListener(new SelectionAdapter() {
-            public void widgetSelected(SelectionEvent e) {
-                for (final TableItem item : swtTable.getItems()) {
-                    deleteTableItem(item);
+        clearFilesButton.addSelectionListener(
+            new SelectionAdapter() {
+                public void widgetSelected(SelectionEvent e) {
+                    for (final TableItem item : swtTable.getItems()) {
+                        deleteTableItem(item);
+                    }
                 }
             }
-        });
+        );
 
         setupUpdateStuff(topButtonsComposite);
     }
@@ -809,51 +901,78 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         Composite bottomButtonsComposite = new Composite(shell, SWT.FILL);
         bottomButtonsComposite.setLayout(new GridLayout(3, false));
 
-        GridData bottomButtonsCompositeGridData = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
+        GridData bottomButtonsCompositeGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false,
+            3,
+            1
+        );
         bottomButtonsComposite.setLayoutData(bottomButtonsCompositeGridData);
 
         final Button quitButton = new Button(bottomButtonsComposite, SWT.PUSH);
-        GridData quitButtonGridData = new GridData(GridData.BEGINNING, GridData.CENTER, false, false);
+        GridData quitButtonGridData = new GridData(
+            GridData.BEGINNING,
+            GridData.CENTER,
+            false,
+            false
+        );
         quitButtonGridData.minimumWidth = 70;
         quitButtonGridData.widthHint = 70;
         quitButton.setLayoutData(quitButtonGridData);
         quitButton.setText(QUIT_LABEL);
-        quitButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                ui.quit();
+        quitButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    ui.quit();
+                }
             }
-        });
+        );
 
         totalProgressBar = new ProgressBar(bottomButtonsComposite, SWT.SMOOTH);
-        totalProgressBar.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, true));
+        totalProgressBar.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, true)
+        );
 
         actionButton = new Button(bottomButtonsComposite, SWT.PUSH);
-        GridData actionButtonGridData = new GridData(GridData.END, GridData.CENTER, false, false);
+        GridData actionButtonGridData = new GridData(
+            GridData.END,
+            GridData.CENTER,
+            false,
+            false
+        );
         actionButton.setLayoutData(actionButtonGridData);
         setActionButtonText(actionButton);
-        actionButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                executeActionButton();
+        actionButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    executeActionButton();
+                }
             }
-        });
+        );
     }
 
     private void setupTableDragDrop() {
-        DropTarget dt = new DropTarget(swtTable, DND.DROP_DEFAULT | DND.DROP_MOVE);
+        DropTarget dt = new DropTarget(
+            swtTable,
+            DND.DROP_DEFAULT | DND.DROP_MOVE
+        );
         dt.setTransfer(new Transfer[] { FileTransfer.getInstance() });
-        dt.addDropListener(new DropTargetAdapter() {
-
-            @Override
-            public void drop(DropTargetEvent e) {
-                FileTransfer ft = FileTransfer.getInstance();
-                if (ft.isSupportedType(e.currentDataType)) {
-                    String[] fileList = (String[]) e.data;
-                    episodeMap.addArrayOfStringsToQueue(fileList);
+        dt.addDropListener(
+            new DropTargetAdapter() {
+                @Override
+                public void drop(DropTargetEvent e) {
+                    FileTransfer ft = FileTransfer.getInstance();
+                    if (ft.isSupportedType(e.currentDataType)) {
+                        String[] fileList = (String[]) e.data;
+                        episodeMap.addArrayOfStringsToQueue(fileList);
+                    }
                 }
             }
-        });
+        );
     }
 
     private void setupSelectionListener() {
@@ -915,17 +1034,20 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
         setSortColumn();
 
         // Allow deleting of elements
-        swtTable.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                super.keyReleased(e);
-                if ((e.keyCode == '\u0008') // backspace
-                        || (e.keyCode == '\u007F')) // delete
-                {
-                    deleteSelectedTableItems();
+        swtTable.addKeyListener(
+            new KeyAdapter() {
+                @Override
+                public void keyReleased(KeyEvent e) {
+                    super.keyReleased(e);
+                    if (
+                        (e.keyCode == '\u0008') || // backspace
+                        (e.keyCode == '\u007F') // delete
+                    ) {
+                        deleteSelectedTableItems();
+                    }
                 }
             }
-        });
+        );
 
         // editable table
         final TableEditor editor = new TableEditor(swtTable);
@@ -950,12 +1072,21 @@ public final class ResultsTable implements java.beans.PropertyChangeListener, Ad
     }
 
     ResultsTable(final UIStarter ui) {
+        logger.info("=== ResultsTable constructor begin ===");
         this.ui = ui;
+
         shell = ui.shell;
+
         display = ui.display;
 
+        logger.info("Wiring SWT components from UIStarter.");
         setupTopButtons();
+
+        logger.info("Creating ResultsTable SWT table...");
         swtTable = new Table(shell, SWT.CHECK | SWT.FULL_SELECTION | SWT.MULTI);
+
         setupMainWindow();
+
+        logger.info("ResultsTable constructor complete.");
     }
 }

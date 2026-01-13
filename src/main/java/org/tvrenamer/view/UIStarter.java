@@ -2,6 +2,12 @@ package org.tvrenamer.view;
 
 import static org.tvrenamer.model.util.Constants.*;
 
+import java.awt.HeadlessException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
@@ -14,20 +20,14 @@ import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
-
 import org.tvrenamer.controller.UrlLauncher;
 import org.tvrenamer.model.util.Environment;
 
-import java.awt.HeadlessException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.swing.JOptionPane;
-
 public final class UIStarter {
-    private static final Logger logger = Logger.getLogger(UIStarter.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        UIStarter.class.getName()
+    );
 
     final Shell shell;
     final Display display;
@@ -43,15 +43,22 @@ public final class UIStarter {
      *     the path to try to locate the file directly in the file system
      * @return an Image read from the given path
      */
-    private static Image readImageFromPath(final String resourcePath, final String filePath) {
+    private static Image readImageFromPath(
+        final String resourcePath,
+        final String filePath
+    ) {
         Display display = Display.getCurrent();
         Image rval = null;
-        try (InputStream in = UIStarter.class.getResourceAsStream(resourcePath)) {
+        try (
+            InputStream in = UIStarter.class.getResourceAsStream(resourcePath)
+        ) {
             if (in != null) {
                 rval = new Image(display, in);
             }
         } catch (IOException ioe) {
-            logger.warning("exception trying to read image from stream " + resourcePath);
+            logger.warning(
+                "exception trying to read image from stream " + resourcePath
+            );
         }
         if (rval == null) {
             rval = new Image(display, filePath);
@@ -67,7 +74,10 @@ public final class UIStarter {
      * @return an Image read from the given path
      */
     public static Image readImageFromPath(final String resourcePath) {
-        return readImageFromPath(resourcePath, ICON_PARENT_DIRECTORY + "/" + resourcePath);
+        return readImageFromPath(
+            resourcePath,
+            ICON_PARENT_DIRECTORY + "/" + resourcePath
+        );
     }
 
     /**
@@ -80,22 +90,31 @@ public final class UIStarter {
         try {
             defaultFont = display.getSystemFont().getFontData()[0];
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Error attempting to determine system default font", e);
+            logger.log(
+                Level.WARNING,
+                "Error attempting to determine system default font",
+                e
+            );
         }
 
         return defaultFont;
     }
 
-    private void showMessageBox(final SWTMessageBoxType type, final String title,
-                                final String message, final Exception exception)
-    {
+    private void showMessageBox(
+        final SWTMessageBoxType type,
+        final String title,
+        final String message,
+        final Exception exception
+    ) {
         if (shell.isDisposed()) {
             // Shell is gone, try using JOptionPane instead
             try {
                 JOptionPane.showMessageDialog(null, message);
                 return;
             } catch (HeadlessException he) {
-                logger.warning("Could not show message graphically: " + message);
+                logger.warning(
+                    "Could not show message graphically: " + message
+                );
                 return;
             }
         }
@@ -107,7 +126,9 @@ public final class UIStarter {
             if (exception == null) {
                 msgBox.setMessage(message);
             } else {
-                msgBox.setMessage(message + "\n" + exception.getLocalizedMessage());
+                msgBox.setMessage(
+                    message + "\n" + exception.getLocalizedMessage()
+                );
             }
 
             msgBox.open();
@@ -121,9 +142,11 @@ public final class UIStarter {
      * @param title the window title
      * @param message the message content
      */
-    public void showMessageBox(final SWTMessageBoxType type,
-                               final String title, final String message)
-    {
+    public void showMessageBox(
+        final SWTMessageBoxType type,
+        final String title,
+        final String message
+    ) {
         showMessageBox(type, title, message, null);
     }
 
@@ -154,7 +177,12 @@ public final class UIStarter {
     @SuppressWarnings("SameReturnValue")
     private int onException(Exception exception) {
         logger.log(Level.SEVERE, UNKNOWN_EXCEPTION, exception);
-        showMessageBox(SWTMessageBoxType.DLG_ERR, ERROR_LABEL, UNKNOWN_EXCEPTION, exception);
+        showMessageBox(
+            SWTMessageBoxType.DLG_ERR,
+            ERROR_LABEL,
+            UNKNOWN_EXCEPTION,
+            exception
+        );
         shell.dispose();
         return 1;
     }
@@ -163,9 +191,12 @@ public final class UIStarter {
         shell.dispose();
     }
 
-    private void makeMenuItem(final Menu parent, final String text,
-                              final Listener listener, final char shortcut)
-    {
+    private void makeMenuItem(
+        final Menu parent,
+        final String text,
+        final Listener listener,
+        final char shortcut
+    ) {
         MenuItem newItem = new MenuItem(parent, SWT.PUSH);
         newItem.setText(text + "\tCtrl+" + shortcut);
         newItem.addListener(SWT.Selection, listener);
@@ -184,7 +215,9 @@ public final class UIStarter {
 
         MenuItem helpVisitWebPageItem = new MenuItem(helpMenu, SWT.PUSH);
         helpVisitWebPageItem.setText("Visit Web Page");
-        helpVisitWebPageItem.addSelectionListener(new UrlLauncher(TVRENAMER_PROJECT_URL));
+        helpVisitWebPageItem.addSelectionListener(
+            new UrlLauncher(TVRENAMER_PROJECT_URL)
+        );
 
         return helpMenu;
     }
@@ -206,7 +239,12 @@ public final class UIStarter {
         if (Environment.IS_MAC_OSX) {
             // Add the special Mac OSX Preferences, About and Quit menus.
             CocoaUIEnhancer enhancer = new CocoaUIEnhancer();
-            enhancer.hookApplicationMenu(display, quitListener, aboutListener, preferencesListener);
+            enhancer.hookApplicationMenu(
+                display,
+                quitListener,
+                aboutListener,
+                preferencesListener
+            );
 
             setupHelpMenuBar(menuBarMenu);
         } else {
@@ -244,23 +282,64 @@ public final class UIStarter {
      * like the Display, the Shell, the icon, etc.
      *
      */
+
     public UIStarter() {
-        // Setup display and shell
+        logger.info("=== UIStarter constructor begin ===");
+        logger.info("Setting SWT application name to: " + APPLICATION_NAME);
         Display.setAppName(APPLICATION_NAME);
-        display = new Display();
+
+        try {
+            logger.info("Creating SWT Display instance...");
+            display = new Display();
+
+            logger.info("Display created successfully: " + display);
+        } catch (UnsatisfiedLinkError ule) {
+            logger.log(
+                Level.SEVERE,
+                "Failed to create SWT Display. java.library.path=" +
+                    System.getProperty("java.library.path"),
+                ule
+            );
+            throw ule;
+        }
+
+        logger.info("Creating SWT Shell...");
         shell = new Shell(display);
 
+        logger.info("Shell created: " + shell);
+
+        logger.info("Setting shell title to application name.");
         shell.setText(APPLICATION_NAME);
 
+        logger.info(
+            "Loading application icon from path: " + APPLICATION_ICON_PATH
+        );
         appIcon = readImageFromPath(APPLICATION_ICON_PATH);
+
+        logger.info("Application icon loaded: " + (appIcon != null));
+
+        logger.info("Applying application icon to shell.");
         setAppIcon();
 
+        logger.info("Configuring shell grid layout.");
         GridLayout shellGridLayout = new GridLayout(3, false);
+
         shell.setLayout(shellGridLayout);
 
-        // Create the main window
+        logger.info(
+            "Shell layout configured with columns=" + shellGridLayout.numColumns
+        );
+
+        logger.info("Creating ResultsTable...");
         resultsTable = new ResultsTable(this);
+
+        logger.info("ResultsTable created successfully.");
+
+        logger.info("Setting up application menu bar...");
         setupMenuBar();
+
+        logger.info("Menu bar setup complete.");
+        logger.info("=== UIStarter constructor end ===");
     }
 
     /**
@@ -268,25 +347,47 @@ public final class UIStarter {
      *
      * @return 0 on normal exit, nonzero on error
      */
+
     public int run() {
+        logger.info("UIStarter.run() invoked.");
         try {
+            logger.info("Packing shell (compute trim)...");
             shell.pack(true);
+
+            logger.info("Positioning shell on screen...");
             positionWindow();
 
             // Start the shell
+
+            logger.info("Packing shell before open...");
             shell.pack();
+
+            logger.info("Opening shell...");
             shell.open();
 
-            resultsTable.ready();
+            logger.info("Calling ResultsTable.ready()...");
 
+            resultsTable.ready();
+            logger.info("ResultsTable.ready() completed.");
+
+            logger.info("Entering SWT event loop.");
             while (!shell.isDisposed()) {
                 if (!display.readAndDispatch()) {
                     display.sleep();
                 }
             }
+
+            logger.info("Shell disposed. Disposing display...");
             display.dispose();
+
+            logger.info("Display disposed. Exiting run() normally.");
             return 0;
         } catch (Exception exception) {
+            logger.log(
+                Level.SEVERE,
+                "Exception during UIStarter.run()",
+                exception
+            );
             return onException(exception);
         }
     }
