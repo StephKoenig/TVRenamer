@@ -4,6 +4,8 @@ import static org.tvrenamer.model.util.Constants.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.logging.FileHandler;
@@ -20,6 +22,9 @@ class Launcher {
     private static final Logger logger = Logger.getLogger(
         Launcher.class.getName()
     );
+
+    private static final PrintStream originalSystemErr = System.err;
+    private static PrintStream redirectedSystemErr;
     private static FileHandler startupFileHandler;
 
     static void initializeFileLogger() {
@@ -31,15 +36,59 @@ class Launcher {
             startupFileHandler.setFormatter(new SimpleFormatter());
             startupFileHandler.setLevel(Level.ALL);
             Logger rootLogger = Logger.getLogger("");
+
             rootLogger.addHandler(startupFileHandler);
+
             rootLogger.setLevel(Level.ALL);
+
             logger.info("Startup log initialized: " + logPath);
+
             logger.info(
                 "Root logger handler count after startup init: " +
                     rootLogger.getHandlers().length
             );
+
+            if (redirectedSystemErr == null) {
+                redirectedSystemErr = new PrintStream(
+                    new OutputStream() {
+                        private final StringBuilder buffer =
+                            new StringBuilder();
+
+                        @Override
+                        public void write(int b) {
+                            if (b == '\n') {
+                                flushBuffer();
+                            } else {
+                                buffer.append((char) b);
+                            }
+                        }
+
+                        @Override
+                        public void flush() {
+                            flushBuffer();
+                        }
+
+                        private void flushBuffer() {
+                            if (buffer.length() > 0) {
+                                logger.severe(
+                                    "[System.err] " + buffer.toString()
+                                );
+                                buffer.setLength(0);
+                            }
+                        }
+
+                        @Override
+                        public void close() {
+                            flushBuffer();
+                        }
+                    },
+                    true
+                );
+                System.setErr(redirectedSystemErr);
+                logger.info("System.err redirected to startup log handler.");
+            }
         } catch (IOException e) {
-            System.err.println(
+            originalSystemErr.println(
                 "Could not create startup log file: " + e.getMessage()
             );
         }
@@ -62,17 +111,42 @@ class Launcher {
             );
 
             String launch4jExeDirEnv = System.getenv("LAUNCH4J_EXEDIR");
+
             String launch4jExePathEnv = System.getenv("LAUNCH4J_EXE_PATH");
+
             String sunJavaCommand = System.getProperty("sun.java.command");
+
             boolean launch4jProperty =
                 System.getProperty("launch4j.exedir") != null ||
                 System.getProperty("launch4j.executable") != null;
 
             boolean launch4jEnv =
                 launch4jExeDirEnv != null || launch4jExePathEnv != null;
+
             boolean sunCommandIndicatesExe =
                 sunJavaCommand != null &&
                 sunJavaCommand.toLowerCase().contains(".exe");
+
+            logger.info(
+                "Launch4j detection booleans: property=" +
+                    launch4jProperty +
+                    ", env=" +
+                    launch4jEnv +
+                    ", sunCommandIndicatesExe=" +
+                    sunCommandIndicatesExe
+            );
+            logger.info(
+                "launch4j.exedir=" +
+                    System.getProperty("launch4j.exedir") +
+                    ", launch4j.executable=" +
+                    System.getProperty("launch4j.executable") +
+                    ", LAUNCH4J_EXEDIR=" +
+                    launch4jExeDirEnv +
+                    ", LAUNCH4J_EXE_PATH=" +
+                    launch4jExePathEnv +
+                    ", sun.java.command=" +
+                    sunJavaCommand
+            );
             if (launch4jProperty || launch4jEnv || sunCommandIndicatesExe) {
                 StringBuilder reason = new StringBuilder(
                     "Detected Launch4j runtime via"
@@ -80,23 +154,32 @@ class Launcher {
                 boolean needComma = false;
                 if (launch4jProperty) {
                     reason.append(" system properties");
+
                     needComma = true;
                 }
+
                 if (launch4jEnv) {
                     if (needComma) {
                         reason.append(",");
                     }
+
                     reason.append(" environment variables");
+
                     needComma = true;
                 }
+
                 if (sunCommandIndicatesExe) {
                     if (needComma) {
                         reason.append(",");
                     }
+
                     reason.append(" sun.java.command");
                 }
+
                 reason.append("; skipping logging configuration reload.");
+
                 logger.info(reason.toString());
+
                 return;
             }
 
@@ -106,6 +189,7 @@ class Launcher {
                     false,
                     Launcher.class.getClassLoader()
                 );
+
                 logger.info(
                     "StdOutConsoleHandler class verified on classpath."
                 );
@@ -114,6 +198,7 @@ class Launcher {
                     "initializeLoggingConfig: missing StdOutConsoleHandler",
                     cnfe
                 );
+
                 return;
             }
 
@@ -125,6 +210,7 @@ class Launcher {
                 "Root logger handler count before reload: " +
                     rootLogger.getHandlers().length
             );
+
             try {
                 logManager.readConfiguration(loggingConfigStream);
             } catch (IOException ioe) {
@@ -133,8 +219,13 @@ class Launcher {
                     "IOException while loading logging config",
                     ioe
                 );
+
+                return;
+            } catch (Throwable t) {
+                logException("initializeLoggingConfig: readConfiguration", t);
                 return;
             }
+
             logger.info("Logging properties loaded successfully.");
             logger.info(
                 "Root logger level after reload: " + rootLogger.getLevel()
@@ -190,8 +281,15 @@ class Launcher {
         logger.fine("Shutdown complete.");
 
         // Close the startup file handler
+
         if (startupFileHandler != null) {
             startupFileHandler.close();
+        }
+
+        if (redirectedSystemErr != null) {
+            System.setErr(originalSystemErr);
+            redirectedSystemErr = null;
+            logger.info("System.err restored to original stream.");
         }
     }
 
