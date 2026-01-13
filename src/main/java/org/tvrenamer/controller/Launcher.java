@@ -60,13 +60,43 @@ class Launcher {
                 "Logging configuration stream acquired: " +
                     loggingConfigStream.getClass().getName()
             );
-            if (
+
+            String launch4jExeDirEnv = System.getenv("LAUNCH4J_EXEDIR");
+            String launch4jExePathEnv = System.getenv("LAUNCH4J_EXE_PATH");
+            String sunJavaCommand = System.getProperty("sun.java.command");
+            boolean launch4jProperty =
                 System.getProperty("launch4j.exedir") != null ||
-                System.getProperty("launch4j.executable") != null
-            ) {
-                logger.info(
-                    "Detected Launch4j runtime; skipping logging configuration reload."
+                System.getProperty("launch4j.executable") != null;
+
+            boolean launch4jEnv =
+                launch4jExeDirEnv != null || launch4jExePathEnv != null;
+            boolean sunCommandIndicatesExe =
+                sunJavaCommand != null &&
+                sunJavaCommand.toLowerCase().contains(".exe");
+            if (launch4jProperty || launch4jEnv || sunCommandIndicatesExe) {
+                StringBuilder reason = new StringBuilder(
+                    "Detected Launch4j runtime via"
                 );
+                boolean needComma = false;
+                if (launch4jProperty) {
+                    reason.append(" system properties");
+                    needComma = true;
+                }
+                if (launch4jEnv) {
+                    if (needComma) {
+                        reason.append(",");
+                    }
+                    reason.append(" environment variables");
+                    needComma = true;
+                }
+                if (sunCommandIndicatesExe) {
+                    if (needComma) {
+                        reason.append(",");
+                    }
+                    reason.append(" sun.java.command");
+                }
+                reason.append("; skipping logging configuration reload.");
+                logger.info(reason.toString());
                 return;
             }
 
