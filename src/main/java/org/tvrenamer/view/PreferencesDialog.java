@@ -3,6 +3,11 @@ package org.tvrenamer.view;
 import static org.tvrenamer.model.ReplacementToken.*;
 import static org.tvrenamer.model.util.Constants.*;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -30,23 +35,23 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Text;
-
 import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.ReplacementToken;
 import org.tvrenamer.model.UserPreferences;
 
-import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 class PreferencesDialog extends Dialog {
-    private static final Logger logger = Logger.getLogger(PreferencesDialog.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        PreferencesDialog.class.getName()
+    );
     private static final UserPreferences prefs = UserPreferences.getInstance();
 
     private static final int DND_OPERATIONS = DND.DROP_MOVE;
     private static final char DOUBLE_QUOTE = '"';
 
-    private static class PreferencesDragSourceListener implements DragSourceListener {
+    private static class PreferencesDragSourceListener
+        implements DragSourceListener
+    {
 
         private final List sourceList;
 
@@ -63,10 +68,14 @@ class PreferencesDialog extends Dialog {
 
         @Override
         public void dragSetData(DragSourceEvent event) {
-            String listEntry = sourceList.getItem(sourceList.getSelectionIndex());
+            String listEntry = sourceList.getItem(
+                sourceList.getSelectionIndex()
+            );
             String token;
 
-            Pattern patt = Pattern.compile(REPLACEMENT_OPTIONS_LIST_ENTRY_REGEX);
+            Pattern patt = Pattern.compile(
+                REPLACEMENT_OPTIONS_LIST_ENTRY_REGEX
+            );
             Matcher tokenMatcher = patt.matcher(listEntry);
             if (tokenMatcher.matches()) {
                 token = tokenMatcher.group(1);
@@ -80,7 +89,9 @@ class PreferencesDialog extends Dialog {
         }
     }
 
-    private static class PreferencesDropTargetListener implements DropTargetListener {
+    private static class PreferencesDropTargetListener
+        implements DropTargetListener
+    {
 
         private final Text targetText;
 
@@ -134,6 +145,12 @@ class PreferencesDialog extends Dialog {
     private Button recurseFoldersCheckbox;
     private Button rmdirEmptyCheckbox;
     private Button deleteRowsCheckbox;
+
+    // Overrides (Show name -> Show name)
+    private Text overridesFromText;
+    private Text overridesToText;
+    private List overridesList;
+
     private TabFolder tabFolder;
     private Shell preferencesShell;
 
@@ -148,15 +165,32 @@ class PreferencesDialog extends Dialog {
 
         Label helpLabel = new Label(preferencesShell, SWT.NONE);
         helpLabel.setText(HELP_TOOLTIP);
-        helpLabel.setLayoutData(new GridData(SWT.END, SWT.CENTER, true, true,
-                                             shellGridLayout.numColumns, 1));
+        helpLabel.setLayoutData(
+            new GridData(
+                SWT.END,
+                SWT.CENTER,
+                true,
+                true,
+                shellGridLayout.numColumns,
+                1
+            )
+        );
 
         tabFolder = new TabFolder(preferencesShell, getStyle());
-        tabFolder.setLayoutData(new GridData(SWT.END, SWT.CENTER, true, true,
-                                             shellGridLayout.numColumns, 1));
+        tabFolder.setLayoutData(
+            new GridData(
+                SWT.END,
+                SWT.CENTER,
+                true,
+                true,
+                shellGridLayout.numColumns,
+                1
+            )
+        );
 
         createGeneralTab();
         createRenameTab();
+        createOverridesTab();
 
         statusLabel.open(preferencesShell, shellGridLayout.numColumns);
 
@@ -177,7 +211,11 @@ class PreferencesDialog extends Dialog {
         preferencesShell.redraw();
     }
 
-    private void createLabel(final String label, final String tooltip, final Composite group) {
+    private void createLabel(
+        final String label,
+        final String tooltip,
+        final Composite group
+    ) {
         final Label labelObj = new Label(group, SWT.NONE);
         labelObj.setText(label);
         labelObj.setToolTipText(tooltip);
@@ -185,13 +223,24 @@ class PreferencesDialog extends Dialog {
         // we don't need to return the object
     }
 
-    private Text createText(final String text, final Composite group, boolean setSize) {
+    private Text createText(
+        final String text,
+        final Composite group,
+        boolean setSize
+    ) {
         final Text textObj = new Text(group, SWT.BORDER);
         textObj.setText(text);
         textObj.setTextLimit(99);
         GridData layout;
         if (setSize) {
-            layout = new GridData(GridData.FILL, GridData.CENTER, true, true, 2, 1);
+            layout = new GridData(
+                GridData.FILL,
+                GridData.CENTER,
+                true,
+                true,
+                2,
+                1
+            );
         } else {
             layout = new GridData(GridData.FILL, GridData.CENTER, true, true);
         }
@@ -200,14 +249,20 @@ class PreferencesDialog extends Dialog {
         return textObj;
     }
 
-    private Button createCheckbox(final String text, final String tooltip,
-                                  final boolean isChecked, final Composite group,
-                                  final int alignment, final int span)
-    {
+    private Button createCheckbox(
+        final String text,
+        final String tooltip,
+        final boolean isChecked,
+        final Composite group,
+        final int alignment,
+        final int span
+    ) {
         final Button box = new Button(group, SWT.CHECK);
         box.setText(text);
         box.setSelection(isChecked);
-        box.setLayoutData(new GridData(alignment, GridData.CENTER, true, true, span, 1));
+        box.setLayoutData(
+            new GridData(alignment, GridData.CENTER, true, true, span, 1)
+        );
         box.setToolTipText(tooltip);
 
         return box;
@@ -217,7 +272,9 @@ class PreferencesDialog extends Dialog {
         final Button button = new Button(group, SWT.PUSH);
         button.setText(DEST_DIR_BUTTON_TEXT);
         button.addListener(SWT.Selection, event -> {
-            DirectoryDialog directoryDialog = new DirectoryDialog(preferencesShell);
+            DirectoryDialog directoryDialog = new DirectoryDialog(
+                preferencesShell
+            );
 
             directoryDialog.setFilterPath(prefs.getDestinationDirectoryName());
             directoryDialog.setText(DIR_DIALOG_TEXT);
@@ -247,11 +304,14 @@ class PreferencesDialog extends Dialog {
      * situation is caught by other code; this method just detects if it's
      * the first or last character.
      */
-    private boolean quoteAtBeginningOrEnd(final char c, final int pos,
-                                          final int start, final int end,
-                                          final int originalLength,
-                                          final int insertLength)
-    {
+    private boolean quoteAtBeginningOrEnd(
+        final char c,
+        final int pos,
+        final int start,
+        final int end,
+        final int originalLength,
+        final int insertLength
+    ) {
         // The user has entered a character that is not a double quote.
         if (c != DOUBLE_QUOTE) {
             return false;
@@ -287,15 +347,25 @@ class PreferencesDialog extends Dialog {
      * pasted in some mix of legal and illegal characters.  We strip away the illegal ones,
      * and insert the legal ones, with a warning given to the user.
      */
-    private void filterEnteredSeasonPrefixText(VerifyEvent e, final int previousTextLength) {
+    private void filterEnteredSeasonPrefixText(
+        VerifyEvent e,
+        final int previousTextLength
+    ) {
         String textToInsert = e.text;
         int insertLength = textToInsert.length();
         StringBuilder acceptedText = new StringBuilder(insertLength);
         for (int i = 0; i < insertLength; i++) {
             char c = textToInsert.charAt(i);
-            boolean isLegal = StringUtils.isLegalFilenameCharacter(c)
-                || quoteAtBeginningOrEnd(c, i, e.start, e.end,
-                                         previousTextLength, insertLength);
+            boolean isLegal =
+                StringUtils.isLegalFilenameCharacter(c) ||
+                quoteAtBeginningOrEnd(
+                    c,
+                    i,
+                    e.start,
+                    e.end,
+                    previousTextLength,
+                    insertLength
+                );
             if (isLegal) {
                 acceptedText.append(c);
             }
@@ -344,14 +414,16 @@ class PreferencesDialog extends Dialog {
             String previousText = seasonPrefixText.getText();
             int originalLength = previousText.length();
 
-            if ((e.end < (originalLength - 1))
-                && (previousText.charAt(e.end) == DOUBLE_QUOTE))
-            {
+            if (
+                (e.end < (originalLength - 1)) &&
+                (previousText.charAt(e.end) == DOUBLE_QUOTE)
+            ) {
                 statusLabel.add(NO_TEXT_BEFORE_OPENING_QUOTE);
                 e.doit = false;
-            } else if ((e.start > 1)
-                       && (previousText.charAt(e.start - 1) == DOUBLE_QUOTE))
-            {
+            } else if (
+                (e.start > 1) &&
+                (previousText.charAt(e.start - 1) == DOUBLE_QUOTE)
+            ) {
                 statusLabel.add(NO_TEXT_AFTER_CLOSING_QUOTE);
                 e.doit = false;
             } else {
@@ -376,8 +448,13 @@ class PreferencesDialog extends Dialog {
         if (!seasonPrefixString.equals(unquoted)) {
             // Somehow, illegal characters got through.
             logger.severe("Illegal characters recognized in season prefix");
-            logger.severe("Instead of \"" + unquoted + "\", will use \""
-                          + seasonPrefixString + "\"");
+            logger.severe(
+                "Instead of \"" +
+                    unquoted +
+                    "\", will use \"" +
+                    seasonPrefixString +
+                    "\""
+            );
         }
     }
 
@@ -388,60 +465,120 @@ class PreferencesDialog extends Dialog {
     private void createSeasonPrefixControls(final Composite generalGroup) {
         createLabel(SEASON_PREFIX_TEXT, PREFIX_TOOLTIP, generalGroup);
         seasonPrefixString = prefs.getSeasonPrefix();
-        seasonPrefixText = createText(StringUtils.makeQuotedString(seasonPrefixString),
-                                      generalGroup, true);
+        seasonPrefixText = createText(
+            StringUtils.makeQuotedString(seasonPrefixString),
+            generalGroup,
+            true
+        );
         seasonPrefixText.addVerifyListener(e -> {
             statusLabel.clear(NO_TEXT_BEFORE_OPENING_QUOTE);
             statusLabel.clear(NO_TEXT_AFTER_CLOSING_QUOTE);
             verifySeasonPrefixText(e);
         });
         seasonPrefixText.addModifyListener(e -> ensureValidPrefixText());
-        seasonPrefixLeadingZeroCheckbox = createCheckbox(SEASON_PREFIX_ZERO_TEXT, SEASON_PREFIX_ZERO_TOOLTIP,
-                                                         prefs.isSeasonPrefixLeadingZero(),
-                                                         generalGroup, GridData.BEGINNING, 3);
+        seasonPrefixLeadingZeroCheckbox = createCheckbox(
+            SEASON_PREFIX_ZERO_TEXT,
+            SEASON_PREFIX_ZERO_TOOLTIP,
+            prefs.isSeasonPrefixLeadingZero(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
     }
 
     private void populateGeneralTab(final Composite generalGroup) {
-        moveSelectedCheckbox = createCheckbox(MOVE_SELECTED_TEXT, MOVE_SELECTED_TOOLTIP,
-                                              true, generalGroup, GridData.BEGINNING, 2);
-        renameSelectedCheckbox = createCheckbox(RENAME_SELECTED_TEXT, RENAME_SELECTED_TOOLTIP,
-                                                true, generalGroup, GridData.END, 1);
+        moveSelectedCheckbox = createCheckbox(
+            MOVE_SELECTED_TEXT,
+            MOVE_SELECTED_TOOLTIP,
+            true,
+            generalGroup,
+            GridData.BEGINNING,
+            2
+        );
+        renameSelectedCheckbox = createCheckbox(
+            RENAME_SELECTED_TEXT,
+            RENAME_SELECTED_TOOLTIP,
+            true,
+            generalGroup,
+            GridData.END,
+            1
+        );
 
         createLabel(DEST_DIR_TEXT, DEST_DIR_TOOLTIP, generalGroup);
-        destDirText = createText(prefs.getDestinationDirectoryName(), generalGroup, false);
+        destDirText = createText(
+            prefs.getDestinationDirectoryName(),
+            generalGroup,
+            false
+        );
         destDirButton = createDestDirButton(generalGroup);
 
         createSeasonPrefixControls(generalGroup);
 
         createLabel(IGNORE_LABEL_TEXT, IGNORE_LABEL_TOOLTIP, generalGroup);
-        ignoreWordsText = createText(prefs.getIgnoredKeywordsString(), generalGroup, false);
+        ignoreWordsText = createText(
+            prefs.getIgnoredKeywordsString(),
+            generalGroup,
+            false
+        );
 
-        recurseFoldersCheckbox = createCheckbox(RECURSE_FOLDERS_TEXT, RECURSE_FOLDERS_TOOLTIP,
-                                                prefs.isRecursivelyAddFolders(), generalGroup,
-                                                GridData.BEGINNING, 3);
-        rmdirEmptyCheckbox = createCheckbox(REMOVE_EMPTIED_TEXT, REMOVE_EMPTIED_TOOLTIP,
-                                            prefs.isRemoveEmptiedDirectories(), generalGroup,
-                                            GridData.BEGINNING, 3);
-        deleteRowsCheckbox = createCheckbox(DELETE_ROWS_TEXT, DELETE_ROWS_TOOLTIP,
-                                            prefs.isDeleteRowAfterMove(), generalGroup,
-                                            GridData.BEGINNING, 3);
-        checkForUpdatesCheckbox = createCheckbox(CHECK_UPDATES_TEXT, CHECK_UPDATES_TOOLTIP,
-                                                 prefs.checkForUpdates(), generalGroup,
-                                                 GridData.BEGINNING, 3);
+        recurseFoldersCheckbox = createCheckbox(
+            RECURSE_FOLDERS_TEXT,
+            RECURSE_FOLDERS_TOOLTIP,
+            prefs.isRecursivelyAddFolders(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
+        rmdirEmptyCheckbox = createCheckbox(
+            REMOVE_EMPTIED_TEXT,
+            REMOVE_EMPTIED_TOOLTIP,
+            prefs.isRemoveEmptiedDirectories(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
+        deleteRowsCheckbox = createCheckbox(
+            DELETE_ROWS_TEXT,
+            DELETE_ROWS_TOOLTIP,
+            prefs.isDeleteRowAfterMove(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
+        checkForUpdatesCheckbox = createCheckbox(
+            CHECK_UPDATES_TEXT,
+            CHECK_UPDATES_TOOLTIP,
+            prefs.checkForUpdates(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
     }
 
     private void initializeGeneralControls() {
         final boolean moveIsSelected = prefs.isMoveSelected();
         moveSelectedCheckbox.setSelection(moveIsSelected);
-        toggleEnableControls(moveIsSelected, destDirText, destDirButton,
-                             seasonPrefixText, seasonPrefixLeadingZeroCheckbox);
-        moveSelectedCheckbox.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                toggleEnableControls(moveSelectedCheckbox.getSelection(), destDirText, destDirButton,
-                                     seasonPrefixText, seasonPrefixLeadingZeroCheckbox);
+        toggleEnableControls(
+            moveIsSelected,
+            destDirText,
+            destDirButton,
+            seasonPrefixText,
+            seasonPrefixLeadingZeroCheckbox
+        );
+        moveSelectedCheckbox.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    toggleEnableControls(
+                        moveSelectedCheckbox.getSelection(),
+                        destDirText,
+                        destDirButton,
+                        seasonPrefixText,
+                        seasonPrefixLeadingZeroCheckbox
+                    );
+                }
             }
-        });
+        );
 
         boolean renameIsSelected = prefs.isRenameSelected();
         renameSelectedCheckbox.setSelection(renameIsSelected);
@@ -453,7 +590,9 @@ class PreferencesDialog extends Dialog {
 
         final Composite generalGroup = new Composite(tabFolder, SWT.NONE);
         generalGroup.setLayout(new GridLayout(3, false));
-        generalGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1));
+        generalGroup.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
+        );
         generalGroup.setToolTipText(GENERAL_TOOLTIP);
 
         populateGeneralTab(generalGroup);
@@ -462,9 +601,10 @@ class PreferencesDialog extends Dialog {
         item.setControl(generalGroup);
     }
 
-    private void addStringsToList(final List guiList,
-                                  final ReplacementToken... tokens)
-    {
+    private void addStringsToList(
+        final List guiList,
+        final ReplacementToken... tokens
+    ) {
         for (ReplacementToken token : tokens) {
             guiList.add(token.toString());
         }
@@ -476,27 +616,45 @@ class PreferencesDialog extends Dialog {
 
         Composite replacementGroup = new Composite(tabFolder, SWT.NONE);
         replacementGroup.setLayout(new GridLayout(3, false));
-        replacementGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1));
+        replacementGroup.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
+        );
 
         Label renameTokensLabel = new Label(replacementGroup, SWT.NONE);
         renameTokensLabel.setText(RENAME_TOKEN_TEXT);
         renameTokensLabel.setToolTipText(RENAME_TOKEN_TOOLTIP);
 
         List renameTokensList = new List(replacementGroup, SWT.SINGLE);
-        renameTokensList.setLayoutData(new GridData(GridData.BEGINNING, GridData.CENTER,
-                                                    true, true, 2, 1));
-        addStringsToList(renameTokensList,
-                         SHOW_NAME, SEASON_NUM, SEASON_NUM_LEADING_ZERO,
-                         EPISODE_NUM, EPISODE_NUM_LEADING_ZERO,
-                         EPISODE_TITLE, EPISODE_TITLE_NO_SPACES, EPISODE_RESOLUTION,
-                         DATE_DAY_NUM, DATE_DAY_NUMLZ, DATE_MONTH_NUM, DATE_MONTH_NUMLZ,
-                         DATE_YEAR_MIN, DATE_YEAR_FULL);
+        renameTokensList.setLayoutData(
+            new GridData(GridData.BEGINNING, GridData.CENTER, true, true, 2, 1)
+        );
+        addStringsToList(
+            renameTokensList,
+            SHOW_NAME,
+            SEASON_NUM,
+            SEASON_NUM_LEADING_ZERO,
+            EPISODE_NUM,
+            EPISODE_NUM_LEADING_ZERO,
+            EPISODE_TITLE,
+            EPISODE_TITLE_NO_SPACES,
+            EPISODE_RESOLUTION,
+            DATE_DAY_NUM,
+            DATE_DAY_NUMLZ,
+            DATE_MONTH_NUM,
+            DATE_MONTH_NUMLZ,
+            DATE_YEAR_MIN,
+            DATE_YEAR_FULL
+        );
 
         Label episodeTitleLabel = new Label(replacementGroup, SWT.NONE);
         episodeTitleLabel.setText(RENAME_FORMAT_TEXT);
         episodeTitleLabel.setToolTipText(RENAME_FORMAT_TOOLTIP);
 
-        replacementStringText = createText(prefs.getRenameReplacementString(), replacementGroup, true);
+        replacementStringText = createText(
+            prefs.getRenameReplacementString(),
+            replacementGroup,
+            true
+        );
 
         createDragSource(renameTokensList);
         createDropTarget(replacementStringText);
@@ -504,54 +662,215 @@ class PreferencesDialog extends Dialog {
         item.setControl(replacementGroup);
     }
 
+    private void createOverridesTab() {
+        TabItem item = new TabItem(tabFolder, SWT.NULL);
+        item.setText("Overrides");
+
+        Composite overridesGroup = new Composite(tabFolder, SWT.NONE);
+        overridesGroup.setLayout(new GridLayout(3, false));
+        overridesGroup.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
+        );
+
+        Label fromLabel = new Label(overridesGroup, SWT.NONE);
+        fromLabel.setText("From (extracted show name)");
+        fromLabel.setToolTipText(
+            "Exact match (case-insensitive). Example: Stars"
+        );
+
+        overridesFromText = createText("", overridesGroup, false);
+        new Label(overridesGroup, SWT.NONE); // spacer
+
+        Label toLabel = new Label(overridesGroup, SWT.NONE);
+        toLabel.setText("To (correct show name)");
+        toLabel.setToolTipText(
+            "Replacement name used for TVDB search. Example: Stars (2024)"
+        );
+
+        overridesToText = createText("", overridesGroup, false);
+        new Label(overridesGroup, SWT.NONE); // spacer
+
+        Composite buttons = new Composite(overridesGroup, SWT.NONE);
+        buttons.setLayout(new GridLayout(3, true));
+        buttons.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1)
+        );
+
+        Button addButton = new Button(buttons, SWT.PUSH);
+        addButton.setText("Add / Update");
+        addButton.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false)
+        );
+        addButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    String from = overridesFromText.getText().trim();
+                    String to = overridesToText.getText().trim();
+                    if (from.isEmpty() || to.isEmpty()) {
+                        return;
+                    }
+                    upsertOverride(from, to);
+                    overridesFromText.setText("");
+                    overridesToText.setText("");
+                }
+            }
+        );
+
+        Button removeButton = new Button(buttons, SWT.PUSH);
+        removeButton.setText("Remove");
+        removeButton.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false)
+        );
+        removeButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    int idx = overridesList.getSelectionIndex();
+                    if (idx >= 0) {
+                        String entry = overridesList.getItem(idx);
+                        String from = entry.split("=>")[0].trim();
+                        removeOverride(from);
+                    }
+                }
+            }
+        );
+
+        Button clearButton = new Button(buttons, SWT.PUSH);
+        clearButton.setText("Clear");
+        clearButton.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false)
+        );
+        clearButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    overridesList.removeAll();
+                }
+            }
+        );
+
+        Label listLabel = new Label(overridesGroup, SWT.NONE);
+        listLabel.setText("Overrides list");
+        listLabel.setLayoutData(
+            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
+        );
+
+        overridesList = new List(
+            overridesGroup,
+            SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL
+        );
+        overridesList.setLayoutData(
+            new GridData(SWT.FILL, SWT.FILL, true, true, 3, 1)
+        );
+
+        // Populate list from current prefs
+        for (Map.Entry<String, String> e : prefs
+            .getShowNameOverrides()
+            .entrySet()) {
+            overridesList.add(e.getKey() + " => " + e.getValue());
+        }
+
+        item.setControl(overridesGroup);
+    }
+
+    private void upsertOverride(String from, String to) {
+        // Remove any existing entry for this key (case-insensitive)
+        int removeIdx = -1;
+        for (int i = 0; i < overridesList.getItemCount(); i++) {
+            String entry = overridesList.getItem(i);
+            String existingFrom = entry.split("=>")[0].trim();
+            if (existingFrom.equalsIgnoreCase(from)) {
+                removeIdx = i;
+                break;
+            }
+        }
+        if (removeIdx >= 0) {
+            overridesList.remove(removeIdx);
+        }
+        overridesList.add(from + " => " + to);
+    }
+
+    private void removeOverride(String from) {
+        for (int i = 0; i < overridesList.getItemCount(); i++) {
+            String entry = overridesList.getItem(i);
+            String existingFrom = entry.split("=>")[0].trim();
+            if (existingFrom.equalsIgnoreCase(from)) {
+                overridesList.remove(i);
+                break;
+            }
+        }
+    }
+
     private void createDragSource(final List sourceList) {
         Transfer[] types = new Transfer[] { TextTransfer.getInstance() };
         DragSource dragSource = new DragSource(sourceList, DND_OPERATIONS);
         dragSource.setTransfer(types);
-        dragSource.addDragListener(new PreferencesDragSourceListener(sourceList));
+        dragSource.addDragListener(
+            new PreferencesDragSourceListener(sourceList)
+        );
     }
 
     private void createDropTarget(final Text targetText) {
         Transfer[] types = new Transfer[] { TextTransfer.getInstance() };
         DropTarget dropTarget = new DropTarget(targetText, DND_OPERATIONS);
         dropTarget.setTransfer(types);
-        dropTarget.addDropListener(new PreferencesDropTargetListener(targetText));
+        dropTarget.addDropListener(
+            new PreferencesDropTargetListener(targetText)
+        );
     }
 
     private void createActionButtonGroup() {
-        Composite bottomButtonsComposite = new Composite(preferencesShell, SWT.FILL);
+        Composite bottomButtonsComposite = new Composite(
+            preferencesShell,
+            SWT.FILL
+        );
         bottomButtonsComposite.setLayout(new GridLayout(2, false));
-        bottomButtonsComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER,
-                                                          true, true, 2, 1));
+        bottomButtonsComposite.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, true, 2, 1)
+        );
 
         Button cancelButton = new Button(bottomButtonsComposite, SWT.PUSH);
-        GridData cancelButtonGridData = new GridData(GridData.BEGINNING, GridData.CENTER,
-                                                     false, false);
+        GridData cancelButtonGridData = new GridData(
+            GridData.BEGINNING,
+            GridData.CENTER,
+            false,
+            false
+        );
         cancelButtonGridData.minimumWidth = 150;
         cancelButtonGridData.widthHint = 150;
         cancelButton.setLayoutData(cancelButtonGridData);
         cancelButton.setText(CANCEL_LABEL);
-        cancelButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent event) {
-                preferencesShell.close();
+        cancelButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    preferencesShell.close();
+                }
             }
-        });
+        );
 
         Button saveButton = new Button(bottomButtonsComposite, SWT.PUSH);
-        GridData saveButtonGridData = new GridData(GridData.END, GridData.CENTER, true, true);
+        GridData saveButtonGridData = new GridData(
+            GridData.END,
+            GridData.CENTER,
+            true,
+            true
+        );
         saveButtonGridData.minimumWidth = 150;
         saveButtonGridData.widthHint = 150;
         saveButton.setLayoutData(saveButtonGridData);
         saveButton.setText(SAVE_LABEL);
         saveButton.setFocus();
-        saveButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent event) {
-                savePreferences();
-                preferencesShell.close();
+        saveButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    savePreferences();
+                    preferencesShell.close();
+                }
             }
-        });
+        );
 
         // Set the OK button as the default, so
         // user can press Enter to save
@@ -564,7 +883,9 @@ class PreferencesDialog extends Dialog {
     private void savePreferences() {
         // Update the preferences object from the UI control values
         prefs.setSeasonPrefix(seasonPrefixString);
-        prefs.setSeasonPrefixLeadingZero(seasonPrefixLeadingZeroCheckbox.getSelection());
+        prefs.setSeasonPrefixLeadingZero(
+            seasonPrefixLeadingZeroCheckbox.getSelection()
+        );
         prefs.setRenameReplacementString(replacementStringText.getText());
         prefs.setIgnoreKeywords(ignoreWordsText.getText());
         prefs.setCheckForUpdates(checkForUpdatesCheckbox.getSelection());
@@ -575,6 +896,22 @@ class PreferencesDialog extends Dialog {
 
         prefs.setMoveSelected(moveSelectedCheckbox.getSelection());
         prefs.setRenameSelected(renameSelectedCheckbox.getSelection());
+
+        // Show name overrides (exact match, case-insensitive)
+        Map<String, String> overrides = new LinkedHashMap<>();
+        if (overridesList != null && !overridesList.isDisposed()) {
+            for (String entry : overridesList.getItems()) {
+                String[] parts = entry.split("=>");
+                if (parts.length == 2) {
+                    String from = parts[0].trim();
+                    String to = parts[1].trim();
+                    if (!from.isEmpty() && !to.isEmpty()) {
+                        overrides.put(from, to);
+                    }
+                }
+            }
+        }
+        prefs.setShowNameOverrides(overrides);
 
         UserPreferences.store(prefs);
     }

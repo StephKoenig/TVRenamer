@@ -7,7 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.tvrenamer.controller.UserPreferencesPersistence;
@@ -54,6 +56,10 @@ public class UserPreferences {
     private transient String specifiedIgnoreKeywords;
     private final List<String> ignoreKeywords;
 
+    // Show name overrides: exact match with case-insensitive comparison at lookup time.
+    // Stored in prefs.xml to avoid a separate overrides.xml file.
+    private final Map<String, String> showNameOverrides = new LinkedHashMap<>();
+
     private transient boolean destDirProblem = false;
 
     /**
@@ -77,6 +83,8 @@ public class UserPreferences {
         ignoreKeywords.add(DEFAULT_IGNORED_KEYWORD);
         buildIgnoredKeywordsString();
         destDirProblem = false;
+
+        // no default show name overrides
     }
 
     /**
@@ -84,6 +92,53 @@ public class UserPreferences {
      */
     public static UserPreferences getInstance() {
         return INSTANCE;
+    }
+
+    /**
+     * Resolve a show name by applying user-defined overrides.
+     * Matching is case-insensitive exact match.
+     *
+     * @param extractedShowName show name extracted from the filename
+     * @return overridden show name if configured, otherwise the original input
+     */
+    public String resolveShowName(final String extractedShowName) {
+        if (extractedShowName == null) {
+            return null;
+        }
+
+        for (Map.Entry<String, String> entry : showNameOverrides.entrySet()) {
+            String from = entry.getKey();
+            if (from != null && from.equalsIgnoreCase(extractedShowName)) {
+                String to = entry.getValue();
+                if (to != null && !to.isBlank()) {
+                    return to;
+                }
+                return extractedShowName;
+            }
+        }
+        return extractedShowName;
+    }
+
+    /**
+     * Replace the current set of show name overrides.
+     *
+     * @param overrides mapping of extracted name -> corrected name
+     */
+    public void setShowNameOverrides(final Map<String, String> overrides) {
+        showNameOverrides.clear();
+        if (overrides != null) {
+            showNameOverrides.putAll(overrides);
+        }
+        preferenceChanged(UserPreference.SHOW_NAME_OVERRIDES);
+    }
+
+    /**
+     * Return the live map of show name overrides.
+     *
+     * @return mapping of extracted name -> corrected name
+     */
+    public Map<String, String> getShowNameOverrides() {
+        return showNameOverrides;
     }
 
     /**
