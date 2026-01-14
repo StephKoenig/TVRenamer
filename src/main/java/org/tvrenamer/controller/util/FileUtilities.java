@@ -24,12 +24,26 @@ public class FileUtilities {
         FileUtilities.class.getName()
     );
 
+    /**
+     * Deprecated: logging levels should be configured via {@code logging.properties}.
+     * Kept for legacy callers.
+     */
+    @Deprecated
     public static void loggingOff() {
         logger.setLevel(Level.SEVERE);
     }
 
+    /**
+     * Deprecated: logging levels should be configured via {@code logging.properties}.
+     * Kept for legacy callers.
+     */
+    @Deprecated
     public static void loggingOn() {
         logger.setLevel(Level.INFO);
+    }
+
+    private static String safePath(Path p) {
+        return (p == null) ? "<null>" : p.toString();
     }
 
     /**
@@ -45,12 +59,17 @@ public class FileUtilities {
      *    true if the file existed and was deleted; false if not
      */
     public static boolean deleteFile(Path file) {
+        if (file == null) {
+            logger.warning("cannot delete file: path is null");
+            return false;
+        }
         if (Files.notExists(file)) {
             logger.warning("cannot delete file, does not exist: " + file);
             return false;
         }
         try {
             Files.delete(file);
+            return true;
         } catch (AccessDeniedException ade) {
             logger.warning(
                 "Could not delete file \"" + file + "\"; access denied"
@@ -60,7 +79,6 @@ public class FileUtilities {
             logger.log(Level.WARNING, "Error deleting file " + file, ioe);
             return false;
         }
-        return Files.notExists(file);
     }
 
     /**
@@ -195,6 +213,15 @@ public class FileUtilities {
      *    the new destination if the file was renamed; null if it was not
      */
     public static Path renameFile(final Path srcFile, final Path destFile) {
+        if (srcFile == null || destFile == null) {
+            logger.warning(
+                "cannot rename file: src/dest is null\n  src=" +
+                    safePath(srcFile) +
+                    "\n  dest=" +
+                    safePath(destFile)
+            );
+            return null;
+        }
         if (Files.notExists(srcFile)) {
             logger.warning("cannot rename file, does not exist: " + srcFile);
             return null;
@@ -213,8 +240,9 @@ public class FileUtilities {
         Path actualDest = null;
         try {
             actualDest = Files.move(srcFile, destFile);
-            if (Files.isSameFile(destFile, actualDest)) {
-                return destFile;
+            // Files.move is specified to return the target path; still, be defensive.
+            if (actualDest != null && Files.exists(actualDest)) {
+                return actualDest;
             }
         } catch (AccessDeniedException ade) {
             logger.warning(
@@ -223,14 +251,12 @@ public class FileUtilities {
         } catch (IOException ioe) {
             logger.log(Level.WARNING, "Error renaming file " + srcFile, ioe);
         }
-        // If we got here, things did not go as expected.  Try to make sense
-        // of the state of the world.
+        // If we got here, things did not go as expected. Try to make sense of the state of the world.
         if (Files.exists(srcFile) && Files.notExists(destFile)) {
             // Looks like we did nothing.
             return null;
         }
-        // If we get here, something really weird happened.  Handle it in
-        // a separate method.
+        // If we get here, something really weird happened. Handle it in a separate method.
         return unexpectedMoveResult(srcFile, destFile, actualDest);
     }
 
@@ -379,7 +405,11 @@ public class FileUtilities {
                     );
                     observer.setProgressValue(copied);
                 }
-                if (Thread.interrupted()) {
+                if (Thread.currentThread().isInterrupted()) {
+                    logger.fine(
+                        "copyWithUpdates interrupted; stopping copy of " +
+                            source
+                    );
                     break;
                 }
             }
