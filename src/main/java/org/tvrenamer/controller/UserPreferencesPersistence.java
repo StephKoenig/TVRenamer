@@ -29,11 +29,14 @@ public class UserPreferencesPersistence {
         xstream.allowTypesByWildcard(new String[] { "org.tvrenamer.model.**" });
 
         xstream.alias("preferences", UserPreferences.class);
+
+        xstream.omitField(UserPreferences.class, "pcs");
         xstream.aliasField(
             "moveEnabled",
             UserPreferences.class,
             "moveSelected"
         );
+
         xstream.aliasField(
             "renameEnabled",
             UserPreferences.class,
