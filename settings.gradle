@@ -1,0 +1,10 @@
+/*
+ * Minimal Gradle settings for this project.
+ *
+ * - Sets a stable root project name.
+ * - Enables Version Catalogs (`gradle/libs.versions.toml`) via `dependencyResolutionManagement`.
+ *
+ * Keep this file minimal to avoid surprising build behavior.
+ */
+
+rootProject.name = "tvrenamer"

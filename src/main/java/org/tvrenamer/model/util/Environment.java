@@ -1,23 +1,27 @@
 package org.tvrenamer.model.util;
 
-import org.tvrenamer.controller.util.StringUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.util.StringUtils;
 
 public class Environment {
-    private static final Logger logger = Logger.getLogger(Environment.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        Environment.class.getName()
+    );
 
     public static final String USER_HOME = System.getProperty("user.home");
-    public static final String TMP_DIR_NAME = System.getProperty("java.io.tmpdir");
+    public static final String TMP_DIR_NAME = System.getProperty(
+        "java.io.tmpdir"
+    );
     private static final String OS_NAME = System.getProperty("os.name");
 
     private enum OSType {
         WINDOWS,
         LINUX,
-        MAC
+        MAC,
     }
 
     private static OSType chooseOSType() {
@@ -33,6 +37,7 @@ public class Environment {
     private static final OSType JVM_OS_TYPE = chooseOSType();
     public static final boolean IS_MAC_OSX = (JVM_OS_TYPE == OSType.MAC);
     public static final boolean IS_WINDOWS = (JVM_OS_TYPE == OSType.WINDOWS);
+
     @SuppressWarnings("unused")
     public static final boolean IS_UN_X = (JVM_OS_TYPE == OSType.LINUX);
 
@@ -43,31 +48,45 @@ public class Environment {
 
     static String readVersionNumber() {
         byte[] buffer = new byte[10];
-        // Release env (jar)
-        InputStream versionStream = Environment.class.getResourceAsStream("/tvrenamer.version");
-        // Dev env
-        if (versionStream == null) {
-            versionStream = Environment.class.getResourceAsStream("/src/main/resources/tvrenamer.version");
-        }
 
-        int bytesRead = -1;
-        try {
-            bytesRead = versionStream.read(buffer);
+        // Runtime: the version file must be present on the classpath.
+        try (
+            InputStream versionStream = Environment.class.getResourceAsStream(
+                "/tvrenamer.version"
+            )
+        ) {
+            if (versionStream == null) {
+                throw new RuntimeException(
+                    "Version file '/tvrenamer.version' not found on classpath"
+                );
+            }
+
+            int bytesRead = versionStream.read(buffer);
+            if (bytesRead < MIN_BYTES_FOR_VERSION) {
+                throw new RuntimeException(
+                    "Unable to extract version from version file"
+                );
+            }
+            return StringUtils.makeString(buffer).trim();
+        } catch (IOException ioe) {
+            logger.log(
+                Level.WARNING,
+                "Exception when reading version file",
+                ioe
+            );
+            throw new RuntimeException(
+                "Exception when reading version file",
+                ioe
+            );
+        } catch (RuntimeException re) {
+            // Preserve the original message for easier diagnostics
+            throw re;
         } catch (Exception e) {
             logger.log(Level.WARNING, "Exception when reading version file", e);
-            // Has to be unchecked exception as in static block, otherwise
-            // exception isn't actually handled (mainly for junit in ant)
-            throw new RuntimeException("Exception when reading version file", e);
-        } finally {
-            try {
-                versionStream.close();
-            } catch (IOException ioe) {
-                logger.log(Level.WARNING, "Exception trying to close version file", ioe);
-            }
+            throw new RuntimeException(
+                "Exception when reading version file",
+                e
+            );
         }
-        if (bytesRead < MIN_BYTES_FOR_VERSION) {
-            throw new RuntimeException("Unable to extract version from version file");
-        }
-        return StringUtils.makeString(buffer).trim();
     }
 }
