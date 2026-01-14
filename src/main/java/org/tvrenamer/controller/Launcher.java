@@ -4,12 +4,16 @@ import static org.tvrenamer.model.util.Constants.*;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.CodeSource;
 import java.util.logging.FileHandler;
-import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -17,255 +21,190 @@ import java.util.logging.SimpleFormatter;
 import org.tvrenamer.model.ShowStore;
 import org.tvrenamer.view.UIStarter;
 
+/**
+ * Application launcher.
+ *
+ * Logging strategy:
+ * - Primary configuration comes from {@code /logging.properties}.
+ * - A file log ({@code tvrenamer.log}) is created only when:
+ *   - debug is enabled via {@code -Dtvrenamer.debug=true}, OR
+ *   - a fatal error occurs (then we write exception + environment summary).
+ *
+ * The log file is written next to the executable/jar if possible, otherwise to %TEMP%.
+ * The log is overwritten each run.
+ */
 class Launcher {
 
     private static final Logger logger = Logger.getLogger(
         Launcher.class.getName()
     );
 
-    private static final PrintStream originalSystemErr = System.err;
-    private static PrintStream redirectedSystemErr;
-    private static FileHandler startupFileHandler;
+    private static final String DEBUG_PROPERTY = "tvrenamer.debug";
+    private static final String LOG_FILENAME = "tvrenamer.log";
 
-    static void initializeFileLogger() {
-        // Add a file handler FIRST so we capture all messages
-        try {
-            String logPath =
-                System.getProperty("user.dir") + "/tvrenamer-startup.log";
-            startupFileHandler = new FileHandler(logPath, false);
-            startupFileHandler.setFormatter(new SimpleFormatter());
-            startupFileHandler.setLevel(Level.ALL);
-            Logger rootLogger = Logger.getLogger("");
+    private static volatile FileHandler fileHandler;
 
-            rootLogger.addHandler(startupFileHandler);
-
-            rootLogger.setLevel(Level.ALL);
-
-            logger.info("Startup log initialized: " + logPath);
-
-            logger.info(
-                "Root logger handler count after startup init: " +
-                    rootLogger.getHandlers().length
-            );
-
-            if (redirectedSystemErr == null) {
-                redirectedSystemErr = new PrintStream(
-                    new OutputStream() {
-                        private final StringBuilder buffer =
-                            new StringBuilder();
-
-                        @Override
-                        public void write(int b) {
-                            if (b == '\n') {
-                                flushBuffer();
-                            } else {
-                                buffer.append((char) b);
-                            }
-                        }
-
-                        @Override
-                        public void flush() {
-                            flushBuffer();
-                        }
-
-                        private void flushBuffer() {
-                            if (buffer.length() > 0) {
-                                logger.severe(
-                                    "[System.err] " + buffer.toString()
-                                );
-                                buffer.setLength(0);
-                            }
-                        }
-
-                        @Override
-                        public void close() {
-                            flushBuffer();
-                        }
-                    },
-                    true
+    static void initializeLoggingConfig() {
+        try (
+            InputStream in = Launcher.class.getResourceAsStream(
+                LOGGING_PROPERTIES
+            )
+        ) {
+            if (in == null) {
+                // Keep default JUL configuration; do not hard-fail startup.
+                logger.warning(
+                    "logging.properties not found on classpath; using default JDK logging configuration."
                 );
-                System.setErr(redirectedSystemErr);
-                logger.info("System.err redirected to startup log handler.");
+                return;
             }
-        } catch (IOException e) {
-            originalSystemErr.println(
-                "Could not create startup log file: " + e.getMessage()
+            LogManager.getLogManager().readConfiguration(in);
+        } catch (Throwable t) {
+            // Logging config failures should not prevent startup.
+            // Avoid recursion: write a minimal message to stderr as well.
+            System.err.println("Failed to load logging configuration: " + t);
+            logger.log(
+                Level.WARNING,
+                "Failed to load logging configuration",
+                t
             );
         }
     }
 
-    static void initializeLoggingConfig() {
-        // Find logging.properties file inside jar
-        try (
-            InputStream loggingConfigStream =
-                Launcher.class.getResourceAsStream(LOGGING_PROPERTIES)
-        ) {
-            if (loggingConfigStream == null) {
-                logger.warning("Warning: logging properties not found.");
-                return;
-            }
+    private static boolean isDebugEnabled() {
+        return Boolean.parseBoolean(
+            System.getProperty(DEBUG_PROPERTY, "false")
+        );
+    }
 
-            logger.info(
-                "Logging configuration stream acquired: " +
-                    loggingConfigStream.getClass().getName()
-            );
+    private static Path resolveLogDirectory() {
+        // 1) Try to locate the directory containing the jar/exe.
+        try {
+            CodeSource cs =
+                Launcher.class.getProtectionDomain().getCodeSource();
+            if (cs != null) {
+                URL location = cs.getLocation();
+                if (location != null) {
+                    URI uri = location.toURI();
+                    Path p = Paths.get(uri).toAbsolutePath().normalize();
 
-            String launch4jExeDirEnv = System.getenv("LAUNCH4J_EXEDIR");
-
-            String launch4jExePathEnv = System.getenv("LAUNCH4J_EXE_PATH");
-
-            String sunJavaCommand = System.getProperty("sun.java.command");
-
-            boolean launch4jProperty =
-                System.getProperty("launch4j.exedir") != null ||
-                System.getProperty("launch4j.executable") != null;
-
-            boolean launch4jEnv =
-                launch4jExeDirEnv != null || launch4jExePathEnv != null;
-
-            boolean sunCommandIndicatesExe =
-                sunJavaCommand != null &&
-                sunJavaCommand.toLowerCase().contains(".exe");
-
-            logger.info(
-                "Launch4j detection booleans: property=" +
-                    launch4jProperty +
-                    ", env=" +
-                    launch4jEnv +
-                    ", sunCommandIndicatesExe=" +
-                    sunCommandIndicatesExe
-            );
-            logger.info(
-                "launch4j.exedir=" +
-                    System.getProperty("launch4j.exedir") +
-                    ", launch4j.executable=" +
-                    System.getProperty("launch4j.executable") +
-                    ", LAUNCH4J_EXEDIR=" +
-                    launch4jExeDirEnv +
-                    ", LAUNCH4J_EXE_PATH=" +
-                    launch4jExePathEnv +
-                    ", sun.java.command=" +
-                    sunJavaCommand
-            );
-            if (launch4jProperty || launch4jEnv || sunCommandIndicatesExe) {
-                StringBuilder reason = new StringBuilder(
-                    "Detected Launch4j runtime via"
-                );
-                boolean needComma = false;
-                if (launch4jProperty) {
-                    reason.append(" system properties");
-
-                    needComma = true;
-                }
-
-                if (launch4jEnv) {
-                    if (needComma) {
-                        reason.append(",");
+                    // If it's a file, use its parent directory. If it's a directory, use it directly.
+                    if (Files.isRegularFile(p)) {
+                        Path parent = p.getParent();
+                        if (parent != null) {
+                            return parent;
+                        }
+                    } else if (Files.isDirectory(p)) {
+                        return p;
+                    } else {
+                        Path parent = p.getParent();
+                        if (parent != null) {
+                            return parent;
+                        }
                     }
-
-                    reason.append(" environment variables");
-
-                    needComma = true;
-                }
-
-                if (sunCommandIndicatesExe) {
-                    if (needComma) {
-                        reason.append(",");
-                    }
-
-                    reason.append(" sun.java.command");
-                }
-
-                reason.append("; skipping logging configuration reload.");
-
-                logger.info(reason.toString());
-
-                return;
-            }
-
-            try {
-                Class.forName(
-                    "org.tvrenamer.model.util.StdOutConsoleHandler",
-                    false,
-                    Launcher.class.getClassLoader()
-                );
-
-                logger.info(
-                    "StdOutConsoleHandler class verified on classpath."
-                );
-            } catch (ClassNotFoundException cnfe) {
-                logException(
-                    "initializeLoggingConfig: missing StdOutConsoleHandler",
-                    cnfe
-                );
-
-                return;
-            }
-
-            LogManager logManager = LogManager.getLogManager();
-
-            Logger rootLogger = Logger.getLogger("");
-
-            logger.info(
-                "Root logger handler count before reload: " +
-                    rootLogger.getHandlers().length
-            );
-
-            try {
-                logManager.readConfiguration(loggingConfigStream);
-            } catch (IOException ioe) {
-                logger.log(
-                    Level.WARNING,
-                    "IOException while loading logging config",
-                    ioe
-                );
-
-                return;
-            } catch (Throwable t) {
-                logException("initializeLoggingConfig: readConfiguration", t);
-                return;
-            }
-
-            logger.info("Logging properties loaded successfully.");
-            logger.info(
-                "Root logger level after reload: " + rootLogger.getLevel()
-            );
-            logger.info(
-                "Root logger handler count after reload: " +
-                    rootLogger.getHandlers().length
-            );
-
-            if (startupFileHandler == null) {
-                logger.warning(
-                    "Startup file handler missing after configuration reload."
-                );
-                return;
-            }
-
-            boolean alreadyAttached = false;
-            for (Handler handler : rootLogger.getHandlers()) {
-                if (handler == startupFileHandler) {
-                    alreadyAttached = true;
-                    break;
                 }
             }
-
-            if (!alreadyAttached) {
-                rootLogger.addHandler(startupFileHandler);
-                logger.info(
-                    "Reattached startup file handler after configuration reload."
-                );
-            }
-
-            for (Handler handler : rootLogger.getHandlers()) {
-                logger.info(
-                    "Root logger handler after reload: " +
-                        handler.getClass().getName()
-                );
-            }
-        } catch (Throwable t) {
-            logException("initializeLoggingConfig", t);
+        } catch (Throwable ignored) {
+            // Fall through to TEMP.
         }
+
+        // 2) Fallback: %TEMP%
+        String tmp = System.getenv("TEMP");
+        if (tmp != null && !tmp.isBlank()) {
+            return Paths.get(tmp).toAbsolutePath().normalize();
+        }
+
+        // 3) Final fallback: java.io.tmpdir
+        return Paths.get(System.getProperty("java.io.tmpdir", "."))
+            .toAbsolutePath()
+            .normalize();
+    }
+
+    private static Path resolveLogFilePath() {
+        return resolveLogDirectory().resolve(LOG_FILENAME);
+    }
+
+    private static synchronized void ensureFileLoggingAttached() {
+        if (fileHandler != null) {
+            return;
+        }
+
+        Path logPath = resolveLogFilePath();
+
+        try {
+            // Overwrite each run (append=false)
+            fileHandler = new FileHandler(logPath.toString(), false);
+            fileHandler.setFormatter(new SimpleFormatter());
+            fileHandler.setLevel(Level.ALL);
+
+            Logger root = Logger.getLogger("");
+            root.addHandler(fileHandler);
+
+            // Do not force root level here; honor logging.properties.
+            logger.info("File logging enabled: " + logPath);
+        } catch (IOException ioe) {
+            // If we can't create the log file, do not block startup.
+            System.err.println(
+                "Could not create log file at " +
+                    logPath +
+                    ": " +
+                    ioe.getMessage()
+            );
+            logger.log(
+                Level.WARNING,
+                "Could not create log file at " + logPath,
+                ioe
+            );
+        } catch (Throwable t) {
+            System.err.println("Unexpected error enabling file logging: " + t);
+            logger.log(
+                Level.WARNING,
+                "Unexpected error enabling file logging",
+                t
+            );
+        }
+    }
+
+    private static String buildEnvironmentSummary() {
+        StringBuilder sb = new StringBuilder(512);
+        sb.append("=== TVRenamer Environment ===\n");
+        sb.append("Version: ").append(VERSION_NUMBER).append('\n');
+        sb
+            .append("Java Version: ")
+            .append(System.getProperty("java.version"))
+            .append('\n');
+        sb
+            .append("Java Home: ")
+            .append(System.getProperty("java.home"))
+            .append('\n');
+        sb
+            .append("OS: ")
+            .append(System.getProperty("os.name"))
+            .append(' ')
+            .append(System.getProperty("os.arch"))
+            .append('\n');
+        sb
+            .append("Working Directory: ")
+            .append(System.getProperty("user.dir"))
+            .append('\n');
+        sb.append("Log File: ").append(resolveLogFilePath()).append('\n');
+        return sb.toString();
+    }
+
+    private static String stackTraceToString(Throwable t) {
+        StringWriter sw = new StringWriter(4096);
+        PrintWriter pw = new PrintWriter(sw);
+        t.printStackTrace(pw);
+        pw.flush();
+        return sw.toString();
+    }
+
+    private static void logFatal(String context, Throwable t) {
+        // Attach file logging if not already enabled.
+        ensureFileLoggingAttached();
+
+        logger.severe("FATAL: " + context);
+        logger.severe(buildEnvironmentSummary());
+        logger.severe(stackTraceToString(t));
     }
 
     /**
@@ -280,93 +219,50 @@ class Launcher {
         ListingsLookup.cleanUp();
         logger.fine("Shutdown complete.");
 
-        // Close the startup file handler
-
-        if (startupFileHandler != null) {
-            startupFileHandler.close();
-        }
-
-        if (redirectedSystemErr != null) {
-            System.setErr(originalSystemErr);
-            redirectedSystemErr = null;
-            logger.info("System.err restored to original stream.");
+        FileHandler handler = fileHandler;
+        if (handler != null) {
+            try {
+                handler.close();
+            } catch (Throwable ignored) {
+                // ignore
+            }
         }
     }
 
-    private static void logException(String context, Throwable t) {
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        t.printStackTrace(pw);
-        logger.severe("EXCEPTION in " + context + ":\n" + sw.toString());
-    }
-
-    /**
-     * All this application does is run the UI, with no arguments. Configuration
-     * comes from the PREFERENCES_FILE (see Constants.java). But in the future,
-     * it might be able to do different things depending on command-line arguments.
-     *
-     * @param args
-     *             not actually processed, at this time
-     */
     public static void main(String[] args) {
-        // Initialize file logging FIRST to capture everything
-        initializeFileLogger();
+        // Configure logging from logging.properties (best effort).
+        initializeLoggingConfig();
 
-        // Set up global exception handler to catch any uncaught exceptions
+        // If debug enabled, create/overwrite tvrenamer.log immediately.
+        if (isDebugEnabled()) {
+            ensureFileLoggingAttached();
+            logger.info("Debug enabled via -D" + DEBUG_PROPERTY + "=true");
+        }
+
+        // Set up global exception handler to catch any uncaught exceptions.
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-            logException(
+            logFatal(
                 "Uncaught exception in thread " + thread.getName(),
                 throwable
             );
-            if (startupFileHandler != null) {
-                startupFileHandler.close();
-            }
+            tvRenamerThreadShutdown();
         });
 
         try {
             logger.info("=== TVRenamer Startup ===");
             logger.info("Version: " + VERSION_NUMBER);
-            logger.info("Java Version: " + System.getProperty("java.version"));
-            logger.info("Java Home: " + System.getProperty("java.home"));
-            logger.info("Working Directory: " + System.getProperty("user.dir"));
-            logger.info(
-                "OS: " +
-                    System.getProperty("os.name") +
-                    " " +
-                    System.getProperty("os.arch")
-            );
-            logger.info(
-                "Launcher class loader: " + Launcher.class.getClassLoader()
-            );
-            logger.info(
-                "Context class loader: " +
-                    Thread.currentThread().getContextClassLoader()
-            );
-            logger.info(
-                "java.library.path: " + System.getProperty("java.library.path")
-            );
-
-            logger.info("Loading logging configuration...");
-            initializeLoggingConfig();
-            logger.info("Logging configuration load complete.");
 
             logger.info("Creating UIStarter...");
             UIStarter ui = new UIStarter();
-            logger.info("UIStarter created successfully.");
-
             logger.info("Running UI...");
             int status = ui.run();
 
-            logger.info("UI exited with status: " + status);
             tvRenamerThreadShutdown();
-
             logger.info("=== TVRenamer Exit ===");
             System.exit(status);
         } catch (Throwable t) {
-            logException("main()", t);
-            if (startupFileHandler != null) {
-                startupFileHandler.close();
-            }
+            logFatal("Exception in main()", t);
+            tvRenamerThreadShutdown();
             System.exit(1);
         }
     }

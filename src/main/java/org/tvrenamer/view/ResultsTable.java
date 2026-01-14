@@ -114,18 +114,18 @@ public final class ResultsTable
     }
 
     void ready() {
-        logger.info(
+        logger.fine(
             "ResultsTable.ready(): registering property change listener"
         );
         prefs.addPropertyChangeListener(this);
 
-        logger.info("ResultsTable.ready(): setting focus to table");
+        logger.fine("ResultsTable.ready(): setting focus to table");
         swtTable.setFocus();
 
-        logger.info("ResultsTable.ready(): validating destination directory");
+        logger.fine("ResultsTable.ready(): validating destination directory");
         checkDestinationDirectory();
 
-        logger.info(
+        logger.fine(
             "ResultsTable.ready(): subscribing to episode map and requesting preload"
         );
         // Load the preload folder into the episode map, which will call
@@ -134,7 +134,7 @@ public final class ResultsTable
 
         episodeMap.subscribe(this);
 
-        logger.info("ResultsTable.ready(): preload requested");
+        logger.fine("ResultsTable.ready(): preload requested");
         episodeMap.preload();
     }
 
@@ -1072,21 +1072,21 @@ public final class ResultsTable
     }
 
     ResultsTable(final UIStarter ui) {
-        logger.info("=== ResultsTable constructor begin ===");
+        logger.fine("=== ResultsTable constructor begin ===");
         this.ui = ui;
 
         shell = ui.shell;
 
         display = ui.display;
 
-        logger.info("Wiring SWT components from UIStarter.");
+        logger.fine("Wiring SWT components from UIStarter.");
         setupTopButtons();
 
-        logger.info("Creating ResultsTable SWT table...");
+        logger.fine("Creating ResultsTable SWT table...");
         swtTable = new Table(shell, SWT.CHECK | SWT.FULL_SELECTION | SWT.MULTI);
 
         setupMainWindow();
 
-        logger.info("ResultsTable constructor complete.");
+        logger.fine("ResultsTable constructor complete.");
     }
 }
