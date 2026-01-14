@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 
 ext {
     // Define osgi.platform for SWT dependency resolution
