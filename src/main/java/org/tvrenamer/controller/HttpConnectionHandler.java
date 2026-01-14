@@ -1,20 +1,21 @@
 package org.tvrenamer.controller;
 
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-
-import org.tvrenamer.model.TVRenamerIOException;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import org.tvrenamer.model.TVRenamerIOException;
 
 class HttpConnectionHandler {
-    private static final Logger logger = Logger.getLogger(HttpConnectionHandler.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        HttpConnectionHandler.class.getName()
+    );
 
     private static final int CONNECT_TIMEOUT_MS = 30000;
     private static final int READ_TIMEOUT_MS = 60000;
@@ -42,14 +43,18 @@ class HttpConnectionHandler {
      * @throws TVRenamerIOException in all cases; the fact of this method being called
      *   means something went wrong; creates it from the given arguments
      */
-    private String downloadUrlFailed(final Response response, final String url,
-                                     final IOException ioe)
-        throws TVRenamerIOException
-    {
+    private String downloadUrlFailed(
+        final Response response,
+        final String url,
+        final IOException ioe
+    ) throws TVRenamerIOException {
         String msg;
         if (ioe == null) {
-            msg = "attempt to download " + url + " failed with response code "
-                + response.code();
+            msg =
+                "attempt to download " +
+                url +
+                " failed with response code " +
+                response.code();
         } else {
             msg = "exception downloading " + url;
         }
@@ -67,28 +72,30 @@ class HttpConnectionHandler {
     public String downloadUrl(String urlString) throws TVRenamerIOException {
         logger.fine("Downloading URL " + urlString);
 
-        Request request;
-        Response response = null;
-        try {
-            request = new Request.Builder().url(urlString).build();
-            response = CLIENT.newCall(request).execute();
-            if (response != null) {
-                if (response.isSuccessful()) {
-                    ResponseBody body = response.body();
-                    if (body != null) {
-                        String downloaded = body.string();
-                        if (logger.isLoggable(Level.FINEST)) {
-                            logger.log(Level.FINEST, "Url stream:\n{0}", downloaded);
-                        }
-                        return downloaded;
+        Request request = new Request.Builder().url(urlString).build();
+
+        try (Response response = CLIENT.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                ResponseBody body = response.body();
+                if (body != null) {
+                    String downloaded = body.string();
+                    if (logger.isLoggable(Level.FINEST)) {
+                        logger.log(
+                            Level.FINEST,
+                            "Url stream:\n{0}",
+                            downloaded
+                        );
                     }
-                } else if (response.code() == 404) {
-                    throw new FileNotFoundException(urlString);
+                    return downloaded;
                 }
+            } else if (response.code() == 404) {
+                throw new FileNotFoundException(urlString);
             }
-            throw new TVRenamerIOException(urlString);
+
+            // Preserve response details for diagnostics.
+            return downloadUrlFailed(response, urlString, null);
         } catch (IOException ioe) {
-            return downloadUrlFailed(response, urlString, ioe);
+            return downloadUrlFailed(null, urlString, ioe);
         }
     }
 }
