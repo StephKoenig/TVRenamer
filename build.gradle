@@ -32,8 +32,8 @@ dependencies {
     }
 
     // Core dependencies - modernized
-    implementation 'com.thoughtworks.xstream:xstream:1.4.20'
-    implementation 'commons-codec:commons-codec:1.16.0'
+    implementation 'com.thoughtworks.xstream:xstream:1.4.21'
+    implementation 'commons-codec:commons-codec:1.17.0'
     // xpp3_min was historically used with XStream, but XStream can use its own defaults.
     // If XML parsing regressions appear, re-add xpp3_min or explicitly configure the parser.
     // xmlpull is already provided transitively via xstream -> mxparser -> xmlpull
