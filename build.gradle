@@ -169,8 +169,45 @@ sourceSets {
     test {
         java {
             srcDir 'src/test/java'
+            exclude 'org/tvrenamer/controller/TheTVDBProviderTest.java'
+        }
+        resources {
+            srcDir 'src/test/resources'
         }
     }
+    // Integration tests (TVDB / network-dependent). Not run as part of the standard 'test' task.
+    integrationTest {
+        java {
+            // Reuse the same test sources, but only include the TVDB integration test.
+            srcDir 'src/test/java'
+            include 'org/tvrenamer/controller/TheTVDBProviderTest.java'
+        }
+        resources {
+            srcDir 'src/test/resources'
+        }
+
+        // IMPORTANT: include the normal test outputs (e.g., EpisodeTestData) on the integration test classpath.
+        compileClasspath += sourceSets.main.output + sourceSets.test.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom(testImplementation)
+    integrationTestRuntimeOnly.extendsFrom(testRuntimeOnly)
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs network-dependent integration tests (TVDB).'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    shouldRunAfter(tasks.named('test'))
+}
+
+tasks.named('check') {
+    dependsOn(tasks.named('test'))
+    // integrationTest is opt-in; do not depend on it by default.
 }
 
 tasks.named('jar') {
