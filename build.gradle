@@ -9,7 +9,6 @@ dependencyLocking {
     lockAllConfigurations()
 }
 
-
 ext {
     // Define osgi.platform for SWT dependency resolution
     setProperty('osgi.platform', 'win32.win32.x86_64')
@@ -64,8 +63,82 @@ launch4j {
     jreMinVersion = "17"
 }
 
+// Generate tvrenamer.version at build time from Git commit count.
+// Version format: 1.0.<commitCount>
+def computeCommitCount = {
+    try {
+        def proc = ["git", "rev-list", "--count", "HEAD"].execute(null, project.rootDir)
+        proc.waitFor()
+        if (proc.exitValue() == 0) {
+            return proc.in.text.trim()
+        }
+    } catch (Exception ignored) {
+        // Fall through to default below
+    }
+    return "0"
+}
+
+tasks.register('generateVersionFile') {
+    outputs.file(layout.buildDirectory.file("generated/version/tvrenamer.version"))
+    doLast {
+        def count = computeCommitCount()
+        def versionText = "1.0.${count}\n"
+        def outFile = layout.buildDirectory.file("generated/version/tvrenamer.version").get().asFile
+        outFile.parentFile.mkdirs()
+        outFile.text = versionText
+    }
+}
+
+def generatedVersionFile = layout.buildDirectory.file("generated/version/tvrenamer.version")
+
 tasks.named('processResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Ensure the generated version file replaces the static resource version.
+    exclude("tvrenamer.version")
+
+    dependsOn(tasks.named('generateVersionFile'))
+
+    // Add the generated version file into the root of the resources output.
+    from(generatedVersionFile) {
+        into ""
+        rename { "tvrenamer.version" }
+    }
+
+    // Workaround: ensure the version file is present in build/resources/main even if Gradle's
+    // CopySpec input isn't picked up as expected on some environments.
+    doLast {
+        copy {
+            from(generatedVersionFile)
+            into(layout.buildDirectory.dir("resources/main").get().asFile)
+            rename { "tvrenamer.version" }
+        }
+    }
+}
+
+tasks.named('processTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Tests also need a tvrenamer.version on the classpath to avoid static init failures.
+    // Ensure we use the generated version and do not rely on the source file.
+    exclude("tvrenamer.version")
+
+    dependsOn(tasks.named('generateVersionFile'))
+
+    from(generatedVersionFile) {
+        into ""
+        rename { "tvrenamer.version" }
+    }
+
+    // Workaround: ensure the version file is present in build/resources/test even if Gradle's
+    // CopySpec input isn't picked up as expected on some environments.
+    doLast {
+        copy {
+            from(generatedVersionFile)
+            into(layout.buildDirectory.dir("resources/test").get().asFile)
+            rename { "tvrenamer.version" }
+        }
+    }
 }
 
 // Shadow plugin configuration for integrated JAR with all dependencies
@@ -74,41 +147,31 @@ shadowJar {
     // and CI artifact paths don’t accidentally break.
     archiveClassifier.set('all')
     mergeServiceFiles()
-    // Ensure proper handling of SWT and native libraries
+
+    dependsOn(tasks.named('generateVersionFile'))
+
+    // Force the generated version file into the JAR root.
+    from(layout.buildDirectory.file("generated/version/tvrenamer.version")) {
+        into ""
+        rename { "tvrenamer.version" }
+    }
 }
-
-
-
 
 sourceSets {
     main {
-
         java {
-
             srcDir 'src/main/java'
-
         }
-
         resources {
-
             srcDir 'src/main/resources'
-
         }
-
     }
-
     test {
-
         java {
-
             srcDir 'src/test/java'
-
         }
-
     }
-
 }
-
 
 tasks.named('jar') {
     enabled = false
