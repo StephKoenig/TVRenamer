@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
@@ -437,7 +438,7 @@ public final class ResultsTable
                 final FileEpisode episode = episodeMap.get(fileName);
                 // Skip files not successfully downloaded and ready to be moved
                 if (episode.optionCount() == 0) {
-                    logger.info(
+                    logger.fine(
                         "checked but not ready: " + episode.getFilepath()
                     );
                     continue;
@@ -448,22 +449,42 @@ public final class ResultsTable
             }
         }
 
-        MoveRunner mover = new MoveRunner(pendingMoves);
-        mover.setUpdater(new ProgressBarUpdater(this));
-        activeMover = mover;
-        mover.runThread();
+        // If there is nothing to do, re-enable the action button and return.
+        if (pendingMoves.isEmpty()) {
+            actionButton.setEnabled(true);
+            return;
+        }
+
+        try {
+            MoveRunner mover = new MoveRunner(pendingMoves);
+            mover.setUpdater(new ProgressBarUpdater(this));
+            activeMover = mover;
+            mover.runThread();
+        } catch (RuntimeException e) {
+            // If we fail to start the move thread, restore UI state.
+            activeMover = null;
+            logger.log(Level.WARNING, "Failed to start move operation", e);
+            actionButton.setEnabled(true);
+            throw e;
+        }
     }
 
     private void executeActionButton() {
         currentFailures.clear();
 
         if (!prefs.isMoveEnabled() && !prefs.isRenameSelected()) {
-            logger.info("move and rename both disabled, nothing to be done.");
+            logger.fine("move and rename both disabled, nothing to be done.");
             return;
         }
 
         actionButton.setEnabled(false);
-        renameFiles();
+        try {
+            renameFiles();
+        } catch (RuntimeException e) {
+            // Defensive: ensure the UI doesn’t get stuck disabled if startup fails.
+            actionButton.setEnabled(true);
+            throw e;
+        }
         swtTable.setFocus();
     }
 
@@ -565,7 +586,7 @@ public final class ResultsTable
      * Preferences Dialog can cause them to need to be changed.)
      */
     public void refreshDestinations() {
-        logger.info("Refreshing destinations");
+        logger.fine("Refreshing destinations");
         for (TableItem item : swtTable.getItems()) {
             String fileName = CURRENT_FILE_FIELD.getCellText(item);
             String newFileName = episodeMap.currentLocationOf(fileName);
@@ -658,7 +679,7 @@ public final class ResultsTable
     }
 
     private void updateUserPreferences(final UserPreference userPref) {
-        logger.info("Preference change event: " + userPref);
+        logger.fine("Preference change event: " + userPref);
 
         switch (userPref) {
             case RENAME_SELECTED:
@@ -823,7 +844,7 @@ public final class ResultsTable
             }
         } else {
             currentFailures.add(episode);
-            logger.info("failed to move item: " + episode);
+            logger.fine("failed to move item: " + episode);
         }
     }
 

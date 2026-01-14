@@ -4,7 +4,6 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.widgets.TaskItem;
-
 import org.tvrenamer.model.ProgressUpdater;
 
 public class ProgressBarUpdater implements ProgressUpdater {
@@ -26,9 +25,15 @@ public class ProgressBarUpdater implements ProgressUpdater {
         this.display = ui.getDisplay();
         this.taskItem = ui.getTaskItem();
         this.progressBar = ui.getProgressBar();
-        this.barSize = progressBar.getMaximum();
 
-        if (taskItem != null) {
+        // progressBar may be null or disposed if UI is shutting down
+        if (progressBar != null && !progressBar.isDisposed()) {
+            this.barSize = progressBar.getMaximum();
+        } else {
+            this.barSize = 0;
+        }
+
+        if (taskItem != null && !taskItem.isDisposed()) {
             taskItem.setProgressState(SWT.NORMAL);
             taskItem.setOverlayImage(ItemState.RENAMING.getIcon());
         }
@@ -40,11 +45,15 @@ public class ProgressBarUpdater implements ProgressUpdater {
      */
     @Override
     public void finish() {
+        if (display == null || display.isDisposed()) {
+            return;
+        }
+
         display.asyncExec(() -> {
-            if (progressBar != null) {
+            if (progressBar != null && !progressBar.isDisposed()) {
                 progressBar.setSelection(0);
             }
-            if (taskItem != null) {
+            if (taskItem != null && !taskItem.isDisposed()) {
                 taskItem.setOverlayImage(null);
                 taskItem.setProgressState(SWT.DEFAULT);
             }
@@ -63,16 +72,24 @@ public class ProgressBarUpdater implements ProgressUpdater {
      */
     @Override
     public void setProgress(final int totalNumFiles, final int nRemaining) {
-        if (display.isDisposed()) {
+        if (display == null || display.isDisposed()) {
+            return;
+        }
+        if (totalNumFiles <= 0) {
+            return;
+        }
+        if (barSize <= 0) {
             return;
         }
 
-        final float progress = (float) (totalNumFiles - nRemaining) / totalNumFiles;
+        final float progress =
+            (float) (totalNumFiles - nRemaining) / totalNumFiles;
         display.asyncExec(() -> {
-            if (progressBar.isDisposed()) {
+            if (progressBar == null || progressBar.isDisposed()) {
                 return;
             }
             progressBar.setSelection(Math.round(progress * barSize));
+
             if (taskItem != null) {
                 if (taskItem.isDisposed()) {
                     return;
