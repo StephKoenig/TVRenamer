@@ -2,11 +2,6 @@ package org.tvrenamer.controller;
 
 import static org.tvrenamer.model.util.Constants.*;
 
-import org.tvrenamer.controller.util.FileUtilities;
-import org.tvrenamer.model.FileEpisode;
-import org.tvrenamer.model.MoveObserver;
-import org.tvrenamer.model.UserPreferences;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,10 +9,19 @@ import java.nio.file.attribute.FileTime;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.util.FileUtilities;
+import org.tvrenamer.model.FileEpisode;
+import org.tvrenamer.model.MoveObserver;
+import org.tvrenamer.model.UserPreferences;
 
 public class FileMover implements Callable<Boolean> {
+
     static final Logger logger = Logger.getLogger(FileMover.class.getName());
     static final UserPreferences userPrefs = UserPreferences.getInstance();
+
+    private static String safePath(Path p) {
+        return (p == null) ? "<null>" : p.toString();
+    }
 
     private final FileEpisode episode;
     private final Path destRoot;
@@ -48,6 +52,34 @@ public class FileMover implements Callable<Boolean> {
      */
     public void addObserver(MoveObserver observer) {
         this.observer = observer;
+    }
+
+    private void setFailureAndLog(
+        Path source,
+        Path dest,
+        String message,
+        Throwable t
+    ) {
+        episode.setFailToMove();
+        if (t == null) {
+            logger.warning(
+                message +
+                    "\n  source=" +
+                    safePath(source) +
+                    "\n  dest=" +
+                    safePath(dest)
+            );
+        } else {
+            logger.log(
+                Level.WARNING,
+                message +
+                    "\n  source=" +
+                    safePath(source) +
+                    "\n  dest=" +
+                    safePath(dest),
+                t
+            );
+        }
     }
 
     /**
@@ -107,25 +139,35 @@ public class FileMover implements Callable<Boolean> {
      *
      */
     private void failToCopy(final Path source, final Path dest) {
+        // Mark failure early; we may add more detail below.
         episode.setFailToMove();
-        if (Files.exists(dest)) {
-            // An incomplete copy was done.  Try to clean it up.
+
+        if (dest != null && Files.exists(dest)) {
+            // An incomplete copy was done. Try to clean it up.
             FileUtilities.deleteFile(dest);
             if (Files.exists(dest)) {
-                logger.warning("made incomplete copy of \"" + source
-                               + "\" to \"" + dest
-                               + "\" and could not clean it up");
+                logger.warning(
+                    "made incomplete copy of \"" +
+                        source +
+                        "\" to \"" +
+                        dest +
+                        "\" and could not clean it up"
+                );
                 return;
             }
         }
+
         logger.warning("failed to move " + source);
-        if (Files.notExists(dest)) {
+
+        // Best-effort cleanup of newly created empty folders, if the destination file is not present.
+        if (dest != null && Files.notExists(dest)) {
             Path outDir = userPrefs.getDestinationDirectory();
             if (outDir != null) {
                 Path parent = dest.getParent();
-                while ((parent != null)
-                       && !FileUtilities.isSameFile(parent, outDir))
-                {
+                while (
+                    (parent != null) &&
+                    !FileUtilities.isSameFile(parent, outDir)
+                ) {
                     boolean rmdired = FileUtilities.rmdir(parent);
                     if (rmdired) {
                         logger.info("removing empty directory " + parent);
@@ -156,13 +198,20 @@ public class FileMover implements Callable<Boolean> {
         if (observer != null) {
             observer.initializeProgress(episode.getFileSize());
         }
+
         boolean ok = FileUtilities.copyWithUpdates(source, dest, observer);
         if (ok) {
             ok = FileUtilities.deleteFile(source);
             if (!ok) {
-                logger.warning("failed to delete original " + source);
+                setFailureAndLog(
+                    source,
+                    dest,
+                    "failed to delete original after copy",
+                    null
+                );
             }
         }
+
         if (ok) {
             episode.setCopied();
         } else {
@@ -171,16 +220,20 @@ public class FileMover implements Callable<Boolean> {
     }
 
     private void finishMove(final Path actualDest) {
-        // TODO: why do we set the file modification time to "now"?  Would like to
+        // TODO: why do we set the file modification time to "now"? Would like to
         // at least make this behavior configurable.
         try {
             FileTime now = FileTime.fromMillis(System.currentTimeMillis());
             Files.setLastModifiedTime(actualDest, now);
         } catch (IOException ioe) {
-            logger.log(Level.WARNING, "Unable to set modification time " + actualDest, ioe);
-            // Well, the file got moved to the right place already.  One could argue
-            // for returning true.  But, true is only if *everything* worked.
-            episode.setFailToMove();
+            // The file moved, but we couldn't set mtime. Keep behavior (mark failure),
+            // but improve diagnostics.
+            setFailureAndLog(
+                actualDest,
+                actualDest,
+                "unable to set modification time",
+                ioe
+            );
         }
     }
 
@@ -199,13 +252,23 @@ public class FileMover implements Callable<Boolean> {
      * @param tryRename
      *    if false, do not try to simply rename the file; always do a "copy-and-delete"
      */
-    private void doActualMove(final Path srcPath, final Path destPath, final boolean tryRename) {
+    private void doActualMove(
+        final Path srcPath,
+        final Path destPath,
+        final boolean tryRename
+    ) {
         logger.fine("Going to move\n  '" + srcPath + "'\n  '" + destPath + "'");
         episode.setMoving();
+
         if (tryRename) {
             Path actualDest = FileUtilities.renameFile(srcPath, destPath);
             if (actualDest == null) {
-                logger.severe("Unable to move " + srcPath);
+                setFailureAndLog(
+                    srcPath,
+                    destPath,
+                    "unable to rename/move file",
+                    null
+                );
                 failToCopy(srcPath, destPath);
                 return;
             }
@@ -213,8 +276,12 @@ public class FileMover implements Callable<Boolean> {
                 episode.setRenamed();
             } else {
                 episode.setPath(actualDest);
-                logger.warning("actual destination did not match intended:\n  "
-                               + actualDest + "\n  " + destPath);
+                logger.warning(
+                    "actual destination did not match intended:\n  " +
+                        actualDest +
+                        "\n  " +
+                        destPath
+                );
                 episode.setMisnamed();
                 return;
             }
@@ -225,8 +292,8 @@ public class FileMover implements Callable<Boolean> {
                 return;
             }
         }
-        episode.setPath(destPath);
 
+        episode.setPath(destPath);
         finishMove(destPath);
     }
 
@@ -287,51 +354,71 @@ public class FileMover implements Callable<Boolean> {
             episode.setNoFile();
             return;
         }
-        Path realSrc;
+
+        final Path realSrc;
         try {
             realSrc = srcPath.toRealPath();
         } catch (IOException ioe) {
-            logger.warning("could not get real path of " + srcPath);
-            episode.setFailToMove();
+            setFailureAndLog(
+                srcPath,
+                null,
+                "could not get real path of source",
+                ioe
+            );
             return;
         }
+
         episode.setFileVerified();
+
         Path destDir = destRoot;
         String filename = destBasename + destSuffix;
         if (destIndex != null) {
             if (userPrefs.isMoveEnabled()) {
                 destDir = destRoot.resolve(DUPLICATES_DIRECTORY);
             }
-            filename =  destBasename + versionString() + destSuffix;
+            filename = destBasename + versionString() + destSuffix;
         }
 
         if (!FileUtilities.ensureWritableDirectory(destDir)) {
-            logger.warning("not attempting to move " + srcPath);
-            episode.setFailToMove();
+            setFailureAndLog(
+                srcPath,
+                destDir,
+                "not attempting to move; destination directory not writable",
+                null
+            );
             return;
         }
 
+        final Path realDestDir;
         try {
-            destDir = destDir.toRealPath();
+            realDestDir = destDir.toRealPath();
         } catch (IOException ioe) {
-            logger.warning("could not get real path of " + destDir);
-            episode.setFailToMove();
+            setFailureAndLog(
+                srcPath,
+                destDir,
+                "could not get real path of destination directory",
+                ioe
+            );
             return;
         }
 
-        Path destPath = destDir.resolve(filename);
+        Path destPath = realDestDir.resolve(filename);
         if (Files.exists(destPath)) {
             if (destPath.equals(realSrc)) {
                 logger.info("nothing to be done to " + srcPath);
                 episode.setAlreadyInPlace();
                 return;
             }
-            logger.warning("cannot move; destination exists:\n  " + destPath);
-            episode.setFailToMove();
+            setFailureAndLog(
+                srcPath,
+                destPath,
+                "cannot move; destination exists",
+                null
+            );
             return;
         }
 
-        tryToMoveRealPaths(realSrc, destPath, destDir);
+        tryToMoveRealPaths(realSrc, destPath, realDestDir);
     }
 
     /**
@@ -346,18 +433,26 @@ public class FileMover implements Callable<Boolean> {
     @Override
     public Boolean call() {
         try {
-            // There are numerous reasons why the move would fail.  Instead of calling
+            // There are numerous reasons why the move would fail. Instead of calling
             // setFailToMove on the episode in each individual case, make the functionality
             // into a subfunction, and set the episode here for any of the failure cases.
             tryToMoveFile();
+        } catch (RuntimeException e) {
+            // RuntimeException is unexpected here; log with full context.
+            setFailureAndLog(
+                getCurrentPath(),
+                destRoot,
+                "unexpected runtime exception during file move",
+                e
+            );
         } catch (Exception e) {
-            logger.log(Level.WARNING, "exception caught doing file move", e);
-            // It's very likely that we already set a failure status, but make sure.
-            if (episode.isSuccess()) {
-                logger.warning("Move status was " + episode.fileStatus
-                               + " despite exception; changing it to failure");
-                episode.setFailToMove();
-            }
+            // Defensive: keep legacy behavior but improve diagnostics.
+            setFailureAndLog(
+                getCurrentPath(),
+                destRoot,
+                "exception caught doing file move",
+                e
+            );
         } finally {
             if (observer != null) {
                 observer.finishProgress(episode);
