@@ -2,45 +2,57 @@ package org.tvrenamer.controller;
 
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.reflection.PureJavaReflectionProvider;
-
-import org.tvrenamer.model.UserPreferences;
-
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.model.UserPreferences;
 
 public class UserPreferencesPersistence {
-    private static final Logger logger = Logger.getLogger(UserPreferencesPersistence.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        UserPreferencesPersistence.class.getName()
+    );
 
     // Use reflection provider so the default constructor is called, thus calling
-    // the superclass constructor
-    // Instantiate the object so the Observable superclass is called corrected
-    private static final XStream xstream = new XStream(new PureJavaReflectionProvider());
+    // the superclass constructor. Instantiate the object so the Observable superclass
+    // is called correctly.
+    private static final XStream xstream = new XStream(
+        new PureJavaReflectionProvider()
+    );
 
     static {
-        // XStream 1.4.18+ requires explicit security permissions
+        // XStream requires explicit security permissions
         xstream.allowTypes(new Class[] { UserPreferences.class });
         xstream.allowTypesByWildcard(new String[] { "org.tvrenamer.model.**" });
 
         xstream.alias("preferences", UserPreferences.class);
-        xstream.aliasField("moveEnabled", UserPreferences.class, "moveSelected");
-        xstream.aliasField("renameEnabled", UserPreferences.class, "renameSelected");
-        // Make the fields of Observable transient
+        xstream.aliasField(
+            "moveEnabled",
+            UserPreferences.class,
+            "moveSelected"
+        );
+        xstream.aliasField(
+            "renameEnabled",
+            UserPreferences.class,
+            "renameSelected"
+        );
+
         // Make the fields of PropertyChangeSupport transient
         xstream.omitField(java.beans.PropertyChangeSupport.class, "listeners");
         xstream.omitField(java.beans.PropertyChangeSupport.class, "children");
         xstream.omitField(java.beans.PropertyChangeSupport.class, "source");
-        xstream.omitField(java.beans.PropertyChangeSupport.class, "propertyChangeSupportSerializedDataVersion");
+        xstream.omitField(
+            java.beans.PropertyChangeSupport.class,
+            "propertyChangeSupportSerializedDataVersion"
+        );
     }
 
     /**
      * Save the preferences object to the path.
-     * 
+     *
      * @param prefs the preferences object to save
      * @param path  the path to save it to
      */
@@ -48,35 +60,59 @@ public class UserPreferencesPersistence {
     public static void persist(UserPreferences prefs, Path path) {
         String xml = xstream.toXML(prefs);
 
-        try (BufferedWriter writer = Files.newBufferedWriter(path)) {
-            writer.write(xml);
-        } catch (IOException | UnsupportedOperationException | SecurityException e) {
-            logger.log(Level.SEVERE, "Exception occurred when writing preferences file", e);
+        try {
+            Path parent = path.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+
+            // Overwrite any existing file
+            Files.writeString(path, xml);
+        } catch (
+            IOException
+            | UnsupportedOperationException
+            | SecurityException e
+        ) {
+            logger.log(
+                Level.SEVERE,
+                "Exception occurred when writing preferences file '" +
+                    path.toAbsolutePath() +
+                    "'",
+                e
+            );
         }
     }
 
     /**
      * Load the preferences from path.
-     * 
+     *
      * @param path the path to read
      * @return the populated preferences object
      */
     @SuppressWarnings("SameParameterValue")
     public static UserPreferences retrieve(Path path) {
-        if (Files.exists(path)) {
-            try (InputStream in = Files.newInputStream(path)) {
-                return (UserPreferences) xstream.fromXML(in);
-            } catch (IOException e) {
-                logger.log(Level.SEVERE, "Exception reading preferences file '"
-                        + path.toAbsolutePath().toString(), e);
-                logger.info("assuming default preferences");
-            }
-        } else {
+        if (Files.notExists(path)) {
             // If file doesn't exist, assume defaults
-            logger.fine("Preferences file '" + path.toAbsolutePath().toString()
-                    + "' does not exist - assuming defaults");
+            logger.fine(
+                "Preferences file '" +
+                    path.toAbsolutePath() +
+                    "' does not exist - assuming defaults"
+            );
+            return null;
         }
 
-        return null;
+        try (InputStream in = Files.newInputStream(path)) {
+            return (UserPreferences) xstream.fromXML(in);
+        } catch (IOException | IllegalArgumentException | SecurityException e) {
+            logger.log(
+                Level.SEVERE,
+                "Exception reading preferences file '" +
+                    path.toAbsolutePath() +
+                    "'",
+                e
+            );
+            logger.info("assuming default preferences");
+            return null;
+        }
     }
 }
