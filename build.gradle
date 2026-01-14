@@ -53,7 +53,7 @@ application {
 launch4j {
     mainClassName = 'org.tvrenamer.controller.Launcher'
     icon = "${projectDir}/src/main/resources/icons/oldschool-tv-icon.ico"
-    jarTask = project.tasks.shadowJar
+    jarTask = tasks.shadowJar
     outfile = "TVRenamer.exe"
     downloadUrl = "http://java.com/download"
     headerType = "gui"
@@ -67,7 +67,9 @@ tasks.named('processResources') {
 
 // Shadow plugin configuration for integrated JAR with all dependencies
 shadowJar {
-    archiveClassifier.set('')
+    // Keep the default classifier (typically "-all") stable so consumers
+    // and CI artifact paths don’t accidentally break.
+    archiveClassifier.set('all')
     mergeServiceFiles()
     // Ensure proper handling of SWT and native libraries
 }

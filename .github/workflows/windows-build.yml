@@ -2,9 +2,9 @@ name: Windows Build
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: ["master", "main"]
   pull_request:
-    branches: [ "master", "main" ]
+    branches: ["master", "main"]
 
 jobs:
   build:
@@ -14,30 +14,30 @@ jobs:
       contents: read
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.5'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.5"
 
-    - name: Build with Gradle
-      run: gradle build createExe shadowJar --info
+      - name: Build with Gradle
+        run: gradle build shadowJar createExe --info
 
-    - name: Upload Windows Executable
-      uses: actions/upload-artifact@v4
-      with:
-        name: TVRenamer-Windows-Exe
-        path: build/launch4j/TVRenamer.exe
+      - name: Upload Windows Executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: TVRenamer-Windows-Exe
+          path: build/launch4j/TVRenamer.exe
 
-    - name: Upload Integrated JAR
-      uses: actions/upload-artifact@v4
-      with:
-        name: TVRenamer-JAR
-        path: build/libs/*-all.jar
+      - name: Upload Integrated JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: TVRenamer-JAR
+          path: build/libs/*.jar
