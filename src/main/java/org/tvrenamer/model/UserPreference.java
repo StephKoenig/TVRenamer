@@ -13,6 +13,7 @@ public enum UserPreference {
     IGNORE_REGEX,
 
     SHOW_NAME_OVERRIDES,
+    PREFER_DVD_ORDER,
 
     // Since these are only meaningful at startup, they probably should not be watched
     UPDATE_CHECK,
