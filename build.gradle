@@ -1,8 +1,8 @@
 plugins {
     id 'java'
     id 'application'
-    id 'edu.sc.seis.launch4j' version '3.0.5'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    alias(libs.plugins.launch4j)
+    alias(libs.plugins.shadow)
 }
 
 
@@ -27,22 +27,20 @@ repositories {
 dependencies {
     // SWT - using platform specific dependency for Windows build
     // Exclude transitive dependencies to prevent resolution of '${osgi.platform}'
-    implementation('org.eclipse.platform:org.eclipse.swt.win32.win32.x86_64:3.124.0') {
+    implementation(libs.swtWin64) {
         transitive = false
     }
 
     // Core dependencies - modernized
-    implementation 'com.thoughtworks.xstream:xstream:1.4.21'
-    implementation 'commons-codec:commons-codec:1.17.0'
-    // xpp3_min was historically used with XStream, but XStream can use its own defaults.
-    // If XML parsing regressions appear, re-add xpp3_min or explicitly configure the parser.
-    // xmlpull is already provided transitively via xstream -> mxparser -> xmlpull
+    implementation(libs.xstream)
+    implementation(libs.commonsCodec)
+    // xmlpull is provided transitively via xstream -> mxparser -> xmlpull
 
     // Networking
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation(libs.okhttp)
 
     // Testing
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation(libs.junit4)
 }
 
 application {
