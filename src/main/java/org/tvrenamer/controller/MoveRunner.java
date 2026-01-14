@@ -2,8 +2,6 @@ package org.tvrenamer.controller;
 
 import static org.tvrenamer.model.util.Constants.*;
 
-import org.tvrenamer.model.ProgressUpdater;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,25 +12,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.model.ProgressUpdater;
 
 public class MoveRunner implements Runnable {
-    private static final Logger logger = Logger.getLogger(MoveRunner.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        MoveRunner.class.getName()
+    );
 
     private static final int DEFAULT_TIMEOUT = 120;
-    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
-    private final Thread progressThread = new Thread(this);
+    // Using a single-thread executor is intentional: moves are mostly IO-bound and we prefer correctness
+    // and predictable ordering over throughput.
+    private static final ExecutorService EXECUTOR =
+        Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, FILE_MOVE_THREAD_LABEL);
+            t.setDaemon(true);
+            return t;
+        });
+
+    private final Thread progressThread = new Thread(
+        this,
+        FILE_MOVE_THREAD_LABEL
+    );
     private final Queue<Future<Boolean>> futures = new LinkedList<>();
     private final int numMoves;
     private final int timeout;
     private ProgressUpdater updater = null;
+
+    private volatile boolean shutdownRequested = false;
 
     /**
      * Does the activity of the thread, which is to dequeue a move task, and block
@@ -41,26 +58,62 @@ public class MoveRunner implements Runnable {
      */
     @Override
     public void run() {
-        while (true) {
-            int remaining = futures.size();
-            if (updater != null) {
-                updater.setProgress(numMoves, remaining);
-            }
+        try {
+            while (!shutdownRequested) {
+                int remaining = futures.size();
+                if (updater != null) {
+                    updater.setProgress(numMoves, remaining);
+                }
 
-            if (remaining > 0) {
+                if (remaining == 0) {
+                    if (updater != null) {
+                        updater.finish();
+                    }
+                    return;
+                }
+
                 final Future<Boolean> future = futures.remove();
                 try {
                     Boolean success = future.get(timeout, TimeUnit.SECONDS);
-                    logger.finer("future returned: " + success);
-                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    logger.finer("move task returned: " + success);
+                } catch (InterruptedException ie) {
+                    // Preserve interrupt status and stop processing further tasks.
+                    Thread.currentThread().interrupt();
+                    shutdownRequested = true;
                     future.cancel(true);
-                    logger.warning("exception executing move: " + e.getClass().getName());
+                    logger.warning(
+                        "move runner interrupted; cancelling remaining tasks"
+                    );
+                } catch (TimeoutException te) {
+                    future.cancel(true);
+                    logger.warning(
+                        "move task timed out after " +
+                            timeout +
+                            " seconds; cancelled"
+                    );
+                } catch (CancellationException ce) {
+                    logger.fine("move task cancelled");
+                } catch (ExecutionException ee) {
+                    // Log the underlying cause for troubleshooting.
+                    Throwable cause =
+                        ee.getCause() != null ? ee.getCause() : ee;
+                    logger.log(
+                        Level.WARNING,
+                        "exception executing move task",
+                        cause
+                    );
                 }
-            } else {
+            }
+        } finally {
+            if (shutdownRequested) {
+                // Best-effort cancellation of anything still queued.
+                while (!futures.isEmpty()) {
+                    Future<Boolean> f = futures.remove();
+                    f.cancel(true);
+                }
                 if (updater != null) {
                     updater.finish();
                 }
-                return;
             }
         }
     }
@@ -73,7 +126,9 @@ public class MoveRunner implements Runnable {
      *
      */
     public void runThread() {
-        progressThread.start();
+        if (!progressThread.isAlive()) {
+            progressThread.start();
+        }
     }
 
     /**
@@ -90,9 +145,10 @@ public class MoveRunner implements Runnable {
      *    it will be created and the association be made before the value is returned.
      */
     // TODO: make this a generic facility?
-    private static List<FileMover> getListValue(Map<String, List<FileMover>> table,
-                                                String key)
-    {
+    private static List<FileMover> getListValue(
+        Map<String, List<FileMover>> table,
+        String key
+    ) {
         if (table.containsKey(key)) {
             return table.get(key);
         }
@@ -157,10 +213,11 @@ public class MoveRunner implements Runnable {
      * @return a set of paths that have conflicts; may be empty, and
      *         in fact almost always would be.
      */
-    private static Set<Path> existingConflicts(String destDirName,
-                                               String desiredFilename,
-                                               List<FileMover> moves)
-    {
+    private static Set<Path> existingConflicts(
+        String destDirName,
+        String desiredFilename,
+        List<FileMover> moves
+    ) {
         // Since, at this point, we are only finding EXACT matches (the
         // filename must be identical), at most one element will be added
         // to <code>hits</code>.  It's written this way because in the
@@ -200,14 +257,21 @@ public class MoveRunner implements Runnable {
      * @param destDir
      *   the name of the destination directory
      */
-    private static void resolveConflicts(List<FileMover> listOfMoves, String destDir) {
+    private static void resolveConflicts(
+        List<FileMover> listOfMoves,
+        String destDir
+    ) {
         Map<String, List<FileMover>> desiredFilenames = new HashMap<>();
         for (FileMover move : listOfMoves) {
             getListValue(desiredFilenames, move.getDesiredDestName()).add(move);
         }
         for (String desiredFilename : desiredFilenames.keySet()) {
             List<FileMover> moves = desiredFilenames.get(desiredFilename);
-            Set<Path> existing = existingConflicts(destDir, desiredFilename, moves);
+            Set<Path> existing = existingConflicts(
+                destDir,
+                desiredFilename,
+                moves
+            );
             int nFiles = existing.size() + moves.size();
             if (nFiles > 1) {
                 addIndices(moves, existing);
@@ -223,12 +287,17 @@ public class MoveRunner implements Runnable {
      * @return a mapping from directory names to a list of the FileMovers that will move
      *   files into the directory with that name
      */
-    private static Map<String, List<FileMover>> mapByDestDir(final List<FileMover> episodes) {
+    private static Map<String, List<FileMover>> mapByDestDir(
+        final List<FileMover> episodes
+    ) {
         final Map<String, List<FileMover>> toMove = new HashMap<>();
 
         for (final FileMover pendingMove : episodes) {
             Path moveToDir = pendingMove.getMoveToDirectory();
-            List<FileMover> existingDirMoves = getListValue(toMove, moveToDir.toString());
+            List<FileMover> existingDirMoves = getListValue(
+                toMove,
+                moveToDir.toString()
+            );
             existingDirMoves.add(pendingMove);
         }
 
@@ -245,15 +314,15 @@ public class MoveRunner implements Runnable {
      *
      */
     @SuppressWarnings("SameParameterValue")
-    private MoveRunner(final List<FileMover> episodes,
-                       final ProgressUpdater updater,
-                       final int timeout)
-    {
+    private MoveRunner(
+        final List<FileMover> episodes,
+        final ProgressUpdater updater,
+        final int timeout
+    ) {
         this.updater = updater;
         this.timeout = timeout;
 
-        progressThread.setName(FILE_MOVE_THREAD_LABEL);
-        progressThread.setDaemon(true);
+        // progressThread is already named/daemonized in the field initializer
 
         final Map<String, List<FileMover>> mappings = mapByDestDir(episodes);
         for (String destDir : mappings.keySet()) {
@@ -300,5 +369,15 @@ public class MoveRunner implements Runnable {
      */
     public static void shutDown() {
         EXECUTOR.shutdownNow();
+    }
+
+    /**
+     * Request that this MoveRunner stop processing further queued moves.
+     * This does not guarantee that a currently running move will stop immediately,
+     * but it will stop consuming further tasks and will attempt to cancel queued ones.
+     */
+    public void requestShutdown() {
+        shutdownRequested = true;
+        progressThread.interrupt();
     }
 }
