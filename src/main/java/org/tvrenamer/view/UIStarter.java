@@ -284,15 +284,15 @@ public final class UIStarter {
      */
 
     public UIStarter() {
-        logger.info("=== UIStarter constructor begin ===");
-        logger.info("Setting SWT application name to: " + APPLICATION_NAME);
+        logger.fine("=== UIStarter constructor begin ===");
+        logger.fine("Setting SWT application name to: " + APPLICATION_NAME);
         Display.setAppName(APPLICATION_NAME);
 
         try {
-            logger.info("Creating SWT Display instance...");
+            logger.fine("Creating SWT Display instance...");
             display = new Display();
 
-            logger.info("Display created successfully: " + display);
+            logger.fine("Display created successfully: " + display);
         } catch (UnsatisfiedLinkError ule) {
             logger.log(
                 Level.SEVERE,
@@ -303,43 +303,43 @@ public final class UIStarter {
             throw ule;
         }
 
-        logger.info("Creating SWT Shell...");
+        logger.fine("Creating SWT Shell...");
         shell = new Shell(display);
 
-        logger.info("Shell created: " + shell);
+        logger.fine("Shell created: " + shell);
 
-        logger.info("Setting shell title to application name.");
+        logger.fine("Setting shell title to application name.");
         shell.setText(APPLICATION_NAME);
 
-        logger.info(
+        logger.fine(
             "Loading application icon from path: " + APPLICATION_ICON_PATH
         );
         appIcon = readImageFromPath(APPLICATION_ICON_PATH);
 
-        logger.info("Application icon loaded: " + (appIcon != null));
+        logger.fine("Application icon loaded: " + (appIcon != null));
 
-        logger.info("Applying application icon to shell.");
+        logger.fine("Applying application icon to shell.");
         setAppIcon();
 
-        logger.info("Configuring shell grid layout.");
+        logger.fine("Configuring shell grid layout.");
         GridLayout shellGridLayout = new GridLayout(3, false);
 
         shell.setLayout(shellGridLayout);
 
-        logger.info(
+        logger.fine(
             "Shell layout configured with columns=" + shellGridLayout.numColumns
         );
 
-        logger.info("Creating ResultsTable...");
+        logger.fine("Creating ResultsTable...");
         resultsTable = new ResultsTable(this);
 
-        logger.info("ResultsTable created successfully.");
+        logger.fine("ResultsTable created successfully.");
 
-        logger.info("Setting up application menu bar...");
+        logger.fine("Setting up application menu bar...");
         setupMenuBar();
 
-        logger.info("Menu bar setup complete.");
-        logger.info("=== UIStarter constructor end ===");
+        logger.fine("Menu bar setup complete.");
+        logger.fine("=== UIStarter constructor end ===");
     }
 
     /**
@@ -349,38 +349,38 @@ public final class UIStarter {
      */
 
     public int run() {
-        logger.info("UIStarter.run() invoked.");
+        logger.fine("UIStarter.run() invoked.");
         try {
-            logger.info("Packing shell (compute trim)...");
+            logger.fine("Packing shell (compute trim)...");
             shell.pack(true);
 
-            logger.info("Positioning shell on screen...");
+            logger.fine("Positioning shell on screen...");
             positionWindow();
 
             // Start the shell
 
-            logger.info("Packing shell before open...");
+            logger.fine("Packing shell before open...");
             shell.pack();
 
-            logger.info("Opening shell...");
+            logger.fine("Opening shell...");
             shell.open();
 
-            logger.info("Calling ResultsTable.ready()...");
+            logger.fine("Calling ResultsTable.ready()...");
 
             resultsTable.ready();
-            logger.info("ResultsTable.ready() completed.");
+            logger.fine("ResultsTable.ready() completed.");
 
-            logger.info("Entering SWT event loop.");
+            logger.fine("Entering SWT event loop.");
             while (!shell.isDisposed()) {
                 if (!display.readAndDispatch()) {
                     display.sleep();
                 }
             }
 
-            logger.info("Shell disposed. Disposing display...");
+            logger.fine("Shell disposed. Disposing display...");
             display.dispose();
 
-            logger.info("Display disposed. Exiting run() normally.");
+            logger.fine("Display disposed. Exiting run() normally.");
             return 0;
         } catch (Exception exception) {
             logger.log(
