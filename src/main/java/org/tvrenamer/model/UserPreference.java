@@ -12,8 +12,10 @@ public enum UserPreference {
     ADD_SUBDIRS,
     IGNORE_REGEX,
 
+    SHOW_NAME_OVERRIDES,
+
     // Since these are only meaningful at startup, they probably should not be watched
     UPDATE_CHECK,
     @SuppressWarnings("unused")
-    PRELOAD_FOLDER
+    PRELOAD_FOLDER,
 }

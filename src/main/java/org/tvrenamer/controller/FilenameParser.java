@@ -6,8 +6,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.FileEpisode;
-import org.tvrenamer.model.GlobalOverrides;
 import org.tvrenamer.model.ShowName;
+import org.tvrenamer.model.UserPreferences;
 import org.tvrenamer.model.util.Constants;
 
 public class FilenameParser {
@@ -103,7 +103,7 @@ public class FilenameParser {
             if (matcher.matches()) {
                 String foundName = StringUtils.trimFoundShow(matcher.group(1));
                 String overriddenName =
-                    GlobalOverrides.getInstance().getShowName(foundName);
+                    UserPreferences.getInstance().resolveShowName(foundName);
                 ShowName.mapShowName(overriddenName);
 
                 String resolution = "";
