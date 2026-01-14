@@ -22,6 +22,11 @@ public class GlobalOverridesPersistence {
     );
 
     static {
+        // XStream requires explicit security permissions.
+        // This ensures reading overrides.xml works under newer XStream defaults.
+        xstream.allowTypes(new Class[] { GlobalOverrides.class });
+        xstream.allowTypesByWildcard(new String[] { "org.tvrenamer.model.**" });
+
         xstream.alias("overrides", GlobalOverrides.class);
     }
 

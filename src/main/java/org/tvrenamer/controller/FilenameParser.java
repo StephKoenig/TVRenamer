@@ -1,20 +1,23 @@
 package org.tvrenamer.controller;
 
-import org.tvrenamer.controller.util.StringUtils;
-import org.tvrenamer.model.FileEpisode;
-import org.tvrenamer.model.ShowName;
-import org.tvrenamer.model.util.Constants;
-
 import java.nio.file.Path;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.tvrenamer.controller.util.StringUtils;
+import org.tvrenamer.model.FileEpisode;
+import org.tvrenamer.model.GlobalOverrides;
+import org.tvrenamer.model.ShowName;
+import org.tvrenamer.model.util.Constants;
 
 public class FilenameParser {
-    private static final Logger logger = Logger.getLogger(FilenameParser.class.getName());
 
-    private static final String FILENAME_BEGINS_WITH_SEASON
-        = "(([sS]\\d\\d?[eE]\\d\\d?)|([sS]?\\d\\d?[x.]?\\d\\d\\d?)).*";
+    private static final Logger logger = Logger.getLogger(
+        FilenameParser.class.getName()
+    );
+
+    private static final String FILENAME_BEGINS_WITH_SEASON =
+        "(([sS]\\d\\d?[eE]\\d\\d?)|([sS]?\\d\\d?[x.]?\\d\\d\\d?)).*";
     private static final String DIR_LOOKS_LIKE_SEASON = "[sS][0-3]\\d";
 
     // We sometimes find folders like "MyShow.Season02"; in this case, we want to
@@ -26,29 +29,22 @@ public class FilenameParser {
     private static final String[] REGEX = {
         // this one matches SXXEXX:
         "(.+?[^a-zA-Z0-9]\\D*?)[sS](\\d\\d*)[eE](\\d\\d*).*",
-
         // this one matches Season-XX-Episode-XX:
         "(.+?[^a-zA-Z0-9]\\D*?)Season[- ](\\d\\d*)[- ]?Episode[- ](\\d\\d*).*",
-
         // this one matches sXX.eXX:
         "(.+[^a-zA-Z0-9]\\D*?)[sS](\\d\\d*)\\D*?[eE](\\d\\d*).*",
-
         // this one matches SSxEE, with an optional leading "S"
         "(.+[^a-zA-Z0-9]\\D*?)[Ss](\\d\\d?)x(\\d\\d\\d?).*",
-
         // this one works for titles with years; note, this can be problematic when
         // the filename contains a year as part of the air date, rather than as part
         // of the show name or title
         "(.+?\\d{4}[^a-zA-Z0-9]\\D*?)[sS]?(\\d\\d?)\\D*?(\\d\\d).*",
-
         // this one matches SXXYY; note, must be exactly four digits
         "(.+?[^a-zA-Z0-9]\\D*?)[sS](\\d\\d)(\\d\\d)\\D.*",
-
         // this one matches everything else:
         "(.+[^a-zA-Z0-9]\\D*?)(\\d\\d?)\\D+(\\d\\d).*",
-
         // truly last resort:
-        "(.+[^a-zA-Z0-9]+)(\\d\\d?)(\\d\\d).*"
+        "(.+[^a-zA-Z0-9]+)(\\d\\d?)(\\d\\d).*",
     };
 
     // REGEX is a series of regular expressions for different patterns comprising
@@ -57,7 +53,8 @@ public class FilenameParser {
     // we compile the patterns with the resolution first, and then compile the
     // basic patterns.  So we need an array twice the size of REGEX to hold the
     // two options for each.
-    private static final Pattern[] COMPILED_REGEX = new Pattern[REGEX.length * 2];
+    private static final Pattern[] COMPILED_REGEX = new Pattern[REGEX.length *
+    2];
 
     static {
         // Recognize the "with resolution" pattern first, since the basic patterns
@@ -105,7 +102,9 @@ public class FilenameParser {
             matcher = patt.matcher(strippedName);
             if (matcher.matches()) {
                 String foundName = StringUtils.trimFoundShow(matcher.group(1));
-                ShowName.mapShowName(foundName);
+                String overriddenName =
+                    GlobalOverrides.getInstance().getShowName(foundName);
+                ShowName.mapShowName(overriddenName);
 
                 String resolution = "";
                 if (matcher.groupCount() == 4) {
@@ -150,12 +149,16 @@ public class FilenameParser {
 
     private static String insertShowNameIfNeeded(final Path filePath) {
         if (filePath == null) {
-            throw new IllegalArgumentException("insertShowNameIfNeeded received null argument.");
+            throw new IllegalArgumentException(
+                "insertShowNameIfNeeded received null argument."
+            );
         }
 
         final Path justNamePath = filePath.getFileName();
         if (justNamePath == null) {
-            throw new IllegalArgumentException("insertShowNameIfNeeded received path with no name.");
+            throw new IllegalArgumentException(
+                "insertShowNameIfNeeded received path with no name."
+            );
         }
 
         final String pName = justNamePath.toString();
@@ -163,14 +166,21 @@ public class FilenameParser {
         if (pName.matches(FILENAME_BEGINS_WITH_SEASON)) {
             Path parent = filePath.getParent();
             String parentName = extractParentName(parent);
-            while (StringUtils.toLower(parentName).startsWith("season")
-                   || parentName.matches(DIR_LOOKS_LIKE_SEASON)
-                   || parentName.equals(Constants.DUPLICATES_DIRECTORY))
-            {
+            while (
+                StringUtils.toLower(parentName).startsWith("season") ||
+                parentName.matches(DIR_LOOKS_LIKE_SEASON) ||
+                parentName.equals(Constants.DUPLICATES_DIRECTORY)
+            ) {
                 parent = parent.getParent();
                 parentName = extractParentName(parent);
             }
-            logger.fine("appending parent directory '" + parentName + "' to filename '" + pName + "'");
+            logger.fine(
+                "appending parent directory '" +
+                    parentName +
+                    "' to filename '" +
+                    pName +
+                    "'"
+            );
             return parentName + " " + pName;
         }
         return pName;
