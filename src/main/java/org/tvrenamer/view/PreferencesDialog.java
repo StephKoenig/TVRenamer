@@ -690,17 +690,42 @@ class PreferencesDialog extends Dialog {
         overridesToText = createText("", overridesGroup, false);
         new Label(overridesGroup, SWT.NONE); // spacer
 
+        // Force relayout/redraw when focus moves between fields; some SWT layouts
+        // can temporarily miscompute sizes, causing the button row to appear hidden
+        // until the next paint event (e.g., mouse hover).
+        overridesFromText.addListener(SWT.FocusOut, e ->
+            overridesGroup.layout(true, true)
+        );
+        overridesToText.addListener(SWT.FocusOut, e ->
+            overridesGroup.layout(true, true)
+        );
+
         Composite buttons = new Composite(overridesGroup, SWT.NONE);
         buttons.setLayout(new GridLayout(3, true));
-        buttons.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1)
+        // Explicit sizing hints prevent SWT from "collapsing" this row when focus moves
+        // between Text controls (observed as buttons disappearing until hover).
+        GridData buttonsGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false,
+            3,
+            1
         );
+        buttonsGridData.minimumHeight = 35;
+        buttons.setLayoutData(buttonsGridData);
 
         Button addButton = new Button(buttons, SWT.PUSH);
         addButton.setText("Add / Update");
-        addButton.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, false)
+        GridData addButtonGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false
         );
+        addButtonGridData.minimumWidth = 110;
+        addButtonGridData.heightHint = 30;
+        addButton.setLayoutData(addButtonGridData);
         addButton.addSelectionListener(
             new SelectionAdapter() {
                 @Override
@@ -719,9 +744,15 @@ class PreferencesDialog extends Dialog {
 
         Button removeButton = new Button(buttons, SWT.PUSH);
         removeButton.setText("Remove");
-        removeButton.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, false)
+        GridData removeButtonGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false
         );
+        removeButtonGridData.minimumWidth = 90;
+        removeButtonGridData.heightHint = 30;
+        removeButton.setLayoutData(removeButtonGridData);
         removeButton.addSelectionListener(
             new SelectionAdapter() {
                 @Override
@@ -738,9 +769,15 @@ class PreferencesDialog extends Dialog {
 
         Button clearButton = new Button(buttons, SWT.PUSH);
         clearButton.setText("Clear");
-        clearButton.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, false)
+        GridData clearButtonGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false
         );
+        clearButtonGridData.minimumWidth = 90;
+        clearButtonGridData.heightHint = 30;
+        clearButton.setLayoutData(clearButtonGridData);
         clearButton.addSelectionListener(
             new SelectionAdapter() {
                 @Override
