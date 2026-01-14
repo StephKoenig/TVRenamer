@@ -95,6 +95,9 @@ public final class ResultsTable
     private final Queue<FileEpisode> currentFailures =
         new ConcurrentLinkedQueue<>();
 
+    // Track the currently running move operation so we can cancel it on shutdown.
+    private volatile MoveRunner activeMover = null;
+
     private boolean apiDeprecated = false;
 
     private synchronized void checkDestinationDirectory() {
@@ -447,6 +450,7 @@ public final class ResultsTable
 
         MoveRunner mover = new MoveRunner(pendingMoves);
         mover.setUpdater(new ProgressBarUpdater(this));
+        activeMover = mover;
         mover.runThread();
     }
 
@@ -721,6 +725,9 @@ public final class ResultsTable
     }
 
     void finishAllMoves() {
+        // The current move batch (if any) is done.
+        activeMover = null;
+
         ui.setAppIcon();
         if (currentFailures.size() > 0) {
             informUserOfFailures();
@@ -1078,6 +1085,14 @@ public final class ResultsTable
         shell = ui.shell;
 
         display = ui.display;
+
+        // If the UI is disposed while a move is in progress, cancel pending moves.
+        shell.addListener(SWT.Dispose, e -> {
+            MoveRunner mover = activeMover;
+            if (mover != null) {
+                mover.requestShutdown();
+            }
+        });
 
         logger.fine("Wiring SWT components from UIStarter.");
         setupTopButtons();
