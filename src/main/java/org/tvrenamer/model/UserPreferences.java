@@ -2,31 +2,37 @@ package org.tvrenamer.model;
 
 import static org.tvrenamer.model.util.Constants.*;
 
-import org.tvrenamer.controller.UserPreferencesPersistence;
-import org.tvrenamer.controller.util.FileUtilities;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.UserPreferencesPersistence;
+import org.tvrenamer.controller.util.FileUtilities;
 
 public class UserPreferences {
-    private static final Logger logger = Logger.getLogger(UserPreferences.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        UserPreferences.class.getName()
+    );
 
     private static final UserPreferences INSTANCE = load();
 
-    private final java.beans.PropertyChangeSupport pcs = new java.beans.PropertyChangeSupport(this);
+    private final java.beans.PropertyChangeSupport pcs =
+        new java.beans.PropertyChangeSupport(this);
 
-    public void addPropertyChangeListener(java.beans.PropertyChangeListener listener) {
+    public void addPropertyChangeListener(
+        java.beans.PropertyChangeListener listener
+    ) {
         pcs.addPropertyChangeListener(listener);
     }
 
-    public void removePropertyChangeListener(java.beans.PropertyChangeListener listener) {
+    public void removePropertyChangeListener(
+        java.beans.PropertyChangeListener listener
+    ) {
         pcs.removePropertyChangeListener(listener);
     }
 
@@ -95,29 +101,48 @@ public class UserPreferences {
      *
      */
     private static void setUpOverrides() {
-        if (Files.notExists(OVERRIDES_FILE)) {
-            if (Files.exists(OVERRIDES_FILE_LEGACY)) {
-                try {
-                    Files.move(OVERRIDES_FILE_LEGACY, OVERRIDES_FILE);
-                } catch (Exception e) {
-                    logger.log(Level.WARNING, e.getMessage(), e);
-                    throw new RuntimeException("Could not rename old overrides file from "
-                            + OVERRIDES_FILE_LEGACY + " to " + OVERRIDES_FILE);
+        if (Files.exists(OVERRIDES_FILE)) {
+            return;
+        }
+
+        // Legacy location -> new location
+        if (Files.exists(OVERRIDES_FILE_LEGACY)) {
+            try {
+                Path parent = OVERRIDES_FILE.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
                 }
-            } else {
-                // Previously the GlobalOverrides class was hard-coded to write some
-                // overrides to the file. I don't think that's right, but to try to
-                // preserve the default behavior, if the user doesn't have any other
-                // overrides file, we'll try to copy one from the source code into
-                // place. If it doesn't work, so be it.
-                Path defOver = Paths.get(DEVELOPER_DEFAULT_OVERRIDES_FILENAME);
-                if (Files.exists(defOver)) {
-                    try {
-                        Files.copy(defOver, OVERRIDES_FILE);
-                    } catch (IOException ioe) {
-                        logger.info("unable to copy default overrides file.");
-                    }
+                Files.move(OVERRIDES_FILE_LEGACY, OVERRIDES_FILE);
+                return;
+            } catch (IOException | SecurityException e) {
+                logger.log(
+                    Level.WARNING,
+                    "Could not migrate legacy overrides file from " +
+                        OVERRIDES_FILE_LEGACY +
+                        " to " +
+                        OVERRIDES_FILE,
+                    e
+                );
+                // Continue and try to create/copy a default file below
+            }
+        }
+
+        // If no overrides exist, try copying a developer default file into place (best-effort).
+        Path defOver = Paths.get(DEVELOPER_DEFAULT_OVERRIDES_FILENAME);
+        if (Files.exists(defOver)) {
+            try {
+                Path parent = OVERRIDES_FILE.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
                 }
+                Files.copy(defOver, OVERRIDES_FILE);
+            } catch (IOException | SecurityException e) {
+                logger.log(
+                    Level.FINE,
+                    "Unable to copy default overrides file into place: " +
+                        OVERRIDES_FILE,
+                    e
+                );
             }
         }
     }
@@ -137,50 +162,73 @@ public class UserPreferences {
      * Deal with legacy files and set up
      */
     private static void initialize() {
-        Path temp = null;
-        logger.fine("configuration directory = " + CONFIGURATION_DIRECTORY.toAbsolutePath().toString());
-        if (Files.exists(CONFIGURATION_DIRECTORY)) {
-            // Older versions used the same name as a preferences file
-            if (!Files.isDirectory(CONFIGURATION_DIRECTORY)) {
-                try {
-                    temp = Files.createTempDirectory(APPLICATION_NAME);
-                } catch (Exception ioe) {
-                    temp = null;
-                }
-                if ((temp == null) || Files.notExists(temp)) {
-                    throw new RuntimeException("Could not create temp file");
-                }
-                try {
-                    Files.delete(temp);
-                    Files.move(CONFIGURATION_DIRECTORY, temp);
-                } catch (Exception e) {
-                    logger.log(Level.WARNING, e.getMessage(), e);
-                }
-            }
-        }
+        logger.fine(
+            "configuration directory = " +
+                CONFIGURATION_DIRECTORY.toAbsolutePath()
+        );
+
+        // Ensure configuration directory exists and is writable.
         if (!FileUtilities.ensureWritableDirectory(CONFIGURATION_DIRECTORY)) {
-            throw new RuntimeException("Could not create configuration directory");
+            throw new RuntimeException(
+                "Could not create configuration directory: " +
+                    CONFIGURATION_DIRECTORY
+            );
         }
-        if (temp != null) {
+
+        // If CONFIGURATION_DIRECTORY exists but is not a directory, relocate it (legacy behavior).
+        if (
+            Files.exists(CONFIGURATION_DIRECTORY) &&
+            !Files.isDirectory(CONFIGURATION_DIRECTORY)
+        ) {
             try {
-                Files.move(temp, PREFERENCES_FILE);
-            } catch (Exception e) {
-                logger.log(Level.WARNING, e.getMessage(), e);
-                throw new RuntimeException("Could not rename old prefs file from "
-                        + temp + " to " + PREFERENCES_FILE);
+                Path tempDir = Files.createTempDirectory(APPLICATION_NAME);
+                // Replace temp directory with the legacy file contents
+                Files.deleteIfExists(tempDir);
+                Files.move(CONFIGURATION_DIRECTORY, tempDir);
+
+                // Legacy behavior appears to treat this as an old prefs file; move it into place.
+                if (Files.notExists(PREFERENCES_FILE)) {
+                    Files.move(tempDir, PREFERENCES_FILE);
+                } else {
+                    logger.warning(
+                        "Legacy configuration file found but preferences file already exists; leaving legacy file at: " +
+                            tempDir
+                    );
+                }
+            } catch (IOException | SecurityException e) {
+                throw new RuntimeException(
+                    "Could not relocate legacy configuration file at " +
+                        CONFIGURATION_DIRECTORY,
+                    e
+                );
             }
         }
+
+        // Legacy preferences file -> new preferences file
         if (Files.exists(PREFERENCES_FILE_LEGACY)) {
             if (Files.exists(PREFERENCES_FILE)) {
-                throw new RuntimeException("Found two legacy preferences files!!");
-            } else {
-                try {
-                    Files.move(PREFERENCES_FILE_LEGACY, PREFERENCES_FILE);
-                } catch (Exception e) {
-                    logger.log(Level.WARNING, e.getMessage(), e);
+                throw new RuntimeException(
+                    "Found two legacy preferences files!!"
+                );
+            }
+            try {
+                Path parent = PREFERENCES_FILE.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
                 }
+                Files.move(PREFERENCES_FILE_LEGACY, PREFERENCES_FILE);
+            } catch (IOException | SecurityException e) {
+                logger.log(
+                    Level.WARNING,
+                    "Could not migrate legacy preferences file from " +
+                        PREFERENCES_FILE_LEGACY +
+                        " to " +
+                        PREFERENCES_FILE,
+                    e
+                );
             }
         }
+
         setUpOverrides();
     }
 
@@ -195,12 +243,17 @@ public class UserPreferences {
         initialize();
 
         // retrieve from file and update in-memory copy
-        UserPreferences prefs = UserPreferencesPersistence.retrieve(PREFERENCES_FILE);
+        UserPreferences prefs = UserPreferencesPersistence.retrieve(
+            PREFERENCES_FILE
+        );
 
         if (prefs != null) {
             prefs.destDirPath = Paths.get(prefs.destDir);
             prefs.buildIgnoredKeywordsString();
-            logger.finer("Successfully read preferences from: " + PREFERENCES_FILE.toAbsolutePath());
+            logger.finer(
+                "Successfully read preferences from: " +
+                    PREFERENCES_FILE.toAbsolutePath()
+            );
             logger.fine("Successfully read preferences: " + prefs.toString());
         } else {
             prefs = new UserPreferences();
@@ -256,7 +309,9 @@ public class UserPreferences {
             return true;
         }
 
-        boolean canCreate = FileUtilities.checkForCreatableDirectory(destDirPath);
+        boolean canCreate = FileUtilities.checkForCreatableDirectory(
+            destDirPath
+        );
         destDirProblem = !canCreate;
 
         if (destDirProblem) {
@@ -393,7 +448,12 @@ public class UserPreferences {
      *                                 contents have been moved away.
      */
     public void setRemoveEmptiedDirectories(boolean removeEmptiedDirectories) {
-        if (valuesAreDifferent(this.removeEmptiedDirectories, removeEmptiedDirectories)) {
+        if (
+            valuesAreDifferent(
+                this.removeEmptiedDirectories,
+                removeEmptiedDirectories
+            )
+        ) {
             this.removeEmptiedDirectories = removeEmptiedDirectories;
 
             preferenceChanged(UserPreference.REMOVE_EMPTY);
@@ -446,7 +506,12 @@ public class UserPreferences {
      *                              into subdirectories.
      */
     public void setRecursivelyAddFolders(boolean recursivelyAddFolders) {
-        if (valuesAreDifferent(this.recursivelyAddFolders, recursivelyAddFolders)) {
+        if (
+            valuesAreDifferent(
+                this.recursivelyAddFolders,
+                recursivelyAddFolders
+            )
+        ) {
             this.recursivelyAddFolders = recursivelyAddFolders;
 
             preferenceChanged(UserPreference.ADD_SUBDIRS);
@@ -510,14 +575,18 @@ public class UserPreferences {
         if (valuesAreDifferent(specifiedIgnoreKeywords, ignoreWordsString)) {
             specifiedIgnoreKeywords = ignoreWordsString;
             ignoreKeywords.clear();
-            String[] ignoreWords = ignoreWordsString.split(IGNORE_WORDS_SPLIT_REGEX);
+            String[] ignoreWords = ignoreWordsString.split(
+                IGNORE_WORDS_SPLIT_REGEX
+            );
             for (String ignorable : ignoreWords) {
                 // Be careful not to allow empty string as a "keyword."
                 if (ignorable.length() > 1) {
                     // TODO: Convert commas into pipes for proper regex, remove periods
                     ignoreKeywords.add(ignorable);
                 } else {
-                    logger.warning("keywords to ignore must be at least two characters.");
+                    logger.warning(
+                        "keywords to ignore must be at least two characters."
+                    );
                     logger.warning("not adding \"" + ignorable + "\"");
                 }
             }
@@ -570,11 +639,15 @@ public class UserPreferences {
      *                                to be numbered with a leading zero
      */
     public void setSeasonPrefixLeadingZero(boolean seasonPrefixLeadingZero) {
-        if (valuesAreDifferent(this.seasonPrefixLeadingZero, seasonPrefixLeadingZero)) {
+        if (
+            valuesAreDifferent(
+                this.seasonPrefixLeadingZero,
+                seasonPrefixLeadingZero
+            )
+        ) {
             this.seasonPrefixLeadingZero = seasonPrefixLeadingZero;
 
             preferenceChanged(UserPreference.LEADING_ZERO);
-
         }
     }
 
@@ -584,7 +657,12 @@ public class UserPreferences {
      * @param renameReplacementMask the rename replacement mask
      */
     public void setRenameReplacementString(String renameReplacementMask) {
-        if (valuesAreDifferent(this.renameReplacementMask, renameReplacementMask)) {
+        if (
+            valuesAreDifferent(
+                this.renameReplacementMask,
+                renameReplacementMask
+            )
+        ) {
             this.renameReplacementMask = renameReplacementMask;
 
             preferenceChanged(UserPreference.REPLACEMENT_MASK);
@@ -621,11 +699,24 @@ public class UserPreferences {
      */
     @Override
     public String toString() {
-        return "UserPreferences\n [destDir=" + destDir + ",\n  seasonPrefix=" + seasonPrefix
-                + ",\n  moveSelected=" + moveSelected + ",\n  renameSelected=" + renameSelected
-                + ",\n  renameReplacementMask=" + renameReplacementMask
-                + ",\n  checkForUpdates=" + checkForUpdates
-                + ",\n  deleteRowAfterMove=" + deleteRowAfterMove
-                + ",\n  setRecursivelyAddFolders=" + recursivelyAddFolders + "]";
+        return (
+            "UserPreferences\n [destDir=" +
+            destDir +
+            ",\n  seasonPrefix=" +
+            seasonPrefix +
+            ",\n  moveSelected=" +
+            moveSelected +
+            ",\n  renameSelected=" +
+            renameSelected +
+            ",\n  renameReplacementMask=" +
+            renameReplacementMask +
+            ",\n  checkForUpdates=" +
+            checkForUpdates +
+            ",\n  deleteRowAfterMove=" +
+            deleteRowAfterMove +
+            ",\n  setRecursivelyAddFolders=" +
+            recursivelyAddFolders +
+            "]"
+        );
     }
 }
