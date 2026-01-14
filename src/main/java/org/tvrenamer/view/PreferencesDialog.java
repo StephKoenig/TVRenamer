@@ -145,6 +145,7 @@ class PreferencesDialog extends Dialog {
     private Button recurseFoldersCheckbox;
     private Button rmdirEmptyCheckbox;
     private Button deleteRowsCheckbox;
+    private Button preferDvdOrderCheckbox;
 
     // Overrides (Show name -> Show name)
     private Text overridesFromText;
@@ -553,6 +554,15 @@ class PreferencesDialog extends Dialog {
             GridData.BEGINNING,
             3
         );
+
+        preferDvdOrderCheckbox = createCheckbox(
+            PREFER_DVD_ORDER_TEXT,
+            PREFER_DVD_ORDER_TOOLTIP,
+            prefs.isPreferDvdOrderIfPresent(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
     }
 
     private void initializeGeneralControls() {
@@ -933,6 +943,8 @@ class PreferencesDialog extends Dialog {
 
         prefs.setMoveSelected(moveSelectedCheckbox.getSelection());
         prefs.setRenameSelected(renameSelectedCheckbox.getSelection());
+
+        prefs.setPreferDvdOrderIfPresent(preferDvdOrderCheckbox.getSelection());
 
         // Show name overrides (exact match, case-insensitive)
         Map<String, String> overrides = new LinkedHashMap<>();

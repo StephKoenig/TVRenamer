@@ -51,6 +51,9 @@ public class UserPreferences {
     private boolean checkForUpdates;
     private boolean recursivelyAddFolders;
 
+    // Prefer DVD ordering/titles if present; fall back to aired ordering otherwise.
+    private boolean preferDvdOrderIfPresent = false;
+
     // For the ignore keywords, we do some processing. So we also preserve exactly
     // what the user specified.
     private transient String specifiedIgnoreKeywords;
@@ -79,6 +82,7 @@ public class UserPreferences {
         renameReplacementMask = DEFAULT_REPLACEMENT_MASK;
         checkForUpdates = true;
         recursivelyAddFolders = true;
+        preferDvdOrderIfPresent = false;
         ignoreKeywords = new ArrayList<>();
         ignoreKeywords.add(DEFAULT_IGNORED_KEYWORD);
         buildIgnoredKeywordsString();
@@ -139,6 +143,27 @@ public class UserPreferences {
      */
     public Map<String, String> getShowNameOverrides() {
         return showNameOverrides;
+    }
+
+    /**
+     * Whether to prefer DVD ordering/titles when available (falls back to aired ordering otherwise).
+     *
+     * This applies to future lookups only; existing table entries are not re-queried.
+     */
+    public boolean isPreferDvdOrderIfPresent() {
+        return preferDvdOrderIfPresent;
+    }
+
+    /**
+     * Set whether to prefer DVD ordering/titles when available (falls back to aired ordering otherwise).
+     *
+     * This applies to future lookups only; existing table entries are not re-queried.
+     */
+    public void setPreferDvdOrderIfPresent(boolean prefer) {
+        if (valuesAreDifferent(this.preferDvdOrderIfPresent, prefer)) {
+            this.preferDvdOrderIfPresent = prefer;
+            preferenceChanged(UserPreference.PREFER_DVD_ORDER);
+        }
     }
 
     /**
@@ -767,6 +792,8 @@ public class UserPreferences {
             renameReplacementMask +
             ",\n  checkForUpdates=" +
             checkForUpdates +
+            ",\n  preferDvdOrderIfPresent=" +
+            preferDvdOrderIfPresent +
             ",\n  deleteRowAfterMove=" +
             deleteRowAfterMove +
             ",\n  setRecursivelyAddFolders=" +
