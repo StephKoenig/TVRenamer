@@ -86,6 +86,7 @@ public final class ResultsTable
     private final UIStarter ui;
     private final Shell shell;
     private final Display display;
+    private final ThemePalette themePalette;
     private final Table swtTable;
     private final EpisodeDb episodeMap = new EpisodeDb();
 
@@ -694,6 +695,9 @@ public final class ResultsTable
             case LEADING_ZERO:
                 refreshDestinations();
                 break;
+            case THEME_MODE:
+                Fields.setThemeMode(prefs.getThemeMode());
+                break;
             case IGNORE_REGEX:
             case PRELOAD_FOLDER:
             case ADD_SUBDIRS:
@@ -869,6 +873,7 @@ public final class ResultsTable
     private void setupTopButtons() {
         final Composite topButtonsComposite = new Composite(shell, SWT.FILL);
         topButtonsComposite.setLayout(new RowLayout());
+        ThemeManager.applyPalette(topButtonsComposite, themePalette);
 
         final FileDialog fd = new FileDialog(shell, SWT.MULTI);
         final Button addFilesButton = new Button(topButtonsComposite, SWT.PUSH);
@@ -928,6 +933,7 @@ public final class ResultsTable
     private void setupBottomComposite() {
         Composite bottomButtonsComposite = new Composite(shell, SWT.FILL);
         bottomButtonsComposite.setLayout(new GridLayout(3, false));
+        ThemeManager.applyPalette(bottomButtonsComposite, themePalette);
 
         GridData bottomButtonsCompositeGridData = new GridData(
             SWT.FILL,
@@ -1106,6 +1112,8 @@ public final class ResultsTable
         shell = ui.shell;
 
         display = ui.display;
+        themePalette = ThemeManager.createPalette(display);
+        Fields.setThemeMode(themePalette.getMode());
 
         // If the UI is disposed while a move is in progress, cancel pending moves.
         shell.addListener(SWT.Dispose, e -> {
@@ -1118,8 +1126,12 @@ public final class ResultsTable
         logger.fine("Wiring SWT components from UIStarter.");
         setupTopButtons();
 
-        logger.fine("Creating ResultsTable SWT table...");
+        logger.fine("Creating ResultsTable...");
         swtTable = new Table(shell, SWT.CHECK | SWT.FULL_SELECTION | SWT.MULTI);
+        swtTable.setBackground(themePalette.getControlBackground());
+        swtTable.setForeground(themePalette.getControlForeground());
+        swtTable.setHeaderBackground(themePalette.getTableHeaderBackground());
+        swtTable.setHeaderForeground(themePalette.getTableHeaderForeground());
 
         setupMainWindow();
 
