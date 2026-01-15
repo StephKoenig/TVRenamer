@@ -1,5 +1,7 @@
 # TVRenamer
 [![Windows Build](https://github.com/StephKoenig/tvrenamer/actions/workflows/windows-build.yml/badge.svg?branch=master)](https://github.com/StephKoenig/tvrenamer/actions/workflows/windows-build.yml?query=branch%3Amaster)
+![Windows x64](https://img.shields.io/badge/Windows-x64-blue)
+![Java](https://img.shields.io/badge/Java-17%2B-blue)
 
 ## About
 TVRenamer is a Java GUI utility to rename TV episodes from TV listings.
@@ -47,13 +49,15 @@ This fork currently builds Windows artifacts via GitHub Actions. You can use:
   - `TVRenamer-JAR` (fat jar)
 
 ### Running on Windows
+**Windows x64 only:** this fork builds against SWT `win32.win32.x86_64` and requires a 64-bit Java 17+ runtime.
+
 1. Download the Windows artifact (EXE) or the JAR.
-2. Ensure Java 17 is installed (see “Common Problems → Java version issues” below).
+2. Ensure **64-bit Java 17+** is installed (see “Common Problems → Java version issues” below).
 3. Run:
    - `TVRenamer.exe` (Windows executable), or
    - `java -jar <jar-file>.jar` (if you downloaded the jar artifact)
 
-> Note: This fork’s build configuration targets Windows SWT (`win32.win32.x86_64`). macOS/Linux packaging instructions from upstream may not apply here.
+> Note: This fork’s build configuration targets Windows x64 SWT (`win32.win32.x86_64`). macOS/Linux packaging instructions from upstream may not apply here.
 
 ## Common Problems
 ### Connectivity Issues
