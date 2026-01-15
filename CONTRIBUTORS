@@ -1,9 +1,13 @@
 Below is a list of projects/people that TVRenamer relies on (with thanks):
+ - The original TVRenamer project and community (https://github.com/tvrenamer/tvrenamer)
  - Eclipse SWT
- - Codehaus XStream
+ - Thoughtworks XStream
  - TransparenTech CocoaUIEnhancer
  - Apache Commons Codec
- - Xml Pull Parser 3rd Edition (XPP3)
+ - OkHttp
+ - JUnit (testing)
+
+We also acknowledge and thank all prior contributors to TVRenamer who helped build and maintain the project over the years.
 
 Below is a list of projects/people that have made contributions to TVRenamer:
  - thefloweringash (http://github.com/thefloweringash/tvrenamer)
