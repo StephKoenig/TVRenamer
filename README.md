@@ -27,10 +27,10 @@ The screenshot currently references the upstream wiki:
  * Optionally move renamed files, e.g. a NAS or external HDD
 
 ### New / improved in this fork
- * Theme support: **Light**, **Dark**, and **Auto** (OS-detected). (Theme changes require an application restart.)
  * **DVD ordering** option
- * **Overrides** tab to map “show name → show name” when matching is incorrect
- * SMB/network renaming: supported for many Windows setups (wording intentionally cautious; please report edge cases)
+ * **Overrides** to map “show name → show name” when matching is incorrect
+ * SMB/network renaming: supported for many Windows setups (report edge cases)
+ * Theme support: **Light**, **Dark**, and **Auto** (OS-detected). (requires restart.)
 
 ## Usage & Download
 
@@ -45,7 +45,7 @@ The screenshot currently references the upstream wiki:
 This fork currently builds Windows artifacts via GitHub Actions. You can use:
 - **GitHub Releases** (if/when published), or
 - **GitHub Actions artifacts** from the latest successful run on `master`:
-  - `TVRenamer-Windows-Exe` (Windows executable)
+  - `TVRenamer-Windows-Exe` (Windows x64)
   - `TVRenamer-JAR` (fat jar)
 
 ### Running on Windows
