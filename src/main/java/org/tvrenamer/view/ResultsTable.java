@@ -1056,7 +1056,7 @@ public final class ResultsTable
 
     private void setupResultsTable() {
         swtTable.setHeaderVisible(true);
-        swtTable.setLinesVisible(true);
+        swtTable.setLinesVisible(false);
         GridData gridData = new GridData(GridData.FILL_BOTH);
         // gridData.widthHint = 780;
         gridData.heightHint = 350;

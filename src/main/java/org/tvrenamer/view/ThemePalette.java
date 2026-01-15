@@ -44,7 +44,11 @@ final class ThemePalette {
             accentColor = createColor(new RGB(99, 153, 255));
             tableHeaderBackground = createColor(new RGB(55, 55, 55));
             tableHeaderForeground = controlForeground;
-            tableRowAlternate = createColor(new RGB(52, 52, 52));
+
+            // Increase zebra striping contrast in dark mode: alternate rows should be
+            // noticeably different from the base table background, but still subtle.
+            tableRowAlternate = createColor(new RGB(58, 58, 58));
+
             selectionBackground = createColor(new RGB(70, 110, 180));
             selectionForeground = controlForeground;
         } else {
