@@ -1,6 +1,6 @@
 # Agent Notes (TVRenamer)
 
-This file is agent-facing documentation for working on **TVRenamer**. It focuses on: available tooling, how to build locally on Windows, and how the project compiles remotely via GitHub Actions.
+This file is agent-facing documentation for working on **TVRenamer**. It focuses on: available tooling, how to build locally on Windows, how the project compiles remotely via GitHub Actions, and how to perform **manual GitHub Releases** using tested CI artifacts.
 
 ---
 
@@ -105,6 +105,7 @@ The GitHub CLI is useful for:
 - Viewing logs
 - Downloading artifacts
 - Creating PRs
+- Creating Releases
 
 Assumptions:
 - You are authenticated (`gh auth status`)
@@ -142,6 +143,45 @@ Create a PR (recommended when not pushing directly to `master`):
 gh pr create --fill
 gh pr view --web
 ```
+
+---
+
+## Manual GitHub Release procedure (using tested CI artifacts)
+
+This project intentionally does **not** auto-release on every successful build. Releases are created manually when you decide the current state is ready.
+
+### Versioning
+- The project embeds a build version of the form: `1.0.<commitCount>`
+- Release tags should match that scheme: `v1.0.<commitCount>`
+- `<commitCount>` is computed from the Git repository, consistent with the build logic:
+  - `git rev-list --count HEAD`
+
+### Release source of truth
+- Releases should use artifacts from the **latest successful GitHub Actions run** on `master` (Windows build), rather than an unverified local build.
+- Attach **all JARs** and the Windows EXE.
+
+### Preconditions / safety checks
+1. Confirm `HEAD` is the commit you want to release.
+2. Confirm there is a **successful** Actions run for that commit on `master`.
+3. Confirm the tag does **not** already exist:
+   - If `v1.0.<commitCount>` already exists, stop and ask the user what to do next (do not overwrite tags).
+
+### Steps (high level)
+1. Compute `<commitCount>` for `HEAD` and construct the tag `v1.0.<commitCount>`.
+2. Locate the latest successful CI run for `master` (preferably matching `HEAD`).
+3. Download artifacts into a local folder (e.g. `./artifacts`):
+   - `TVRenamer-Windows-Exe`
+   - `TVRenamer-JAR`
+4. Create and push the git tag:
+   - `git tag v1.0.<commitCount>`
+   - `git push origin v1.0.<commitCount>`
+5. Create the GitHub Release and upload assets:
+   - include `TVRenamer.exe`
+   - include **all** `*.jar` files from the artifact
+
+### Notes
+- GitHub Actions “artifacts” are great for testing but are not a substitute for Releases (they can expire and are less discoverable).
+- GitHub Releases are intended as the long-lived distribution channel for end users.
 
 ---
 
