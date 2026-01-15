@@ -107,13 +107,15 @@ public final class ThemeManager {
             installTabFolderHeaderTheming(tabFolder, palette);
         }
 
+        // Table zebra striping improves readability and works reliably across platforms/themes.
+        if (control instanceof Table table) {
+            installTableAlternatingRowBackground(table, palette);
+        }
+
         // Best-effort border polish for dark mode.
         // SWT native widgets draw their own borders; this only helps where SWT allows custom painting.
         if (palette.isDark()) {
-            if (control instanceof Table table) {
-                installTableGridlinePainter(table, palette);
-                installTableAlternatingRowBackground(table, palette);
-            } else if (control instanceof Button button) {
+            if (control instanceof Button button) {
                 installButtonBorderPainter(button, palette);
             }
         }
@@ -175,80 +177,21 @@ public final class ThemeManager {
         // so we can only theme the TabFolder itself and the composites within each tab.
     }
 
-    private static void installTableGridlinePainter(
-        final Table table,
-        final ThemePalette palette
-    ) {
-        if (table == null || table.isDisposed()) {
-            return;
-        }
-
-        // Avoid installing multiple times (applyPalette is recursive and may be called more than once).
-        if (Boolean.TRUE.equals(table.getData("tvrenamer.dark.gridlines"))) {
-            return;
-        }
-        table.setData("tvrenamer.dark.gridlines", Boolean.TRUE);
-
-        // We draw subtle grid lines ourselves so they aren't bright white in dark mode.
-        // This is best-effort: some platforms/themes may still draw native lines on top.
-        table.addPaintListener(
-            new PaintListener() {
-                @Override
-                public void paintControl(PaintEvent e) {
-                    if (table.isDisposed()) {
-                        return;
-                    }
-                    e.gc.setForeground(palette.getBorderColor());
-
-                    Rectangle client = table.getClientArea();
-
-                    // Horizontal lines at the bottom of each item
-                    int itemCount = table.getItemCount();
-                    for (int i = 0; i < itemCount; i++) {
-                        TableItem item = table.getItem(i);
-                        if (item == null) {
-                            continue;
-                        }
-                        Rectangle bounds = item.getBounds(0);
-                        int y = bounds.y + bounds.height - 1;
-                        if (y >= client.y && y <= client.y + client.height) {
-                            e.gc.drawLine(
-                                client.x,
-                                y,
-                                client.x + client.width,
-                                y
-                            );
-                        }
-                    }
-
-                    // Vertical column separators
-                    int x = client.x;
-                    int colCount = table.getColumnCount();
-                    for (int c = 0; c < colCount; c++) {
-                        x += table.getColumn(c).getWidth();
-                        e.gc.drawLine(
-                            x - 1,
-                            client.y,
-                            x - 1,
-                            client.y + client.height
-                        );
-                    }
-                }
-            }
-        );
-    }
+    // Intentionally no custom gridline painter.
+    // We rely on zebra striping for row separation, which is more consistent across platforms/themes.
 
     private static void installTableAlternatingRowBackground(
         final Table table,
         final ThemePalette palette
     ) {
-        if (table == null || table.isDisposed()) {
+        if (table == null || table.isDisposed() || palette == null) {
             return;
         }
-        if (Boolean.TRUE.equals(table.getData("tvrenamer.dark.altrows"))) {
+        // Apply in BOTH themes (light and dark).
+        if (Boolean.TRUE.equals(table.getData("tvrenamer.table.altrows"))) {
             return;
         }
-        table.setData("tvrenamer.dark.altrows", Boolean.TRUE);
+        table.setData("tvrenamer.table.altrows", Boolean.TRUE);
 
         Listener refresher = new Listener() {
             @Override
@@ -272,9 +215,13 @@ public final class ThemeManager {
             }
         };
 
+        // Keep striping correct as rows are added/removed and table is redrawn.
         table.addListener(SWT.Paint, refresher);
         table.addListener(SWT.Resize, refresher);
         table.addListener(SWT.Selection, refresher);
+
+        // Apply once immediately.
+        refresher.handleEvent(null);
     }
 
     private static void installButtonBorderPainter(
