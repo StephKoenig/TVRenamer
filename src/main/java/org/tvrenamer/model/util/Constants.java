@@ -129,6 +129,11 @@ public class Constants {
         "If checked, will automatically check " +
         APPLICATION_NAME +
         " website for new versions at startup, and offer to update if found";
+    public static final String THEME_MODE_TEXT = "Theme [?]";
+    public static final String THEME_MODE_TOOLTIP =
+        "Choose Light, Dark, or Auto (uses the operating system theme). Changes take effect after restart.";
+    public static final String THEME_MODE_RESTART_NOTE =
+        "Theme changes apply next time TVRenamer starts.";
     public static final String PREFER_DVD_ORDER_TEXT =
         "Prefer DVD episode order if present [?]";
     public static final String PREFER_DVD_ORDER_TOOLTIP =

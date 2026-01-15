@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.model.ThemeMode;
 import org.tvrenamer.model.UserPreferences;
 
 public class UserPreferencesPersistence {
@@ -25,7 +26,9 @@ public class UserPreferencesPersistence {
 
     static {
         // XStream requires explicit security permissions
-        xstream.allowTypes(new Class[] { UserPreferences.class });
+        xstream.allowTypes(
+            new Class[] { UserPreferences.class, ThemeMode.class }
+        );
         xstream.allowTypesByWildcard(new String[] { "org.tvrenamer.model.**" });
 
         xstream.alias("preferences", UserPreferences.class);
@@ -42,6 +45,7 @@ public class UserPreferencesPersistence {
             UserPreferences.class,
             "renameSelected"
         );
+        xstream.aliasField("theme", UserPreferences.class, "themeMode");
 
         // Make the fields of PropertyChangeSupport transient
         xstream.omitField(java.beans.PropertyChangeSupport.class, "listeners");

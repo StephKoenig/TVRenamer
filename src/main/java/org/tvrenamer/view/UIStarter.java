@@ -31,6 +31,7 @@ public final class UIStarter {
 
     final Shell shell;
     final Display display;
+    private final ThemePalette themePalette;
     private final Image appIcon;
     private final ResultsTable resultsTable;
 
@@ -292,6 +293,8 @@ public final class UIStarter {
             logger.fine("Creating SWT Display instance...");
             display = new Display();
 
+            themePalette = ThemeManager.createPalette(display);
+
             logger.fine("Display created successfully: " + display);
         } catch (UnsatisfiedLinkError ule) {
             logger.log(
@@ -307,6 +310,9 @@ public final class UIStarter {
         shell = new Shell(display);
 
         logger.fine("Shell created: " + shell);
+
+        shell.setBackground(themePalette.getShellBackground());
+        shell.setForeground(themePalette.getShellForeground());
 
         logger.fine("Setting shell title to application name.");
         shell.setText(APPLICATION_NAME);
@@ -332,6 +338,7 @@ public final class UIStarter {
 
         logger.fine("Creating ResultsTable...");
         resultsTable = new ResultsTable(this);
+        ThemeManager.applyPalette(shell, themePalette);
 
         logger.fine("ResultsTable created successfully.");
 

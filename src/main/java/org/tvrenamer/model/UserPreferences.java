@@ -49,6 +49,7 @@ public class UserPreferences {
     private boolean deleteRowAfterMove;
     private String renameReplacementMask;
     private boolean checkForUpdates;
+    private ThemeMode themeMode;
     private boolean recursivelyAddFolders;
 
     // Prefer DVD ordering/titles if present; fall back to aired ordering otherwise.
@@ -81,6 +82,7 @@ public class UserPreferences {
         deleteRowAfterMove = false;
         renameReplacementMask = DEFAULT_REPLACEMENT_MASK;
         checkForUpdates = true;
+        themeMode = ThemeMode.LIGHT;
         recursivelyAddFolders = true;
         preferDvdOrderIfPresent = false;
         ignoreKeywords = new ArrayList<>();
@@ -163,6 +165,28 @@ public class UserPreferences {
         if (valuesAreDifferent(this.preferDvdOrderIfPresent, prefer)) {
             this.preferDvdOrderIfPresent = prefer;
             preferenceChanged(UserPreference.PREFER_DVD_ORDER);
+        }
+    }
+
+    /**
+     * Return the current theme preference.
+     *
+     * @return selected ThemeMode
+     */
+    public ThemeMode getThemeMode() {
+        return themeMode;
+    }
+
+    /**
+     * Set the theme preference. Null inputs default to LIGHT.
+     *
+     * @param mode the desired ThemeMode
+     */
+    public void setThemeMode(ThemeMode mode) {
+        ThemeMode resolved = (mode == null) ? ThemeMode.LIGHT : mode;
+        if (valuesAreDifferent(this.themeMode, resolved)) {
+            this.themeMode = resolved;
+            preferenceChanged(UserPreference.THEME_MODE);
         }
     }
 
@@ -330,6 +354,9 @@ public class UserPreferences {
         if (prefs != null) {
             prefs.destDirPath = Paths.get(prefs.destDir);
             prefs.buildIgnoredKeywordsString();
+            if (prefs.themeMode == null) {
+                prefs.themeMode = ThemeMode.LIGHT;
+            }
             logger.finer(
                 "Successfully read preferences from: " +
                     PREFERENCES_FILE.toAbsolutePath()

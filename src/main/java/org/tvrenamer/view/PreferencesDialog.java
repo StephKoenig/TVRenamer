@@ -24,6 +24,7 @@ import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Dialog;
@@ -37,6 +38,7 @@ import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Text;
 import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.ReplacementToken;
+import org.tvrenamer.model.ThemeMode;
 import org.tvrenamer.model.UserPreferences;
 
 class PreferencesDialog extends Dialog {
@@ -145,7 +147,9 @@ class PreferencesDialog extends Dialog {
     private Button recurseFoldersCheckbox;
     private Button rmdirEmptyCheckbox;
     private Button deleteRowsCheckbox;
+    private Combo themeModeCombo;
     private Button preferDvdOrderCheckbox;
+    private ThemePalette themePalette;
 
     // Overrides (Show name -> Show name)
     private Text overridesFromText;
@@ -178,6 +182,7 @@ class PreferencesDialog extends Dialog {
         );
 
         tabFolder = new TabFolder(preferencesShell, getStyle());
+
         tabFolder.setLayoutData(
             new GridData(
                 SWT.END,
@@ -188,6 +193,7 @@ class PreferencesDialog extends Dialog {
                 1
             )
         );
+        ThemeManager.applyPalette(tabFolder, themePalette);
 
         createGeneralTab();
         createRenameTab();
@@ -555,6 +561,22 @@ class PreferencesDialog extends Dialog {
             3
         );
 
+        createLabel(THEME_MODE_TEXT, THEME_MODE_TOOLTIP, generalGroup);
+        themeModeCombo = new Combo(generalGroup, SWT.DROP_DOWN | SWT.READ_ONLY);
+        themeModeCombo.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1)
+        );
+        themeModeCombo.setToolTipText(THEME_MODE_TOOLTIP);
+        for (ThemeMode mode : ThemeMode.values()) {
+            themeModeCombo.add(mode.toString());
+        }
+
+        Label themeRestartLabel = new Label(generalGroup, SWT.NONE);
+        themeRestartLabel.setText(THEME_MODE_RESTART_NOTE);
+        themeRestartLabel.setLayoutData(
+            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
+        );
+
         preferDvdOrderCheckbox = createCheckbox(
             PREFER_DVD_ORDER_TEXT,
             PREFER_DVD_ORDER_TOOLTIP,
@@ -592,6 +614,17 @@ class PreferencesDialog extends Dialog {
 
         boolean renameIsSelected = prefs.isRenameSelected();
         renameSelectedCheckbox.setSelection(renameIsSelected);
+
+        ThemeMode selectedTheme = prefs.getThemeMode();
+        if (selectedTheme == null) {
+            selectedTheme = ThemeMode.LIGHT;
+        }
+        int themeIndex = themeModeCombo.indexOf(selectedTheme.toString());
+        if (themeIndex >= 0) {
+            themeModeCombo.select(themeIndex);
+        } else if (themeModeCombo.getItemCount() > 0) {
+            themeModeCombo.select(0);
+        }
     }
 
     private void createGeneralTab() {
@@ -599,11 +632,15 @@ class PreferencesDialog extends Dialog {
         item.setText(GENERAL_LABEL);
 
         final Composite generalGroup = new Composite(tabFolder, SWT.NONE);
+
         generalGroup.setLayout(new GridLayout(3, false));
+
         generalGroup.setLayoutData(
             new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
         );
+
         generalGroup.setToolTipText(GENERAL_TOOLTIP);
+        ThemeManager.applyPalette(generalGroup, themePalette);
 
         populateGeneralTab(generalGroup);
         initializeGeneralControls();
@@ -625,10 +662,13 @@ class PreferencesDialog extends Dialog {
         item.setText(RENAMING_LABEL);
 
         Composite replacementGroup = new Composite(tabFolder, SWT.NONE);
+
         replacementGroup.setLayout(new GridLayout(3, false));
+
         replacementGroup.setLayoutData(
             new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
         );
+        ThemeManager.applyPalette(replacementGroup, themePalette);
 
         Label renameTokensLabel = new Label(replacementGroup, SWT.NONE);
         renameTokensLabel.setText(RENAME_TOKEN_TEXT);
@@ -677,10 +717,13 @@ class PreferencesDialog extends Dialog {
         item.setText("Overrides");
 
         Composite overridesGroup = new Composite(tabFolder, SWT.NONE);
+
         overridesGroup.setLayout(new GridLayout(3, false));
+
         overridesGroup.setLayoutData(
             new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
         );
+        ThemeManager.applyPalette(overridesGroup, themePalette);
 
         Label fromLabel = new Label(overridesGroup, SWT.NONE);
         fromLabel.setText("From (extracted show name)");
@@ -873,6 +916,8 @@ class PreferencesDialog extends Dialog {
             SWT.FILL
         );
         bottomButtonsComposite.setLayout(new GridLayout(2, false));
+        ThemeManager.applyPalette(bottomButtonsComposite, themePalette);
+
         bottomButtonsComposite.setLayoutData(
             new GridData(SWT.FILL, SWT.CENTER, true, true, 2, 1)
         );
@@ -946,6 +991,14 @@ class PreferencesDialog extends Dialog {
 
         prefs.setPreferDvdOrderIfPresent(preferDvdOrderCheckbox.getSelection());
 
+        ThemeMode selectedTheme = ThemeMode.fromString(
+            themeModeCombo.getText()
+        );
+        if (selectedTheme == null) {
+            selectedTheme = ThemeMode.LIGHT;
+        }
+        prefs.setThemeMode(selectedTheme);
+
         // Show name overrides (exact match, case-insensitive)
         Map<String, String> overrides = new LinkedHashMap<>();
         if (overridesList != null && !overridesList.isDisposed()) {
@@ -971,10 +1024,18 @@ class PreferencesDialog extends Dialog {
      */
     public void open() {
         // Create the dialog window
+
         preferencesShell = new Shell(parent, getStyle());
+
         preferencesShell.setText(PREFERENCES_LABEL);
 
+        themePalette = ThemeManager.createPalette(
+            preferencesShell.getDisplay()
+        );
+        ThemeManager.applyPalette(preferencesShell, themePalette);
+
         // Add the contents of the dialog window
+
         createContents();
 
         preferencesShell.pack();

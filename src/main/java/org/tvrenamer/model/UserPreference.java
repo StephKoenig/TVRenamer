@@ -14,6 +14,7 @@ public enum UserPreference {
 
     SHOW_NAME_OVERRIDES,
     PREFER_DVD_ORDER,
+    THEME_MODE,
 
     // Since these are only meaningful at startup, they probably should not be watched
     UPDATE_CHECK,
