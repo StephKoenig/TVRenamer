@@ -247,7 +247,7 @@ public final class UIStarter {
                 preferencesListener
             );
 
-            setupHelpMenuBar(menuBarMenu);
+            helpMenu = setupHelpMenuBar(menuBarMenu);
         } else {
             // Add the normal Preferences, About and Quit menus.
             MenuItem fileMenuItem = new MenuItem(menuBarMenu, SWT.CASCADE);

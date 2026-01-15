@@ -193,11 +193,18 @@ class PreferencesDialog extends Dialog {
                 1
             )
         );
+
+        // TabFolder and its TabItems can remain OS/native themed on some platforms,
+        // but we should still ensure the contained controls inherit our palette.
         ThemeManager.applyPalette(tabFolder, themePalette);
 
         createGeneralTab();
         createRenameTab();
         createOverridesTab();
+
+        // Best-effort: re-apply after tab creation so children created inside tab composites
+        // are definitely themed (checkbox text, text fields, combos, lists, etc).
+        ThemeManager.applyPalette(tabFolder, themePalette);
 
         statusLabel.open(preferencesShell, shellGridLayout.numColumns);
 
