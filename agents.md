@@ -195,13 +195,6 @@ This project intentionally does **not** auto-release on every successful build. 
 
 ## Repository hygiene / gotchas
 
-### Gradle wrapper missing `gradle-wrapper.jar`
-If `./gradlew` fails with:
-- `Unable to access jarfile .../gradle/wrapper/gradle-wrapper.jar`
-
-Your checkout is missing the wrapper JAR. Do a normal git checkout/pull so `gradle/wrapper/gradle-wrapper.jar` is present, then rerun:
-- `./gradlew --version`
-
 - Line endings: Windows checkouts may flip LF/CRLF depending on Git settings. Avoid churn by not reformatting unrelated files.
 - Generated outputs should not be committed:
   - `build/` is output-only
