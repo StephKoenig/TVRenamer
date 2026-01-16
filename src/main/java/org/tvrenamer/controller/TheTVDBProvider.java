@@ -52,6 +52,8 @@ public class TheTVDBProvider {
     private static final String XPATH_SERIES = "/Data/Series";
     private static final String XPATH_SERIES_ID = "seriesid";
     private static final String XPATH_NAME = "SeriesName";
+    private static final String XPATH_FIRST_AIRED = "FirstAired";
+    private static final String XPATH_ALIAS_NAMES = "AliasNames";
     private static final String SERIES_NOT_PERMITTED =
         "** 403: Series Not Permitted **";
 
@@ -115,13 +117,54 @@ public class TheTVDBProvider {
             String seriesName = nodeTextValue(XPATH_NAME, eNode);
             String tvdbId = nodeTextValue(XPATH_SERIES_ID, eNode);
 
+            String firstAired = nodeTextValue(XPATH_FIRST_AIRED, eNode);
+            Integer firstAiredYear = null;
+            if (firstAired != null && firstAired.length() >= 4) {
+                try {
+                    firstAiredYear = Integer.parseInt(
+                        firstAired.substring(0, 4)
+                    );
+                } catch (Exception ignored) {
+                    // best-effort only
+                }
+            }
+
+            String aliasNamesRaw = nodeTextValue(XPATH_ALIAS_NAMES, eNode);
+            java.util.List<String> aliasNames =
+                java.util.Collections.emptyList();
+            if (aliasNamesRaw != null) {
+                String trimmed = aliasNamesRaw.trim();
+                if (!trimmed.isEmpty()) {
+                    // TVDB v1 often returns pipe-delimited alias lists like: |Alias A|Alias B|
+                    String[] parts = trimmed.split("\\|");
+                    java.util.ArrayList<String> aliases =
+                        new java.util.ArrayList<>();
+                    for (String p : parts) {
+                        String a = p.trim();
+                        if (!a.isEmpty()) {
+                            aliases.add(a);
+                        }
+                    }
+                    if (!aliases.isEmpty()) {
+                        aliasNames = java.util.Collections.unmodifiableList(
+                            aliases
+                        );
+                    }
+                }
+            }
+
             if (SERIES_NOT_PERMITTED.equals(seriesName)) {
                 logger.warning(
                     "ignoring unpermitted option for " +
                         showName.getExampleFilename()
                 );
             } else {
-                showName.addShowOption(tvdbId, seriesName);
+                showName.addShowOption(
+                    tvdbId,
+                    seriesName,
+                    firstAiredYear,
+                    aliasNames
+                );
             }
         }
     }

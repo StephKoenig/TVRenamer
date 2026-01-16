@@ -1,16 +1,38 @@
 package org.tvrenamer.model;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class ShowOption {
-    private static final Logger logger = Logger.getLogger(ShowOption.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        ShowOption.class.getName()
+    );
 
     final String idString;
     final String name;
 
+    // Optional metadata (primarily used for disambiguation UX)
+    final Integer firstAiredYear; // nullable
+    final List<String> aliasNames; // never null
+
     ShowOption(final String idString, final String name) {
+        this(idString, name, null, Collections.emptyList());
+    }
+
+    ShowOption(
+        final String idString,
+        final String name,
+        final Integer firstAiredYear,
+        final List<String> aliasNames
+    ) {
         this.idString = idString;
         this.name = name;
+        this.firstAiredYear = firstAiredYear;
+        this.aliasNames = (aliasNames == null)
+            ? Collections.emptyList()
+            : aliasNames;
     }
 
     /**
@@ -26,11 +48,23 @@ public class ShowOption {
      * @return a ShowOption with the given ID
      */
     public static ShowOption getShowOption(String id, String name) {
+        return getShowOption(id, name, null, Collections.emptyList());
+    }
+
+    public static ShowOption getShowOption(
+        String id,
+        String name,
+        Integer firstAiredYear,
+        List<String> aliasNames
+    ) {
         ShowOption matchedShowOption = Series.getExistingSeries(id);
         if (matchedShowOption != null) {
+            // If this option was already materialized as a Series, we keep returning it.
+            // Note: Series currently does not carry the extra search metadata; callers
+            // should treat that metadata as best-effort UI sugar.
             return matchedShowOption;
         }
-        return new ShowOption(id, name);
+        return new ShowOption(id, name, firstAiredYear, aliasNames);
     }
 
     /**
@@ -80,7 +114,9 @@ public class ShowOption {
         if (this instanceof FailedShow) {
             return (FailedShow) this;
         }
-        throw new IllegalStateException("cannot make FailedShow out of " + this);
+        throw new IllegalStateException(
+            "cannot make FailedShow out of " + this
+        );
     }
 
     /**
@@ -118,6 +154,24 @@ public class ShowOption {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Get the year the show first aired, if known.
+     *
+     * @return the 4-digit year, or null if unavailable
+     */
+    public Integer getFirstAiredYear() {
+        return firstAiredYear;
+    }
+
+    /**
+     * Alias names returned by the provider search endpoint, if any.
+     *
+     * @return immutable list of alias names; never null
+     */
+    public List<String> getAliasNames() {
+        return aliasNames;
     }
 
     /**

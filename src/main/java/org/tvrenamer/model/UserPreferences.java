@@ -69,6 +69,13 @@ public class UserPreferences {
     // Stored in prefs.xml to avoid a separate overrides.xml file.
     private final Map<String, String> showNameOverrides = new LinkedHashMap<>();
 
+    // Show disambiguation overrides: map a provider query string (normalized) to a chosen
+    // provider series ID (e.g., TVDB seriesid). This allows us to persist user selections
+    // when a provider search returns multiple close matches (e.g., "Star" vs "Star (2024)").
+    // Stored in prefs.xml alongside other preferences.
+    private final Map<String, String> showDisambiguationOverrides =
+        new LinkedHashMap<>();
+
     private transient boolean destDirProblem = false;
 
     /**
@@ -151,6 +158,66 @@ public class UserPreferences {
      */
     public Map<String, String> getShowNameOverrides() {
         return showNameOverrides;
+    }
+
+    /**
+     * Replace the current set of show disambiguation overrides.
+     *
+     * @param overrides mapping of normalized provider query string -> chosen provider series id
+     */
+    public void setShowDisambiguationOverrides(
+        final Map<String, String> overrides
+    ) {
+        showDisambiguationOverrides.clear();
+        if (overrides != null) {
+            showDisambiguationOverrides.putAll(overrides);
+        }
+        // No dedicated preference enum yet; treat as show override change for refresh purposes.
+        preferenceChanged(UserPreference.SHOW_NAME_OVERRIDES);
+    }
+
+    /**
+     * Return the live map of show disambiguation overrides.
+     *
+     * @return mapping of normalized provider query string -> chosen provider series id
+     */
+    public Map<String, String> getShowDisambiguationOverrides() {
+        return showDisambiguationOverrides;
+    }
+
+    /**
+     * Try to resolve a provider query string to a chosen provider series id using
+     * the persisted disambiguation map.
+     *
+     * @param providerQueryString normalized query string (e.g., ShowName.getQueryString())
+     * @return the chosen provider series id, or null if not configured
+     */
+    public String resolveDisambiguatedSeriesId(
+        final String providerQueryString
+    ) {
+        if (providerQueryString == null) {
+            return null;
+        }
+        String key = providerQueryString.trim();
+        if (key.isEmpty()) {
+            return null;
+        }
+
+        // Query strings are already normalized, but we keep this case-insensitive
+        // to be robust across future normalization changes.
+        for (Map.Entry<
+            String,
+            String
+        > entry : showDisambiguationOverrides.entrySet()) {
+            String from = entry.getKey();
+            if (from != null && from.equalsIgnoreCase(key)) {
+                String to = entry.getValue();
+                if (to != null && !to.isBlank()) {
+                    return to;
+                }
+            }
+        }
+        return null;
     }
 
     /**
