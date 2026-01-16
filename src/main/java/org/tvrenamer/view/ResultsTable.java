@@ -1073,6 +1073,20 @@ public final class ResultsTable
                 @Override
                 public void keyReleased(KeyEvent e) {
                     super.keyReleased(e);
+
+                    // Select All: MOD1+A (Ctrl+A on Windows/Linux, Cmd+A on macOS)
+                    if (
+                        ((e.stateMask & SWT.MOD1) != 0) &&
+                        (e.keyCode == 'a' || e.keyCode == 'A')
+                    ) {
+                        if (swtTable.getItemCount() > 0) {
+                            swtTable.selectAll();
+                            swtTable.showSelection();
+                        }
+                        return;
+                    }
+
+                    // Clear selected rows
                     if (
                         (e.keyCode == '\u0008') || // backspace
                         (e.keyCode == '\u007F') // delete
