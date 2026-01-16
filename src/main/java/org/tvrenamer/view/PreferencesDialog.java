@@ -3,6 +3,8 @@ package org.tvrenamer.view;
 import static org.tvrenamer.model.ReplacementToken.*;
 import static org.tvrenamer.model.util.Constants.*;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -32,10 +34,12 @@ import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Text;
+import org.tvrenamer.controller.util.FileUtilities;
 import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.ReplacementToken;
 import org.tvrenamer.model.ThemeMode;
@@ -965,8 +969,10 @@ class PreferencesDialog extends Dialog {
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
-                    savePreferences();
-                    preferencesShell.close();
+                    boolean saved = savePreferences();
+                    if (saved) {
+                        preferencesShell.close();
+                    }
                 }
             }
         );
@@ -979,7 +985,62 @@ class PreferencesDialog extends Dialog {
     /**
      * Save the preferences to the xml file
      */
-    private void savePreferences() {
+    private boolean savePreferences() {
+        // Validate the move destination BEFORE committing it into UserPreferences.
+        // This prevents the main window (ResultsTable) from reacting to preference changes
+        // and showing a second error popup while the Preferences dialog is still open.
+        final boolean moveSelected = moveSelectedCheckbox.getSelection();
+        final String destDirTextValue = destDirText.getText();
+
+        if (moveSelected) {
+            final Path destPath;
+            try {
+                destPath = Paths.get(destDirTextValue);
+            } catch (RuntimeException ex) {
+                MessageBox box = new MessageBox(
+                    preferencesShell,
+                    SWT.ICON_ERROR | SWT.OK
+                );
+                box.setText(ERROR_LABEL);
+                box.setMessage(
+                    CANT_CREATE_DEST +
+                        ": '" +
+                        destDirTextValue +
+                        "'. " +
+                        MOVE_NOT_POSSIBLE
+                );
+                box.open();
+
+                if (destDirText != null && !destDirText.isDisposed()) {
+                    destDirText.setFocus();
+                    destDirText.selectAll();
+                }
+                return false;
+            }
+
+            if (!FileUtilities.checkForCreatableDirectory(destPath)) {
+                MessageBox box = new MessageBox(
+                    preferencesShell,
+                    SWT.ICON_ERROR | SWT.OK
+                );
+                box.setText(ERROR_LABEL);
+                box.setMessage(
+                    CANT_CREATE_DEST +
+                        ": '" +
+                        destDirTextValue +
+                        "'. " +
+                        MOVE_NOT_POSSIBLE
+                );
+                box.open();
+
+                if (destDirText != null && !destDirText.isDisposed()) {
+                    destDirText.setFocus();
+                    destDirText.selectAll();
+                }
+                return false;
+            }
+        }
+
         // Update the preferences object from the UI control values
         prefs.setSeasonPrefix(seasonPrefixString);
         prefs.setSeasonPrefixLeadingZero(
@@ -991,9 +1052,11 @@ class PreferencesDialog extends Dialog {
         prefs.setRecursivelyAddFolders(recurseFoldersCheckbox.getSelection());
         prefs.setRemoveEmptiedDirectories(rmdirEmptyCheckbox.getSelection());
         prefs.setDeleteRowAfterMove(deleteRowsCheckbox.getSelection());
-        prefs.setDestinationDirectory(destDirText.getText());
 
-        prefs.setMoveSelected(moveSelectedCheckbox.getSelection());
+        // Commit move settings only after validation succeeded
+        prefs.setDestinationDirectory(destDirTextValue);
+        prefs.setMoveSelected(moveSelected);
+
         prefs.setRenameSelected(renameSelectedCheckbox.getSelection());
 
         prefs.setPreferDvdOrderIfPresent(preferDvdOrderCheckbox.getSelection());
@@ -1023,6 +1086,7 @@ class PreferencesDialog extends Dialog {
         prefs.setShowNameOverrides(overrides);
 
         UserPreferences.store(prefs);
+        return true;
     }
 
     /**

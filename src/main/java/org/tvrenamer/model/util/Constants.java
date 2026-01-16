@@ -182,7 +182,9 @@ public class Constants {
         "Unable to create the destination directory";
     public static final String MOVE_NOT_POSSIBLE =
         "You will not be able to actually move files " +
-        "until this is corrected.  Open the Preferences dialog to correct it.";
+        "until this is corrected.  Open the Preferences dialog to correct it. " +
+        "Hint: verify the path exists (or can be created) and that you have write permission; " +
+        "for network shares, confirm the share is online and accessible.";
     public static final String MOVE_FAILURE_MSG_1 = "Some files were not moved";
     public static final String MOVE_FAILURE_PARTIAL_MSG = ".  These include";
     public static final String NEWLINE_BULLET = "\n\u2022 ";

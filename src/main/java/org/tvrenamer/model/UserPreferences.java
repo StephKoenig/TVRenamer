@@ -447,7 +447,7 @@ public class UserPreferences {
         destDirProblem = !canCreate;
 
         if (destDirProblem) {
-            logger.warning(CANT_CREATE_DEST + destDir);
+            logger.warning(CANT_CREATE_DEST + " " + destDir);
         }
 
         return canCreate;

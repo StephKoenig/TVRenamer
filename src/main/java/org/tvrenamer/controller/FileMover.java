@@ -389,20 +389,24 @@ public class FileMover implements Callable<Boolean> {
             return;
         }
 
-        final Path realDestDir;
+        // Some UNC/SMB paths can fail real-path resolution even when the location is valid and writable.
+        // Prefer real paths when available, but fall back to an absolute/normalized path instead of hard-failing.
+        Path resolvedDestDir;
         try {
-            realDestDir = destDir.toRealPath();
+            resolvedDestDir = destDir.toRealPath();
         } catch (IOException ioe) {
-            setFailureAndLog(
-                srcPath,
-                destDir,
-                "could not get real path of destination directory",
+            logger.log(
+                Level.INFO,
+                "could not get real path of destination directory; continuing with non-real path:\n  destDir=" +
+                    safePath(destDir) +
+                    "\n  source=" +
+                    safePath(srcPath),
                 ioe
             );
-            return;
+            resolvedDestDir = destDir.toAbsolutePath().normalize();
         }
 
-        Path destPath = realDestDir.resolve(filename);
+        Path destPath = resolvedDestDir.resolve(filename);
         if (Files.exists(destPath)) {
             if (destPath.equals(realSrc)) {
                 logger.info("nothing to be done to " + srcPath);
@@ -418,7 +422,7 @@ public class FileMover implements Callable<Boolean> {
             return;
         }
 
-        tryToMoveRealPaths(realSrc, destPath, realDestDir);
+        tryToMoveRealPaths(realSrc, destPath, resolvedDestDir);
     }
 
     /**
