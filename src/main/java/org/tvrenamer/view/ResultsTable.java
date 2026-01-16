@@ -542,33 +542,78 @@ public final class ResultsTable
      *                      SWT.DOWN is Z-A
      */
     void sortTable(final Column column, final int sortDirection) {
-        Field field = column.field;
+        if (swtTable.isDisposed()) {
+            return;
+        }
 
-        // Get the items
-        TableItem[] items = swtTable.getItems();
+        // Sorting can temporarily mis-paint TableEditor controls (notably Combos used
+        // when there are multiple "Proposed File Name" options). Reduce visible
+        // glitches by suspending redraw during row shuffling and forcing a refresh
+        // once done.
+        swtTable.setRedraw(false);
+        try {
+            Field field = column.field;
 
-        // Go through the item list and bubble rows up to the top as appropriate
-        for (int i = 1; i < items.length; i++) {
-            String value1 = field.getItemTextValue(items[i]);
-            for (int j = 0; j < i; j++) {
-                String value2 = field.getItemTextValue(items[j]);
-                // Compare the two values and order accordingly
-                int comparison = COLLATOR.compare(value1, value2);
-                if (
-                    ((comparison < 0) && (sortDirection == SWT.UP)) ||
-                    ((comparison > 0) && (sortDirection == SWT.DOWN))
-                ) {
-                    // Insert a copy of row i at position j, and then delete
-                    // row i. Then fetch the list of items anew, since we
-                    // just modified it.
-                    setSortedItem(items[i], j);
-                    items = swtTable.getItems();
-                    break;
+            // Get the items
+            TableItem[] items = swtTable.getItems();
+
+            // Go through the item list and bubble rows up to the top as appropriate
+            for (int i = 1; i < items.length; i++) {
+                String value1 = field.getItemTextValue(items[i]);
+                for (int j = 0; j < i; j++) {
+                    String value2 = field.getItemTextValue(items[j]);
+                    // Compare the two values and order accordingly
+                    int comparison = COLLATOR.compare(value1, value2);
+                    if (
+                        ((comparison < 0) && (sortDirection == SWT.UP)) ||
+                        ((comparison > 0) && (sortDirection == SWT.DOWN))
+                    ) {
+                        // Insert a copy of row i at position j, and then delete
+                        // row i. Then fetch the list of items anew, since we
+                        // just modified it.
+                        setSortedItem(items[i], j);
+                        items = swtTable.getItems();
+                        break;
+                    }
                 }
             }
+            swtTable.setSortDirection(sortDirection);
+            swtTable.setSortColumn(column.swtColumn);
+
+            // Rebuild any Combo/TableEditor controls after sorting.
+            // During sorting we reattach existing Combo controls to new TableItems, and SWT can
+            // leave one cell visually stale until the next focus/selection event. Recreating the
+            // editors deterministically prevents the "first row wrong until click" glitch.
+            for (TableItem item : swtTable.getItems()) {
+                if (item == null || item.isDisposed()) {
+                    continue;
+                }
+
+                // Dispose any existing combo editor control (if present)
+                deleteItemCombo(item);
+                item.setData(null);
+
+                // Recompute proposed destination/editor from the model
+                String fileName = CURRENT_FILE_FIELD.getCellText(item);
+                String newFileName = episodeMap.currentLocationOf(fileName);
+                if (newFileName == null) {
+                    // Defensive: if the file moved out from under us, remove the row.
+                    deleteTableItem(item);
+                    continue;
+                }
+                FileEpisode episode = episodeMap.get(newFileName);
+                if (episode != null) {
+                    setProposedDestColumn(item, episode);
+                }
+            }
+        } finally {
+            // Force a post-sort layout/paint pass so any embedded editors (Combo/TableEditor)
+            // recompute bounds and the UI doesn't appear "half sorted" until the next click.
+            swtTable.setRedraw(true);
+            swtTable.layout(true, true);
+            swtTable.redraw();
+            swtTable.update();
         }
-        swtTable.setSortDirection(sortDirection);
-        swtTable.setSortColumn(column.swtColumn);
     }
 
     /**
