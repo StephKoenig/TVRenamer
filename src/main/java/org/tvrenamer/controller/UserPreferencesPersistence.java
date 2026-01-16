@@ -1,7 +1,9 @@
 package org.tvrenamer.controller;
 
 import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.converters.reflection.AbstractReflectionConverter.UnknownFieldException;
 import com.thoughtworks.xstream.converters.reflection.PureJavaReflectionProvider;
+import com.thoughtworks.xstream.converters.reflection.ReflectionConverter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -109,7 +111,26 @@ public class UserPreferencesPersistence {
         }
 
         try (InputStream in = Files.newInputStream(path)) {
-            return (UserPreferences) xstream.fromXML(in);
+            try {
+                return (UserPreferences) xstream.fromXML(in);
+            } catch (UnknownFieldException ufe) {
+                // Forward/backward compatibility: tolerate unknown fields in prefs.xml.
+                // Example: older/newer versions may have fields that don't exist in this build.
+                logger.log(
+                    Level.INFO,
+                    "Ignoring unknown field(s) while reading preferences file '" +
+                        path.toAbsolutePath() +
+                        "': " +
+                        ufe.getMessage(),
+                    ufe
+                );
+
+                // Best-effort: ignore unknown fields and retry.
+                xstream.ignoreUnknownElements();
+                try (InputStream inRetry = Files.newInputStream(path)) {
+                    return (UserPreferences) xstream.fromXML(inRetry);
+                }
+            }
         } catch (IOException | IllegalArgumentException | SecurityException e) {
             logger.log(
                 Level.SEVERE,

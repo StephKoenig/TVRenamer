@@ -886,6 +886,18 @@ public final class ResultsTable
      */
     public void finishMove(final TableItem item, final FileEpisode episode) {
         if (episode.isSuccess()) {
+            // Increment processed counter once per successful file operation (rename and/or move).
+            prefs.incrementProcessedFileCount(1);
+            UserPreferences.store(prefs);
+
+            // Best-effort: refresh the processed label if present.
+            // (We avoid hard dependency by looking it up via shell data.)
+            Object labelObj = shell.getData("tvrenamer.processedLabel");
+            if (labelObj instanceof Label label && !label.isDisposed()) {
+                label.setText("Processed: " + prefs.getProcessedFileCount());
+                label.getParent().layout(true, true);
+            }
+
             if (prefs.isDeleteRowAfterMove()) {
                 deleteTableItem(item);
             } else {
@@ -916,9 +928,27 @@ public final class ResultsTable
     }
 
     private void setupTopButtons() {
-        final Composite topButtonsComposite = new Composite(shell, SWT.FILL);
+        // Use GridLayout so we can keep the "Processed: X" label on the same row as the buttons.
+        final Composite topRowComposite = new Composite(shell, SWT.NONE);
+        topRowComposite.setLayout(new GridLayout(2, false));
+        topRowComposite.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1)
+        );
+        ThemeManager.applyPalette(topRowComposite, themePalette);
+
+        final Composite topButtonsComposite = new Composite(
+            topRowComposite,
+            SWT.NONE
+        );
         topButtonsComposite.setLayout(new RowLayout());
         ThemeManager.applyPalette(topButtonsComposite, themePalette);
+
+        final Label processedLabel = new Label(topRowComposite, SWT.NONE);
+        processedLabel.setLayoutData(
+            new GridData(SWT.END, SWT.CENTER, true, false, 1, 1)
+        );
+        processedLabel.setText("Processed: " + prefs.getProcessedFileCount());
+        shell.setData("tvrenamer.processedLabel", processedLabel);
 
         final FileDialog fd = new FileDialog(shell, SWT.MULTI);
         final Button addFilesButton = new Button(topButtonsComposite, SWT.PUSH);
