@@ -7,6 +7,9 @@
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
 
+# Local downloads (e.g., `gh run download --dir ./artifacts`)
+/artifacts/
+
 launch4j.properties
 /package/macosx/
 
