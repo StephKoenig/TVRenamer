@@ -199,7 +199,8 @@ This project intentionally does **not** auto-release on every successful build. 
 - Generated outputs should not be committed:
   - `build/` is output-only
 - Documentation directory:
-  - `docs/` is ignored by `.gitignore` in this repo (do not expect CI to include it unless ignore rules change)
+  - `docs/` is tracked in git and intended for feature specs and planning docs.
+  - CI does not publish `docs/` as build artifacts; it exists for documentation and collaboration in the repo.
 
 ---
 
