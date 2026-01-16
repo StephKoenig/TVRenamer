@@ -55,6 +55,11 @@ public class UserPreferences {
     // Prefer DVD ordering/titles if present; fall back to aired ordering otherwise.
     private boolean preferDvdOrderIfPresent = false;
 
+    // Fun metric: count of files successfully processed (renamed and/or moved).
+    // Persisted in prefs.xml. This should only be incremented once per successfully
+    // processed TableItem to avoid double-counting rename+move operations.
+    private long processedFileCount = 0L;
+
     // For the ignore keywords, we do some processing. So we also preserve exactly
     // what the user specified.
     private transient String specifiedIgnoreKeywords;
@@ -85,6 +90,7 @@ public class UserPreferences {
         themeMode = ThemeMode.LIGHT;
         recursivelyAddFolders = true;
         preferDvdOrderIfPresent = false;
+        processedFileCount = 0L;
         ignoreKeywords = new ArrayList<>();
         ignoreKeywords.add(DEFAULT_IGNORED_KEYWORD);
         buildIgnoredKeywordsString();
@@ -119,9 +125,9 @@ public class UserPreferences {
                 if (to != null && !to.isBlank()) {
                     return to;
                 }
-                return extractedShowName;
             }
         }
+
         return extractedShowName;
     }
 
@@ -154,6 +160,25 @@ public class UserPreferences {
      */
     public boolean isPreferDvdOrderIfPresent() {
         return preferDvdOrderIfPresent;
+    }
+
+    /**
+     * @return total number of files successfully processed (renamed and/or moved)
+     */
+    public long getProcessedFileCount() {
+        return processedFileCount;
+    }
+
+    /**
+     * Increment the processed file counter.
+     *
+     * @param delta number of successfully processed files to add (ignored if <= 0)
+     */
+    public void incrementProcessedFileCount(long delta) {
+        if (delta <= 0) {
+            return;
+        }
+        processedFileCount += delta;
     }
 
     /**
