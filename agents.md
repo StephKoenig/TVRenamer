@@ -101,19 +101,19 @@ Artifacts uploaded by CI:
 ## GitHub CLI (`gh`) usage
 
 The GitHub CLI is useful for:
-- Watching Actions runs
+- Watching Actions runs / build status
 - Viewing logs
 - Downloading artifacts
 - Creating PRs
 - Creating Releases
 
 Assumptions:
-- You are authenticated (`gh auth status`)
 - The local repo is connected to the correct GitHub remote
+- You are authenticated (`gh auth status`)
 
 Common commands:
 
-List recent runs for `master`:
+List recent runs for `master` (quick build-status visibility):
 ```/dev/null/gh.txt#L1-1
 gh run list --branch master --limit 10
 ```
@@ -194,6 +194,13 @@ This project intentionally does **not** auto-release on every successful build. 
 ---
 
 ## Repository hygiene / gotchas
+
+### Gradle wrapper missing `gradle-wrapper.jar`
+If `./gradlew` fails with:
+- `Unable to access jarfile .../gradle/wrapper/gradle-wrapper.jar`
+
+Your checkout is missing the wrapper JAR. Do a normal git checkout/pull so `gradle/wrapper/gradle-wrapper.jar` is present, then rerun:
+- `./gradlew --version`
 
 - Line endings: Windows checkouts may flip LF/CRLF depending on Git settings. Avoid churn by not reformatting unrelated files.
 - Generated outputs should not be committed:
