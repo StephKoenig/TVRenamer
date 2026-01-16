@@ -5,9 +5,12 @@ import static org.tvrenamer.view.Fields.*;
 import static org.tvrenamer.view.ItemState.*;
 
 import java.text.Collator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
@@ -60,6 +63,7 @@ import org.tvrenamer.model.Show;
 import org.tvrenamer.model.ShowStore;
 import org.tvrenamer.model.UserPreference;
 import org.tvrenamer.model.UserPreferences;
+import org.tvrenamer.view.BatchShowDisambiguationDialog;
 
 public final class ResultsTable
     implements java.beans.PropertyChangeListener, AddEpisodeListener
@@ -82,6 +86,14 @@ public final class ResultsTable
     private static final int WIDTH_STATUS = 60;
 
     private static final int DEFAULT_MAX_FAILURES_TO_LIST = 3;
+
+    // Status text used when a row is blocked on ambiguous show selection.
+    private static final String STATUS_SELECT_SHOW = "Select Show...";
+
+    // Per-row flag stored on TableItem to keep "Select Show..." clickable even if other
+    // code recomputes the proposed destination text.
+    private static final String SELECT_SHOW_PENDING_KEY =
+        "tvrenamer.selectShowPending";
 
     private final UIStarter ui;
     private final Shell shell;
@@ -355,6 +367,19 @@ public final class ResultsTable
         return item;
     }
 
+    private void setSelectShowPending(final TableItem item) {
+        if (item == null || item.isDisposed()) {
+            return;
+        }
+        // Durable "action required" state: store a per-row flag so the row remains clickable
+        // even if other code later recomputes the proposed destination text.
+        item.setData(SELECT_SHOW_PENDING_KEY, Boolean.TRUE);
+
+        // Keep the status icon, but make the required action visible in the Proposed File Path column.
+        STATUS_FIELD.setCellImage(item, DOWNLOADING);
+        NEW_FILENAME_FIELD.setCellText(item, STATUS_SELECT_SHOW);
+    }
+
     @Override
     public void addEpisodes(final Queue<FileEpisode> episodes) {
         for (final FileEpisode episode : episodes) {
@@ -385,6 +410,10 @@ public final class ResultsTable
                             if (tableContainsTableItem(item)) {
                                 setProposedDestColumn(item, episode);
                                 STATUS_FIELD.setCellImage(item, ADDED);
+                                item.setText(
+                                    STATUS_FIELD.column.id,
+                                    EMPTY_STRING
+                                );
                             }
                         });
                         if (show.isValidSeries()) {
@@ -395,6 +424,30 @@ public final class ResultsTable
                     @Override
                     public void downloadFailed(FailedShow failedShow) {
                         episode.setFailedShow(failedShow);
+
+                        // If the failure is due to pending show disambiguation, do not surface it
+                        // as an immediate user-visible "unable to find show" error. We'll prompt
+                        // the user in the batch disambiguation dialog and then re-run lookup.
+                        String msg = null;
+                        try {
+                            msg = failedShow.toString();
+                        } catch (Exception ignored) {
+                            // best-effort
+                        }
+                        if (
+                            msg != null &&
+                            msg
+                                .toLowerCase()
+                                .contains("show selection required")
+                        ) {
+                            display.asyncExec(() -> {
+                                if (tableContainsTableItem(item)) {
+                                    setSelectShowPending(item);
+                                }
+                            });
+                            return;
+                        }
+
                         tableItemFailed(item, episode);
                     }
 
@@ -407,6 +460,312 @@ public final class ResultsTable
                 }
             );
         }
+
+        // Refresh any existing "Select Show..." rows in case adding files (or other table refresh
+        // paths) recomputed the Proposed File Path column and wiped the label.
+        markAllSelectShowPending();
+
+        // No timer-based polling: ShowStore notifies us when pending disambiguations are enqueued.
+        // We do nothing here; the listener will open the batch dialog when needed.
+    }
+
+    // Guard against re-entrancy / multiple dialogs opening at once.
+    private volatile boolean batchDisambiguationDialogOpen = false;
+
+    private void markAllSelectShowPending() {
+        // Mark only rows that are actually blocked on show disambiguation.
+        // We do this by matching the row's provider query string against the current pending disambiguations.
+        Map<String, ShowStore.PendingDisambiguation> pending =
+            ShowStore.getPendingDisambiguations();
+        if (pending == null || pending.isEmpty()) {
+            return;
+        }
+
+        HashSet<String> pendingQueryStrings = new HashSet<>();
+        for (String q : pending.keySet()) {
+            if (q != null && !q.isBlank()) {
+                pendingQueryStrings.add(q);
+            }
+        }
+        if (pendingQueryStrings.isEmpty()) {
+            return;
+        }
+
+        for (final TableItem item : swtTable.getItems()) {
+            if (item == null || item.isDisposed()) {
+                continue;
+            }
+
+            String fileNameKey = CURRENT_FILE_FIELD.getCellText(item);
+            FileEpisode episode = episodeMap.get(fileNameKey);
+            if (episode == null || !episode.wasParsed()) {
+                // Clear any stale flag
+                item.setData(SELECT_SHOW_PENDING_KEY, null);
+                continue;
+            }
+
+            String extractedShow = episode.getFilenameShow();
+            if (StringUtils.isBlank(extractedShow)) {
+                item.setData(SELECT_SHOW_PENDING_KEY, null);
+                continue;
+            }
+
+            String queryString = StringUtils.makeQueryString(extractedShow);
+            if (!pendingQueryStrings.contains(queryString)) {
+                // No longer pending: clear flag and allow normal proposed-dest rendering.
+                item.setData(SELECT_SHOW_PENDING_KEY, null);
+                continue;
+            }
+
+            setSelectShowPending(item);
+        }
+    }
+
+    // (removed duplicate declaration)
+
+    /**
+     * Show a single batch dialog for any queued show disambiguations, persist the user's
+     * selections (query string -> series id), then re-trigger lookup for each affected
+     * extracted show name so the table updates.
+     *
+     * @return true if a dialog was shown (or attempted), false if there was nothing to show
+     */
+    private boolean showBatchDisambiguationDialogIfNeeded() {
+        logger.info(
+            "Batch show disambiguation: checking for pending ambiguities..."
+        );
+
+        // If the table is empty, there is nothing to resolve. Clear any stale pending
+        // disambiguations so we don't show a "Resolve ambiguous shows" dialog later.
+        if (swtTable.getItemCount() == 0) {
+            logger.info(
+                "Batch show disambiguation: results table is empty; clearing stale pending ambiguities."
+            );
+            ShowStore.clearPendingDisambiguations();
+            return false;
+        }
+
+        // Snapshot pending disambiguations from the lookup layer
+        Map<String, ShowStore.PendingDisambiguation> pending =
+            ShowStore.getPendingDisambiguations();
+
+        if (pending == null || pending.isEmpty()) {
+            logger.info(
+                "Batch show disambiguation: no pending ambiguities found (nothing to show)."
+            );
+            return false;
+        }
+
+        logger.info(
+            "Batch show disambiguation: found " +
+                pending.size() +
+                " pending ambiguity(ies); preparing dialog"
+        );
+
+        // Enrich pending entries with an example filename if missing.
+        // We only have access to episodes here, so we pick the first matching file for each extracted show.
+        Map<String, ShowStore.PendingDisambiguation> enriched =
+            new LinkedHashMap<>();
+
+        for (Map.Entry<
+            String,
+            ShowStore.PendingDisambiguation
+        > entry : pending.entrySet()) {
+            String queryString = entry.getKey();
+            ShowStore.PendingDisambiguation pd = entry.getValue();
+            if (pd == null) {
+                continue;
+            }
+
+            String exampleFileName = pd.exampleFileName;
+            if (exampleFileName == null || exampleFileName.isBlank()) {
+                // Find a representative file name from the table/model
+                String extracted = pd.extractedShowName;
+                if (extracted != null) {
+                    for (TableItem item : swtTable.getItems()) {
+                        String fileNameKey = CURRENT_FILE_FIELD.getCellText(
+                            item
+                        );
+                        FileEpisode ep = episodeMap.get(fileNameKey);
+                        if (ep == null) {
+                            continue;
+                        }
+                        if (extracted.equals(ep.getFilenameShow())) {
+                            exampleFileName = ep.getFileName();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            enriched.put(
+                queryString,
+                new ShowStore.PendingDisambiguation(
+                    pd.queryString,
+                    pd.extractedShowName,
+                    (exampleFileName == null) ? "" : exampleFileName,
+                    pd.options
+                )
+            );
+        }
+
+        // Show the batch dialog on the UI thread (we're already on UI thread here).
+        BatchShowDisambiguationDialog dialog =
+            new BatchShowDisambiguationDialog(shell, enriched);
+
+        try {
+            batchDisambiguationDialogOpen = true;
+            logger.info("Batch show disambiguation: opening dialog...");
+            Map<String, String> selections = dialog.open();
+            if (selections == null) {
+                logger.info(
+                    "Batch show disambiguation: user cancelled dialog; leaving pending ambiguities queued."
+                );
+
+                // User cancelled: keep the pending queue, but make the UI state explicit.
+                // Any rows that are blocked on show disambiguation should show "Select Show..."
+                // so users don't think it's still downloading.
+                markAllSelectShowPending();
+                return true;
+            }
+            logger.info(
+                "Batch show disambiguation: dialog completed with " +
+                    selections.size() +
+                    " selection(s)"
+            );
+
+            // Apply selections (persist + update prefs)
+            for (Map.Entry<String, String> sel : selections.entrySet()) {
+                String queryString = sel.getKey();
+                String chosenId = sel.getValue();
+                if (queryString == null || queryString.isBlank()) {
+                    continue;
+                }
+                if (chosenId == null || chosenId.isBlank()) {
+                    continue;
+                }
+                ShowStore.applyShowDisambiguationSelection(
+                    queryString,
+                    chosenId
+                );
+            }
+
+            // Clear pending queue now that user has handled it.
+            ShowStore.clearPendingDisambiguations();
+
+            // Re-trigger lookup for each affected item based on provider query string rather than
+            // the extracted show name. This avoids mismatches where the extracted name varies
+            // (punctuation/case/overrides) but the underlying query string is what we actually
+            // disambiguate and persist.
+            HashSet<String> affectedQueryStrings = new HashSet<>();
+            for (ShowStore.PendingDisambiguation pd : enriched.values()) {
+                if (pd == null) {
+                    continue;
+                }
+                String q = pd.queryString;
+                if (q != null && !q.isBlank()) {
+                    affectedQueryStrings.add(q);
+                }
+            }
+            if (affectedQueryStrings.isEmpty()) {
+                return true;
+            }
+
+            for (final TableItem item : swtTable.getItems()) {
+                String fileNameKey = CURRENT_FILE_FIELD.getCellText(item);
+                final FileEpisode episode = episodeMap.get(fileNameKey);
+                if (episode == null) {
+                    continue;
+                }
+                if (!episode.wasParsed()) {
+                    continue;
+                }
+
+                final String extractedShow = episode.getFilenameShow();
+                if (StringUtils.isBlank(extractedShow)) {
+                    continue;
+                }
+
+                // Compute the provider query string the same way ShowName/ShowStore does.
+                final String queryString = StringUtils.makeQueryString(
+                    extractedShow
+                );
+                if (!affectedQueryStrings.contains(queryString)) {
+                    continue;
+                }
+
+                // Reset to "downloading" while we re-resolve show
+                STATUS_FIELD.setCellImage(item, DOWNLOADING);
+
+                ShowStore.mapStringToShow(
+                    extractedShow,
+                    new ShowInformationListener() {
+                        @Override
+                        public void downloadSucceeded(Show show) {
+                            episode.setEpisodeShow(show);
+                            display.asyncExec(() -> {
+                                if (tableContainsTableItem(item)) {
+                                    setProposedDestColumn(item, episode);
+                                    STATUS_FIELD.setCellImage(item, ADDED);
+                                }
+                            });
+                            if (show.isValidSeries()) {
+                                getSeriesListings(
+                                    show.asSeries(),
+                                    item,
+                                    episode
+                                );
+                            }
+                        }
+
+                        @Override
+                        public void downloadFailed(FailedShow failedShow) {
+                            episode.setFailedShow(failedShow);
+
+                            // Same logic as above: suppress "show selection required" failures
+                            // because they'll be resolved via the batch disambiguation dialog.
+                            String msg = null;
+                            try {
+                                msg = failedShow.toString();
+                            } catch (Exception ignored) {
+                                // best-effort
+                            }
+                            if (
+                                msg != null &&
+                                msg
+                                    .toLowerCase()
+                                    .contains("show selection required")
+                            ) {
+                                display.asyncExec(() -> {
+                                    if (tableContainsTableItem(item)) {
+                                        STATUS_FIELD.setCellImage(
+                                            item,
+                                            DOWNLOADING
+                                        );
+                                    }
+                                });
+                                return;
+                            }
+
+                            tableItemFailed(item, episode);
+                        }
+
+                        @Override
+                        public void apiHasBeenDeprecated() {
+                            noteApiFailure();
+                            episode.setApiDiscontinued();
+                            tableItemFailed(item, episode);
+                        }
+                    }
+                );
+            }
+
+            return true;
+        } finally {
+            batchDisambiguationDialogOpen = false;
+        }
+
+        // (Selection apply + queue clear + re-trigger lookups are handled above within the try block.)
     }
 
     /**
@@ -722,6 +1081,12 @@ public final class ResultsTable
             }
         }
         swtTable.deselectAll();
+
+        // If the table is now empty, clear any pending show disambiguations so we don't
+        // later show a stale "Resolve ambiguous shows" dialog unrelated to current rows.
+        if (swtTable.getItemCount() == 0) {
+            ShowStore.clearPendingDisambiguations();
+        }
     }
 
     private void updateUserPreferences(final UserPreference userPref) {
@@ -998,6 +1363,10 @@ public final class ResultsTable
                     for (final TableItem item : swtTable.getItems()) {
                         deleteTableItem(item);
                     }
+
+                    // Clearing the list leaves no rows that could be resolved, so clear any
+                    // pending show disambiguations to avoid stale "Resolve ambiguous shows" prompts.
+                    ShowStore.clearPendingDisambiguations();
                 }
             }
         );
@@ -1108,7 +1477,25 @@ public final class ResultsTable
                     swtTable.deselectAll();
                 }
             }
-            // else, it's a SELECTED event, which we just don't care about
+            // else, it's a SELECTED event. If the row is in "Select Show..." pending state,
+            // open the batch disambiguation dialog so the user can resolve ambiguities.
+            else {
+                try {
+                    TableItem eventItem = (TableItem) event.item;
+                    if (eventItem != null && !eventItem.isDisposed()) {
+                        // If this row is flagged as pending show selection, clicking it should reopen
+                        // the batch disambiguation dialog even if the proposed text was recomputed.
+                        Object pending = eventItem.getData(
+                            SELECT_SHOW_PENDING_KEY
+                        );
+                        if (Boolean.TRUE.equals(pending)) {
+                            showBatchDisambiguationDialogIfNeeded();
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // best-effort; do not break normal selection behavior
+                }
+            }
         });
     }
 
@@ -1178,6 +1565,23 @@ public final class ResultsTable
         editor.grabHorizontal = true;
 
         setupSelectionListener();
+
+        // When provider lookups enqueue ambiguous shows, ShowStore notifies listeners.
+        // Open the batch resolve dialog on the UI thread (debounced by our open-guard).
+        ShowStore.addPendingDisambiguationsListener(() -> {
+            if (shell == null || shell.isDisposed()) {
+                return;
+            }
+            display.asyncExec(() -> {
+                if (shell == null || shell.isDisposed()) {
+                    return;
+                }
+                if (batchDisambiguationDialogOpen) {
+                    return;
+                }
+                showBatchDisambiguationDialogIfNeeded();
+            });
+        });
     }
 
     private void setupMainWindow() {

@@ -1,13 +1,12 @@
 package org.tvrenamer.model;
 
-import org.tvrenamer.controller.ShowInformationListener;
-import org.tvrenamer.controller.util.StringUtils;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.ShowInformationListener;
+import org.tvrenamer.controller.util.StringUtils;
 
 /**
  * The ShowName class is an object that represents a string that is believed to represent
@@ -44,7 +43,10 @@ import java.util.logging.Logger;
  * not able to make those inferences, but it would be good to add in the future.
  */
 public class ShowName {
-    private static final Logger logger = Logger.getLogger(ShowName.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        ShowName.class.getName()
+    );
 
     /**
      * Inner class to hold a query string.  The query string is what we send to the provider
@@ -52,11 +54,14 @@ public class ShowName {
      * show names.
      */
     private static class QueryString {
+
         final String queryString;
         private ShowOption matchedShow = null;
-        private final List<ShowInformationListener> listeners = new LinkedList<>();
+        private final List<ShowInformationListener> listeners =
+            new LinkedList<>();
 
-        private static final Map<String, QueryString> QUERY_STRINGS = new ConcurrentHashMap<>();
+        private static final Map<String, QueryString> QUERY_STRINGS =
+            new ConcurrentHashMap<>();
 
         private QueryString(String queryString) {
             this.queryString = queryString;
@@ -118,7 +123,9 @@ public class ShowName {
         // see ShowName.apiDiscontinued for documentation
         private void apiDiscontinued() {
             synchronized (listeners) {
-                listeners.forEach(ShowInformationListener::apiHasBeenDeprecated);
+                listeners.forEach(
+                    ShowInformationListener::apiHasBeenDeprecated
+                );
             }
         }
 
@@ -154,7 +161,8 @@ public class ShowName {
      * A mapping from Strings to ShowName objects.  This is potentially a
      * many-to-one relationship.
      */
-    private static final Map<String, ShowName> SHOW_NAMES = new ConcurrentHashMap<>();
+    private static final Map<String, ShowName> SHOW_NAMES =
+        new ConcurrentHashMap<>();
 
     /**
      * Get the ShowName object for the given String.  If one was already created,
@@ -195,8 +203,11 @@ public class ShowName {
         if (showName == null) {
             showName = new ShowName(filenameShow);
             SHOW_NAMES.put(filenameShow, showName);
-            logger.severe("could not get show name for " + filenameShow
-                          + ", so created one instead");
+            logger.severe(
+                "could not get show name for " +
+                    filenameShow +
+                    ", so created one instead"
+            );
         }
         return showName;
     }
@@ -297,6 +308,17 @@ public class ShowName {
     }
 
     /**
+     * Return a snapshot of the show options returned by the provider for this ShowName.
+     * This is intended for UI/lookup code that wants to prompt the user when multiple
+     * candidates exist.
+     *
+     * @return a copy of the current show options list (may be empty)
+     */
+    public List<ShowOption> getShowOptions() {
+        return new LinkedList<>(showOptions);
+    }
+
+    /**
      * Find out if this ShowName has received its options from the provider yet.
      *
      * @return true if this ShowName has show options; false otherwise
@@ -315,6 +337,34 @@ public class ShowName {
      */
     public void addShowOption(final String tvdbId, final String seriesName) {
         ShowOption option = ShowOption.getShowOption(tvdbId, seriesName);
+        showOptions.add(option);
+    }
+
+    /**
+     * Add a possible Show option that could be mapped to this ShowName, with
+     * additional best-effort metadata returned by the provider search endpoint.
+     *
+     * @param tvdbId
+     *    the show's id in the TVDB database
+     * @param seriesName
+     *    the "official" show name
+     * @param firstAiredYear
+     *    the year the show first aired (nullable)
+     * @param aliasNames
+     *    alias names returned by the provider (nullable; may be empty)
+     */
+    public void addShowOption(
+        final String tvdbId,
+        final String seriesName,
+        final Integer firstAiredYear,
+        final List<String> aliasNames
+    ) {
+        ShowOption option = ShowOption.getShowOption(
+            tvdbId,
+            seriesName,
+            firstAiredYear,
+            aliasNames
+        );
         showOptions.add(option);
     }
 
@@ -354,8 +404,11 @@ public class ShowName {
                     selected = s;
                 } else {
                     // TODO: could check language?  other criteria?  Case sensitive?
-                    logger.warning("multiple exact hits for " + foundName
-                                   + "; choosing first one");
+                    logger.warning(
+                        "multiple exact hits for " +
+                            foundName +
+                            "; choosing first one"
+                    );
                 }
             }
         }

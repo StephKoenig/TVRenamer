@@ -1,14 +1,17 @@
 package org.tvrenamer.model;
 
-import org.tvrenamer.controller.ShowInformationListener;
-import org.tvrenamer.controller.TheTVDBProvider;
-
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.ShowInformationListener;
+import org.tvrenamer.controller.TheTVDBProvider;
 
 /**
  * ShowStore -- maps strings to Show objects.<p>
@@ -115,9 +118,171 @@ import java.util.logging.Logger;
  */
 public class ShowStore {
 
-    private static final Logger logger = Logger.getLogger(ShowStore.class.getName());
+    private static final Logger logger = Logger.getLogger(
+        ShowStore.class.getName()
+    );
 
-    private static final ExecutorService threadPool = Executors.newCachedThreadPool();
+    private static final ExecutorService threadPool =
+        Executors.newCachedThreadPool();
+
+    private static final UserPreferences prefs = UserPreferences.getInstance();
+
+    /**
+     * Listener invoked when pending show disambiguations are enqueued/changed.
+     *
+     * This allows the UI to react immediately (e.g., open the batch disambiguation dialog)
+     * without timer-based polling.
+     */
+    public interface PendingDisambiguationsListener {
+        void pendingDisambiguationsChanged();
+    }
+
+    private static final CopyOnWriteArrayList<
+        PendingDisambiguationsListener
+    > pendingDisambiguationsListeners = new CopyOnWriteArrayList<>();
+
+    public static void addPendingDisambiguationsListener(
+        final PendingDisambiguationsListener listener
+    ) {
+        if (listener != null) {
+            pendingDisambiguationsListeners.addIfAbsent(listener);
+        }
+    }
+
+    public static void removePendingDisambiguationsListener(
+        final PendingDisambiguationsListener listener
+    ) {
+        if (listener != null) {
+            pendingDisambiguationsListeners.remove(listener);
+        }
+    }
+
+    private static void notifyPendingDisambiguationsChanged() {
+        for (PendingDisambiguationsListener l : pendingDisambiguationsListeners) {
+            try {
+                l.pendingDisambiguationsChanged();
+            } catch (RuntimeException e) {
+                logger.warning(
+                    "pendingDisambiguationsChanged listener threw: " + e
+                );
+            }
+        }
+    }
+
+    /**
+     * Pending disambiguations collected during lookup so the UI can resolve them
+     * in a single batch dialog after adding files.
+     *
+     * Keyed by normalized provider query string.
+     */
+    private static final Map<
+        String,
+        PendingDisambiguation
+    > pendingDisambiguations = new LinkedHashMap<>();
+
+    /**
+     * Represents one ambiguous show lookup that requires user input.
+     *
+     * - queryString: provider query string (normalized; used as key and for persistence)
+     * - extractedShowName: user-facing extracted name (display in batch dialog)
+     * - exampleFileName: FileEpisode.getFileName() (display in batch dialog)
+     * - options: provider candidates (can be truncated to first 5 in UI)
+     */
+    public static final class PendingDisambiguation {
+
+        public final String queryString;
+        public final String extractedShowName;
+        public final String exampleFileName;
+        public final List<ShowOption> options;
+
+        public PendingDisambiguation(
+            final String queryString,
+            final String extractedShowName,
+            final String exampleFileName,
+            final List<ShowOption> options
+        ) {
+            this.queryString = queryString;
+            this.extractedShowName = extractedShowName;
+            this.exampleFileName = exampleFileName;
+            this.options = options;
+        }
+    }
+
+    /**
+     * Get a snapshot of currently pending disambiguations.
+     * The UI can use this to show a single batch dialog.
+     *
+     * @return map of queryString -> pending disambiguation (snapshot)
+     */
+    public static synchronized Map<
+        String,
+        PendingDisambiguation
+    > getPendingDisambiguations() {
+        Map<String, PendingDisambiguation> snapshot = new LinkedHashMap<>(
+            pendingDisambiguations
+        );
+        logger.info(
+            "ShowStore.getPendingDisambiguations: returning " +
+                snapshot.size() +
+                " pending item(s)"
+        );
+        return snapshot;
+    }
+
+    /**
+     * Clear all currently pending disambiguations.
+     * Intended to be called after the UI resolves them (or cancels).
+     */
+    public static synchronized void clearPendingDisambiguations() {
+        int before = pendingDisambiguations.size();
+        pendingDisambiguations.clear();
+        logger.info(
+            "ShowStore.clearPendingDisambiguations: cleared " +
+                before +
+                " pending item(s)"
+        );
+        if (before > 0) {
+            notifyPendingDisambiguationsChanged();
+        }
+    }
+
+    /**
+     * Persist and apply a user-selected disambiguation for a query string.
+     *
+     * @param queryString normalized provider query string
+     * @param chosenId provider series id (e.g., TVDB seriesid)
+     */
+    public static synchronized void applyShowDisambiguationSelection(
+        final String queryString,
+        final String chosenId
+    ) {
+        if (queryString == null || queryString.isBlank()) {
+            logger.warning(
+                "ShowStore.applyShowDisambiguationSelection: blank queryString"
+            );
+            return;
+        }
+        if (chosenId == null || chosenId.isBlank()) {
+            logger.warning(
+                "ShowStore.applyShowDisambiguationSelection: blank chosenId for queryString=" +
+                    queryString
+            );
+            return;
+        }
+        Map<String, String> map = new LinkedHashMap<>(
+            prefs.getShowDisambiguationOverrides()
+        );
+        map.put(queryString, chosenId);
+        prefs.setShowDisambiguationOverrides(map);
+        UserPreferences.store(prefs);
+        logger.info(
+            "ShowStore.applyShowDisambiguationSelection: stored mapping queryString='" +
+                queryString +
+                "' -> id='" +
+                chosenId +
+                "'"
+        );
+    }
 
     /**
      * Submits the task to download the information about the ShowName.
@@ -131,16 +296,23 @@ public class ShowStore {
      * @param showFetcher
      *    the task that will download the information
      */
-    private static void submitDownloadTask(final ShowName showName,
-                                           final Callable<Boolean> showFetcher)
-    {
+    private static void submitDownloadTask(
+        final ShowName showName,
+        final Callable<Boolean> showFetcher
+    ) {
         Future<Boolean> result = null;
         FailedShow failure = null;
         try {
             result = threadPool.submit(showFetcher);
         } catch (RejectedExecutionException | NullPointerException e) {
-            logger.warning("unable to submit download task (" + showName + ") for execution");
-            failure = showName.getFailedShow(new TVRenamerIOException(e.getMessage()));
+            logger.warning(
+                "unable to submit download task (" +
+                    showName +
+                    ") for execution"
+            );
+            failure = showName.getFailedShow(
+                new TVRenamerIOException(e.getMessage())
+            );
         }
         if ((result == null) && (failure == null)) {
             logger.warning("not downloading " + showName);
@@ -170,7 +342,10 @@ public class ShowStore {
      *            the listener to notify or register
      */
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
-    public static void mapStringToShow(String filenameShow, ShowInformationListener listener) {
+    public static void mapStringToShow(
+        String filenameShow,
+        ShowInformationListener listener
+    ) {
         if (listener == null) {
             logger.warning("cannot look up show without a listener");
             return;
@@ -230,7 +405,115 @@ public class ShowStore {
             ShowOption showOption;
             try {
                 TheTVDBProvider.getShowOptions(showName);
-                showOption = showName.selectShowOption();
+
+                // If the user previously disambiguated this query string, honor it.
+                String queryString = showName.getQueryString();
+
+                // 1) If the user previously disambiguated this query string, honor it.
+                String preferredId = prefs.resolveDisambiguatedSeriesId(
+                    queryString
+                );
+                if (preferredId != null) {
+                    ShowOption preferred = null;
+                    for (ShowOption opt : showName.getShowOptions()) {
+                        if (
+                            opt != null && preferredId.equals(opt.getIdString())
+                        ) {
+                            preferred = opt;
+                            break;
+                        }
+                    }
+                    if (preferred != null) {
+                        logger.info(
+                            "ShowStore: using stored disambiguation for queryString='" +
+                                queryString +
+                                "' -> id='" +
+                                preferredId +
+                                "' (" +
+                                preferred.getName() +
+                                ")"
+                        );
+                        showOption = preferred;
+                    } else {
+                        logger.warning(
+                            "ShowStore: stored disambiguation id '" +
+                                preferredId +
+                                "' not found in current search results for queryString='" +
+                                queryString +
+                                "'; falling back to default selection"
+                        );
+                        // Stored mapping no longer matches current search results; fall back.
+                        showOption = showName.selectShowOption();
+                    }
+                } else {
+                    // 2) Improve auto-selection before queuing:
+                    // Prefer an exact SeriesName match (case-insensitive) against the extracted show name,
+                    // then an exact alias match. This avoids prompting for common cases like
+                    // "Doctor Who (2023)" where SeriesName matches exactly but FirstAired may be 2024.
+                    List<ShowOption> options = showName.getShowOptions();
+
+                    ShowOption exactMatch = null;
+                    String extracted = showName.getExampleFilename();
+                    if (extracted != null && !extracted.isBlank()) {
+                        for (ShowOption opt : options) {
+                            if (opt == null) {
+                                continue;
+                            }
+                            String name = opt.getName();
+                            if (
+                                name != null && name.equalsIgnoreCase(extracted)
+                            ) {
+                                exactMatch = opt;
+                                break;
+                            }
+                        }
+
+                        if (exactMatch == null) {
+                            outer: for (ShowOption opt : options) {
+                                if (opt == null) {
+                                    continue;
+                                }
+                                List<String> aliases = null;
+                                try {
+                                    aliases = opt.getAliasNames();
+                                } catch (Exception ignored) {
+                                    aliases = null;
+                                }
+                                if (aliases == null || aliases.isEmpty()) {
+                                    continue;
+                                }
+                                for (String a : aliases) {
+                                    if (
+                                        a != null &&
+                                        a.equalsIgnoreCase(extracted)
+                                    ) {
+                                        exactMatch = opt;
+                                        break outer;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (exactMatch != null) {
+                        showOption = exactMatch;
+                    } else if (options.size() > 1) {
+                        logger.info(
+                            "ShowStore: queuing disambiguation for queryString='" +
+                                queryString +
+                                "' (options=" +
+                                options.size() +
+                                ")"
+                        );
+                        queuePendingDisambiguation(showName, options);
+                        showOption = showName.getFailedShow(
+                            new TVRenamerIOException("show selection required")
+                        );
+                    } else {
+                        // 3) Single (or zero) option: preserve existing behavior.
+                        showOption = showName.selectShowOption();
+                    }
+                }
             } catch (DiscontinuedApiException e) {
                 showName.apiDiscontinued();
                 return false;
@@ -238,7 +521,9 @@ public class ShowStore {
                 showOption = showName.getFailedShow(e);
             }
 
-            logger.fine("Show options for '" + showOption.getName() + "' downloaded");
+            logger.fine(
+                "Show options for '" + showOption.getName() + "' downloaded"
+            );
             if (showOption.isFailedShow()) {
                 showName.nameNotFound(showOption.asFailedShow());
             } else {
@@ -248,6 +533,69 @@ public class ShowStore {
         };
         submitDownloadTask(showName, showFetcher);
     }
+
+    /**
+     * Add a pending disambiguation entry for this show, keyed by query string.
+     *
+     * Note: This does not block or show UI. The UI is expected to call
+     * {@link #getPendingDisambiguations()} and present a single batch dialog to resolve.
+     */
+    private static synchronized void queuePendingDisambiguation(
+        final ShowName showName,
+        final List<ShowOption> options
+    ) {
+        if (showName == null) {
+            logger.warning(
+                "ShowStore.queuePendingDisambiguation: showName was null"
+            );
+            return;
+        }
+        String queryString = showName.getQueryString();
+        if (queryString == null || queryString.isBlank()) {
+            logger.warning(
+                "ShowStore.queuePendingDisambiguation: blank queryString for extractedShowName='" +
+                    showName.getExampleFilename() +
+                    "'"
+            );
+            return;
+        }
+
+        // Only record the first occurrence; later occurrences don't add value for UI.
+        if (pendingDisambiguations.containsKey(queryString)) {
+            logger.info(
+                "ShowStore.queuePendingDisambiguation: already queued for queryString='" +
+                    queryString +
+                    "'"
+            );
+            return;
+        }
+
+        // We do not have direct access to FileEpisode here; keep filename blank for now.
+        // The UI layer can enrich this when calling mapStringToShow (by passing an example filename).
+        pendingDisambiguations.put(
+            queryString,
+            new PendingDisambiguation(
+                queryString,
+                showName.getExampleFilename(),
+                "",
+                options
+            )
+        );
+        logger.info(
+            "ShowStore.queuePendingDisambiguation: queued queryString='" +
+                queryString +
+                "', extractedShowName='" +
+                showName.getExampleFilename() +
+                "', options=" +
+                ((options == null) ? 0 : options.size())
+        );
+
+        // Notify UI so it can open the batch resolve dialog without polling.
+        notifyPendingDisambiguationsChanged();
+    }
+
+    // Note: one-at-a-time modal prompting has been replaced by a pending disambiguation queue
+    // API to support resolving ambiguities in a single batch dialog.
 
     public static void cleanUp() {
         threadPool.shutdownNow();
