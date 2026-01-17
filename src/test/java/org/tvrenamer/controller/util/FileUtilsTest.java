@@ -6,14 +6,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.tvrenamer.controller.util.FileUtilities.*;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
-import org.tvrenamer.model.util.Environment;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,22 +14,31 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.tvrenamer.model.util.Environment;
 
 public class FileUtilsTest {
 
-    private static final String PRESUMED_NONEXISTENT_PATH = "/Usurs/me/Documents/oops";
+    private static final String PRESUMED_NONEXISTENT_PATH =
+        "/Usurs/me/Documents/oops";
 
     @Rule
     public final TemporaryFolder tempFolder = new TemporaryFolder();
 
     @BeforeClass
     public static void setLogging() {
-        FileUtilities.loggingOff();
+        // No-op: FileUtilities.loggingOff() is deprecated. Logging behavior should be
+        // controlled via logging.properties; tests should not mutate global logging.
     }
 
     @AfterClass
     public static void restoreLogging() {
-        FileUtilities.loggingOn();
+        // No-op: FileUtilities.loggingOn() is deprecated. Logging behavior should be
+        // controlled via logging.properties; tests should not mutate global logging.
     }
 
     @Test
@@ -47,15 +48,25 @@ public class FileUtilsTest {
         final Path sandbox = tempFolder.getRoot().toPath();
 
         final Path dirpath = sandbox.resolve(dirname);
-        assertTrue("cannot test existingAncestor because can't ensure writable directory"
-                    + dirpath, ensureWritableDirectory(dirpath));
+        assertTrue(
+            "cannot test existingAncestor because can't ensure writable directory" +
+                dirpath,
+            ensureWritableDirectory(dirpath)
+        );
 
-        assertEquals("existingAncestor(Path) failed to recognize path itself exists",
-                     dirpath, existingAncestor(dirpath));
+        assertEquals(
+            "existingAncestor(Path) failed to recognize path itself exists",
+            dirpath,
+            existingAncestor(dirpath)
+        );
 
         Path uncreatable = Paths.get(PRESUMED_NONEXISTENT_PATH);
-        assertEquals("existingAncestor(Path) failed to find root as answer for " + uncreatable,
-                     uncreatable.getRoot(), existingAncestor(uncreatable));
+        assertEquals(
+            "existingAncestor(Path) failed to find root as answer for " +
+                uncreatable,
+            uncreatable.getRoot(),
+            existingAncestor(uncreatable)
+        );
     }
 
     @Test
@@ -66,47 +77,95 @@ public class FileUtilsTest {
             final Path sandbox = tempFolder.getRoot().toPath();
 
             final Path dirpath = sandbox.resolve(dirname);
-            assertTrue("cannot test existingAncestor because can't ensure writable directory"
-                       + dirpath, ensureWritableDirectory(dirpath));
+            assertTrue(
+                "cannot test existingAncestor because can't ensure writable directory" +
+                    dirpath,
+                ensureWritableDirectory(dirpath)
+            );
 
             // Create a "normal" symbolic link to dirpath
             Path validLink = sandbox.resolve("slink");
             String firstSubDir = "showname";
-            Path toBeUnderLink = validLink.resolve(firstSubDir).resolve("season").resolve("episode");
-            assertEquals("existingAncestor(Path) failed to find " + sandbox + " as answer for "
-                         + validLink, sandbox, existingAncestor(validLink));
-            assertEquals("existingAncestor(Path) failed to find " + sandbox + " as answer for "
-                         + toBeUnderLink, sandbox, existingAncestor(toBeUnderLink));
+            Path toBeUnderLink = validLink
+                .resolve(firstSubDir)
+                .resolve("season")
+                .resolve("episode");
+            assertEquals(
+                "existingAncestor(Path) failed to find " +
+                    sandbox +
+                    " as answer for " +
+                    validLink,
+                sandbox,
+                existingAncestor(validLink)
+            );
+            assertEquals(
+                "existingAncestor(Path) failed to find " +
+                    sandbox +
+                    " as answer for " +
+                    toBeUnderLink,
+                sandbox,
+                existingAncestor(toBeUnderLink)
+            );
 
             try {
                 Files.createSymbolicLink(validLink, dirpath);
             } catch (IOException x) {
-                fail("unable to create link from " + validLink + " to " + dirpath);
+                fail(
+                    "unable to create link from " + validLink + " to " + dirpath
+                );
             }
-            assertTrue("did not detect " + validLink + " as a symbolic link",
-                       Files.isSymbolicLink(validLink));
-            assertFalse("after creating link, " + dirpath + " not exists",
-                        Files.notExists(dirpath));
-            assertFalse("after creating link, " + validLink + " not exists",
-                        Files.notExists(validLink));
-            assertEquals("after link, existingAncestor(Path) failed to find itself"
-                         + " as answer for " + dirpath,
-                         dirpath, existingAncestor(dirpath));
-            assertEquals("after link, existingAncestor(Path) failed to find itself"
-                         + " as answer for " + validLink,
-                         validLink, existingAncestor(validLink));
-            assertEquals("existingAncestor(Path) failed to find " + validLink + " as answer for "
-                         + toBeUnderLink, validLink, existingAncestor(toBeUnderLink));
+            assertTrue(
+                "did not detect " + validLink + " as a symbolic link",
+                Files.isSymbolicLink(validLink)
+            );
+            assertFalse(
+                "after creating link, " + dirpath + " not exists",
+                Files.notExists(dirpath)
+            );
+            assertFalse(
+                "after creating link, " + validLink + " not exists",
+                Files.notExists(validLink)
+            );
+            assertEquals(
+                "after link, existingAncestor(Path) failed to find itself" +
+                    " as answer for " +
+                    dirpath,
+                dirpath,
+                existingAncestor(dirpath)
+            );
+            assertEquals(
+                "after link, existingAncestor(Path) failed to find itself" +
+                    " as answer for " +
+                    validLink,
+                validLink,
+                existingAncestor(validLink)
+            );
+            assertEquals(
+                "existingAncestor(Path) failed to find " +
+                    validLink +
+                    " as answer for " +
+                    toBeUnderLink,
+                validLink,
+                existingAncestor(toBeUnderLink)
+            );
 
             final Path subdir = dirpath.resolve(firstSubDir);
-            assertFalse("cannot do ensureWritableDirectory because target already exists",
-                        Files.exists(subdir));
-            assertTrue("ensureWritableDirectory returned false",
-                       ensureWritableDirectory(subdir));
-            assertTrue("dir from ensureWritableDirectory not found",
-                       Files.exists(subdir));
-            assertTrue("dir from ensureWritableDirectory not a directory",
-                       Files.isDirectory(subdir));
+            assertFalse(
+                "cannot do ensureWritableDirectory because target already exists",
+                Files.exists(subdir)
+            );
+            assertTrue(
+                "ensureWritableDirectory returned false",
+                ensureWritableDirectory(subdir)
+            );
+            assertTrue(
+                "dir from ensureWritableDirectory not found",
+                Files.exists(subdir)
+            );
+            assertTrue(
+                "dir from ensureWritableDirectory not a directory",
+                Files.isDirectory(subdir)
+            );
 
             ////////////////////////////////////////////////////////////////////////////////////////////
             // We're going to do a very bad thing here.  We're going to create a recursive symbolic link.
@@ -120,20 +179,34 @@ public class FileUtilsTest {
             // they neither "exist" nor "not exist".  To "not exist" means to be completely absent.)
             Path aSubDir = dirpath.resolve("a");
             Path target = aSubDir.resolve("b").resolve("c").resolve("d");
-            assertEquals("existingAncestor(Path) failed to find " + dirpath + " as answer for "
-                         + target, dirpath, existingAncestor(target));
+            assertEquals(
+                "existingAncestor(Path) failed to find " +
+                    dirpath +
+                    " as answer for " +
+                    target,
+                dirpath,
+                existingAncestor(target)
+            );
 
             try {
                 Files.createSymbolicLink(aSubDir, target);
             } catch (IOException x) {
                 fail("unable to create link from " + aSubDir + " to " + target);
             }
-            assertTrue("did not detect " + aSubDir + " as a symbolic link",
-                       Files.isSymbolicLink(aSubDir));
-            assertFalse("after creating link, " + target + " not exists",
-                        Files.notExists(target));
-            assertEquals("existingAncestor(Path) failed to find itself as answer for " + target,
-                         target, existingAncestor(target));
+            assertTrue(
+                "did not detect " + aSubDir + " as a symbolic link",
+                Files.isSymbolicLink(aSubDir)
+            );
+            assertFalse(
+                "after creating link, " + target + " not exists",
+                Files.notExists(target)
+            );
+            assertEquals(
+                "existingAncestor(Path) failed to find itself as answer for " +
+                    target,
+                target,
+                existingAncestor(target)
+            );
         }
     }
 
@@ -144,15 +217,23 @@ public class FileUtilsTest {
         final Path sandbox = tempFolder.getRoot().toPath();
 
         final Path dirpath = sandbox.resolve(dirname);
-        assertFalse("cannot test ensureWritableDirectory because target already exists",
-                    Files.exists(dirpath));
+        assertFalse(
+            "cannot test ensureWritableDirectory because target already exists",
+            Files.exists(dirpath)
+        );
 
-        assertTrue("ensureWritableDirectory returned false",
-                   ensureWritableDirectory(dirpath));
-        assertTrue("dir from ensureWritableDirectory not found",
-                   Files.exists(dirpath));
-        assertTrue("dir from ensureWritableDirectory not a directory",
-                   Files.isDirectory(dirpath));
+        assertTrue(
+            "ensureWritableDirectory returned false",
+            ensureWritableDirectory(dirpath)
+        );
+        assertTrue(
+            "dir from ensureWritableDirectory not found",
+            Files.exists(dirpath)
+        );
+        assertTrue(
+            "dir from ensureWritableDirectory not a directory",
+            Files.isDirectory(dirpath)
+        );
 
         assertTrue("rmdirs returned false", rmdir(dirpath));
         assertFalse("dir from rmdirs not removed", Files.exists(dirpath));
@@ -162,15 +243,23 @@ public class FileUtilsTest {
     public void testEnsureWritableDirectoryAlreadyExists() {
         final Path dirpath = tempFolder.getRoot().toPath();
 
-        assertTrue("cannot test ensureWritableDirectory because sandbox does not exist",
-                   Files.exists(dirpath));
+        assertTrue(
+            "cannot test ensureWritableDirectory because sandbox does not exist",
+            Files.exists(dirpath)
+        );
 
-        assertTrue("ensureWritableDirectory returned false",
-                   ensureWritableDirectory(dirpath));
-        assertTrue("dir from ensureWritableDirectory not found",
-                   Files.exists(dirpath));
-        assertTrue("dir from ensureWritableDirectory not a directory",
-                   Files.isDirectory(dirpath));
+        assertTrue(
+            "ensureWritableDirectory returned false",
+            ensureWritableDirectory(dirpath)
+        );
+        assertTrue(
+            "dir from ensureWritableDirectory not found",
+            Files.exists(dirpath)
+        );
+        assertTrue(
+            "dir from ensureWritableDirectory not a directory",
+            Files.isDirectory(dirpath)
+        );
     }
 
     @Test
@@ -185,15 +274,23 @@ public class FileUtilsTest {
             return;
         }
 
-        assertTrue("cannot test ensureWritableDirectory because file does not exist",
-                   Files.exists(dirpath));
+        assertTrue(
+            "cannot test ensureWritableDirectory because file does not exist",
+            Files.exists(dirpath)
+        );
 
-        assertFalse("ensureWritableDirectory returned true when file was in the way",
-                    ensureWritableDirectory(dirpath));
-        assertTrue("file from ensureWritableDirectory not found",
-                   Files.exists(dirpath));
-        assertFalse("file from ensureWritableDirectory is a directory",
-                    Files.isDirectory(dirpath));
+        assertFalse(
+            "ensureWritableDirectory returned true when file was in the way",
+            ensureWritableDirectory(dirpath)
+        );
+        assertTrue(
+            "file from ensureWritableDirectory not found",
+            Files.exists(dirpath)
+        );
+        assertFalse(
+            "file from ensureWritableDirectory is a directory",
+            Files.isDirectory(dirpath)
+        );
     }
 
     @Test
@@ -204,13 +301,17 @@ public class FileUtilsTest {
         try {
             myFolder = tempFolder.newFolder(dirname);
         } catch (Exception e) {
-            fail("cannot test ensureWritableDirectory because newFolder failed");
+            fail(
+                "cannot test ensureWritableDirectory because newFolder failed"
+            );
             return;
         }
 
         Path dirpath = myFolder.toPath();
-        assertTrue("cannot test ensureWritableDirectory because folder does not exist",
-                   Files.exists(dirpath));
+        assertTrue(
+            "cannot test ensureWritableDirectory because folder does not exist",
+            Files.exists(dirpath)
+        );
 
         try {
             Set<PosixFilePermission> perms = new HashSet<>();
@@ -226,13 +327,22 @@ public class FileUtilsTest {
             return;
         }
 
-        assertFalse("failed to make temp dir not writable", Files.isWritable(dirpath));
+        assertFalse(
+            "failed to make temp dir not writable",
+            Files.isWritable(dirpath)
+        );
 
-        assertFalse("ensureWritableDirectory returned true when folder was not writable",
-                    ensureWritableDirectory(dirpath));
-        assertTrue("file from ensureWritableDirectory not found",
-                   Files.exists(dirpath));
-        assertTrue("file from ensureWritableDirectory is a directory",
-                   Files.isDirectory(dirpath));
+        assertFalse(
+            "ensureWritableDirectory returned true when folder was not writable",
+            ensureWritableDirectory(dirpath)
+        );
+        assertTrue(
+            "file from ensureWritableDirectory not found",
+            Files.exists(dirpath)
+        );
+        assertTrue(
+            "file from ensureWritableDirectory is a directory",
+            Files.isDirectory(dirpath)
+        );
     }
 }
