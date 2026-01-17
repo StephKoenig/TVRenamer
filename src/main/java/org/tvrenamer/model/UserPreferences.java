@@ -312,66 +312,10 @@ public class UserPreferences {
         }
     }
 
-    /**
-     * Make sure overrides file is set up.
-     *
-     * If the file is found in the expected location, we leave it there. We are
-     * done.
-     *
-     * If it's not there, first we look for a "legacy" file. If we find a file in
-     * that
-     * location, we relocate it to the proper location.
-     *
-     * If neither file exists, then we will create one, by copying a default file
-     * into place.
-     *
-     */
-    private static void setUpOverrides() {
-        if (Files.exists(OVERRIDES_FILE)) {
-            return;
-        }
-
-        // Legacy location -> new location
-        if (Files.exists(OVERRIDES_FILE_LEGACY)) {
-            try {
-                Path parent = OVERRIDES_FILE.getParent();
-                if (parent != null) {
-                    Files.createDirectories(parent);
-                }
-                Files.move(OVERRIDES_FILE_LEGACY, OVERRIDES_FILE);
-                return;
-            } catch (IOException | SecurityException e) {
-                logger.log(
-                    Level.WARNING,
-                    "Could not migrate legacy overrides file from " +
-                        OVERRIDES_FILE_LEGACY +
-                        " to " +
-                        OVERRIDES_FILE,
-                    e
-                );
-                // Continue and try to create/copy a default file below
-            }
-        }
-
-        // If no overrides exist, try copying a developer default file into place (best-effort).
-        Path defOver = Paths.get(DEVELOPER_DEFAULT_OVERRIDES_FILENAME);
-        if (Files.exists(defOver)) {
-            try {
-                Path parent = OVERRIDES_FILE.getParent();
-                if (parent != null) {
-                    Files.createDirectories(parent);
-                }
-                Files.copy(defOver, OVERRIDES_FILE);
-            } catch (IOException | SecurityException e) {
-                logger.log(
-                    Level.FINE,
-                    "Unable to copy default overrides file into place: " +
-                        OVERRIDES_FILE,
-                    e
-                );
-            }
-        }
-    }
+    // Overrides used to be stored in a separate overrides.xml file.
+    // This fork stores overrides directly in prefs.xml (UserPreferences) instead.
+    // The legacy setup/migration logic is intentionally removed to avoid creating
+    // or maintaining overrides.xml going forward.
 
     /**
      * Save preferences to xml file
@@ -455,7 +399,7 @@ public class UserPreferences {
             }
         }
 
-        setUpOverrides();
+        // No legacy overrides.xml setup; overrides are stored in prefs.xml.
     }
 
     /**
