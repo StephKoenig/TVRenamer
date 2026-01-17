@@ -362,7 +362,7 @@ public class FileUtilities {
      * method returns <code>false</code>.  Otherwise, the contents of the source
      * are copied to the destination, and <code>true</code> is returned.
      *
-     * <p>TODO: the newly created file will not necessarily have the same
+     * <p>Note: the newly created file will not necessarily have the same
      * attributes as the original.  In some cases, like ownership, that might
      * actually be desirable (have the copy be owned by the user running the
      * program), and also might be impossible to change even if the user does
@@ -372,6 +372,8 @@ public class FileUtilities {
      * Linux, "chflags" on OS X?  What about NTFS file streams, and ACLs?  A
      * file copy created just copying the content into a brand new file can
      * behave significantly differently from the original.
+     *
+     * See docs/todo.md: "Preserve file attributes / metadata on copy (where feasible)".
      *
      * @param source
      *            The source file to move.

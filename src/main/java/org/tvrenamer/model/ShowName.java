@@ -437,7 +437,8 @@ public class ShowName {
                 if (selected == null) {
                     selected = s;
                 } else {
-                    // TODO: could check language?  other criteria?  Case sensitive?
+                    // Note: additional tie-breakers (language, year, aliases, etc.) are tracked in docs/todo.md
+                    // under "Improve show selection heuristics when ambiguous".
                     logger.warning(
                         "multiple exact hits for " +
                             foundName +
@@ -446,8 +447,8 @@ public class ShowName {
                 }
             }
         }
-        // TODO: still might be better ways to choose if we don't have an exact match.
-        // Levenshtein distance?
+        // Note: improved fuzzy matching / tie-breakers (e.g., Levenshtein distance) are tracked in docs/todo.md
+        // under "Improve show selection heuristics when ambiguous".
         if (selected == null) {
             selected = showOptions.get(0);
         }
