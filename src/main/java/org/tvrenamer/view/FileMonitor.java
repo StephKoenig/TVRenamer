@@ -23,7 +23,6 @@ public class FileMonitor implements MoveObserver {
 
     private Label label = null;
     private long maximum = 0;
-    private int loopCount = 0;
 
     /**
      * Creates the monitor, with the label and the display.
@@ -103,17 +102,18 @@ public class FileMonitor implements MoveObserver {
         if (label == null || label.isDisposed()) {
             return;
         }
-        if (loopCount++ % 500 == 0) {
-            display.asyncExec(() -> {
-                if (display.isDisposed()) {
-                    return;
-                }
-                if (label == null || label.isDisposed()) {
-                    return;
-                }
-                label.setText(format.format((double) value / maximum));
-            });
-        }
+
+        // copyWithUpdates is throttled (~1 MiB), so updating the per-row label on each callback
+        // avoids the "stuck at 0%" symptom without spamming the UI thread.
+        display.asyncExec(() -> {
+            if (display.isDisposed()) {
+                return;
+            }
+            if (label == null || label.isDisposed()) {
+                return;
+            }
+            label.setText(format.format((double) value / maximum));
+        });
     }
 
     /**
@@ -168,8 +168,8 @@ public class FileMonitor implements MoveObserver {
     /**
      * Aggregate tracker that updates the bottom progress bar in a thread-safe way.
      *
-     * Tracks per-item deltas so overall progress reflects total bytes copied across all files.
-     * The UI is updated on the SWT thread via ResultsTable.
+     * Tracks per-item maxima and latest values so overall progress reflects total bytes copied
+     * across all files. The UI is updated on the SWT thread via ResultsTable.
      */
     public static final class AggregateCopyProgress {
 
@@ -224,21 +224,18 @@ public class FileMonitor implements MoveObserver {
             }
 
             long safeValue = Math.max(0L, Math.min(valueBytes, max));
-            Long prev = itemCopiedBytes.get(item);
-            if (prev == null) {
-                prev = 0L;
-            }
+            itemCopiedBytes.put(item, safeValue);
 
-            // Apply delta to aggregate copied bytes.
-            long delta = safeValue - prev;
-            if (delta != 0L) {
-                copiedBytes = Math.max(
-                    0L,
-                    Math.min(totalBytes, copiedBytes + delta)
-                );
-                itemCopiedBytes.put(item, safeValue);
-                pushUi();
+            // Recompute aggregate copied bytes to avoid snap-back and any delta accounting drift.
+            long sum = 0L;
+            for (Long v : itemCopiedBytes.values()) {
+                if (v != null && v > 0L) {
+                    sum += v;
+                }
             }
+            copiedBytes = Math.max(0L, Math.min(totalBytes, sum));
+
+            pushUi();
         }
 
         public synchronized void completeItem(final TableItem item) {

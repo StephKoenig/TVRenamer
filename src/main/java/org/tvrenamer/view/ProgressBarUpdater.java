@@ -13,15 +13,12 @@ public class ProgressBarUpdater implements ProgressUpdater {
     private final TaskItem taskItem;
     private final ProgressBar progressBar;
 
-    // We use the progress bar as a file-count based progress indicator for move/copy operations
-    // only when aggregate byte-based progress is not active.
-    //
-    // Note: aggregate byte-based progress is driven directly via ResultsTable.updateOverallCopyProgress(...)
-    // from MoveObserver callbacks (copy+delete operations only).
-    private final int barMax;
-
     /**
      * Constructs a ProgressBarUpdater for the given ResultsTable.
+     *
+     * Note: the bottom progress bar is driven by aggregate byte-based copy progress
+     * (copy+delete operations only). This updater should NOT write file-count based
+     * progress into the bottom bar, because it can cause "snap back" behavior.
      *
      * @param ui
      *    the ResultsTable that will use this ProgressBarUpdater
@@ -32,15 +29,6 @@ public class ProgressBarUpdater implements ProgressUpdater {
         this.taskItem = ui.getTaskItem();
         this.progressBar = ui.getProgressBar();
 
-        // progressBar may be null or disposed if UI is shutting down
-        if (progressBar != null && !progressBar.isDisposed()) {
-            // Use a fixed range for smooth updates.
-            this.barMax = Math.max(1, progressBar.getMaximum());
-            progressBar.setMaximum(this.barMax);
-        } else {
-            this.barMax = 0;
-        }
-
         if (taskItem != null && !taskItem.isDisposed()) {
             taskItem.setProgressState(SWT.NORMAL);
             taskItem.setOverlayImage(ItemState.RENAMING.getIcon());
@@ -48,8 +36,7 @@ public class ProgressBarUpdater implements ProgressUpdater {
     }
 
     /**
-     * Cleans up the progress bar and the task item.
-     * Resets the bottom bar after the batch completes.
+     * Cleans up the task item and resets the bottom progress bar after the batch completes.
      */
     @Override
     public void finish() {
@@ -58,44 +45,33 @@ public class ProgressBarUpdater implements ProgressUpdater {
         }
 
         display.asyncExec(() -> {
+            // Reset the bottom progress bar; aggregate progress will repopulate it for the next batch.
             if (progressBar != null && !progressBar.isDisposed()) {
                 progressBar.setSelection(0);
             }
+
             if (taskItem != null && !taskItem.isDisposed()) {
                 taskItem.setOverlayImage(null);
                 taskItem.setProgressState(SWT.DEFAULT);
                 taskItem.setProgress(0);
             }
+
             ui.finishAllMoves();
         });
     }
 
     /**
-     * Updates the bottom progress bar and the Windows taskbar progress by file-count.
+     * Update the Windows taskbar progress only.
      *
-     * This reflects move/copy batch progress only. Renames are excluded by design.
-     *
-     * @param totalNumFiles
-     *            the total number of files to be moved during the duration
-     *            of this progress bar
-     * @param nRemaining
-     *            the number of files left to be moved
+     * We intentionally do NOT update the bottom progress bar here, because it is controlled
+     * by aggregate byte-based progress from per-file copy callbacks.
      */
     @Override
     public void setProgress(final int totalNumFiles, final int nRemaining) {
-        // If aggregate byte-based progress is active, do not overwrite the progress bar
-        // with coarse file-count updates. Aggregate progress will update the bar directly.
-        if (ui != null && ui.isAggregateCopyProgressActive()) {
-            return;
-        }
-
         if (display == null || display.isDisposed()) {
             return;
         }
         if (totalNumFiles <= 0) {
-            return;
-        }
-        if (barMax <= 0) {
             return;
         }
 
@@ -103,12 +79,6 @@ public class ProgressBarUpdater implements ProgressUpdater {
         final float progress = (float) completed / (float) totalNumFiles;
 
         display.asyncExec(() -> {
-            if (progressBar == null || progressBar.isDisposed()) {
-                return;
-            }
-
-            progressBar.setSelection(Math.round(progress * barMax));
-
             if (taskItem != null && !taskItem.isDisposed()) {
                 taskItem.setProgress(Math.round(progress * 100));
             }
