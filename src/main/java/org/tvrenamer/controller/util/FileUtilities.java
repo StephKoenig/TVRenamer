@@ -396,16 +396,16 @@ public class FileUtilities {
             InputStream fis = Files.newInputStream(source)
         ) {
             // Use a larger buffer to improve throughput on fast disks / networks (e.g., SMB).
-            // 4095 KB as requested.
-            final int bufferSize = 4095 * 1024;
+            // 4 MiB (0x400000) buffer.
+            final int bufferSize = 0x400000;
             byte[] buffer = new byte[bufferSize];
 
             int n;
             long copied = 0L;
 
             // Throttle progress notifications to reduce overhead on fast links.
-            // We still copy in large chunks, but only notify every ~4MB (or at end).
-            final long notifyEveryBytes = 4L * 1024L * 1024L;
+            // Notify every ~1 MiB (or at end).
+            final long notifyEveryBytes = 1L * 1024L * 1024L;
             long nextNotifyAt = notifyEveryBytes;
 
             while (-1 != (n = fis.read(buffer))) {
