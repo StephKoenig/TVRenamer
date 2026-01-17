@@ -33,7 +33,9 @@ import org.tvrenamer.controller.util.StringUtils;
 public class Constants {
 
     public static final String APPLICATION_NAME = "TVRenamer";
-    public static final String ABOUT_LABEL = "About " + APPLICATION_NAME;
+    public static final String APPLICATION_DISPLAY_NAME = "TVRenamer (Forked)";
+    public static final String ABOUT_LABEL =
+        "About " + APPLICATION_DISPLAY_NAME;
     public static final String TVRENAMER_DESCRIPTION =
         APPLICATION_NAME +
         " is a Java GUI utility to rename TV episodes from TV listings";
@@ -41,21 +43,27 @@ public class Constants {
     public static final String VERSION_NUMBER = Environment.readVersionNumber();
     public static final String VERSION_LABEL = "Version: " + VERSION_NUMBER;
 
-    public static final String TVRENAMER_PROJECT_URL = "http://tvrenamer.org";
+    // Fork URLs (GitHub)
+    public static final String TVRENAMER_PROJECT_URL =
+        "https://github.com/StephKoenig/tvrenamer";
     public static final String TVRENAMER_DOWNLOAD_URL =
-        TVRENAMER_PROJECT_URL + "/downloads";
+        "https://github.com/StephKoenig/tvrenamer/releases";
     public static final String TVRENAMER_ISSUES_URL =
-        TVRENAMER_PROJECT_URL + "/issues";
+        "https://github.com/StephKoenig/tvrenamer/issues";
+
+    // UpdateChecker should use GitHub Releases rather than tvrenamer.org.
+    // Kept as a constant so the implementation can be swapped without UI churn.
     public static final String TVRENAMER_VERSION_URL =
-        TVRENAMER_PROJECT_URL + "/version";
+        "https://api.github.com/repos/StephKoenig/tvrenamer/releases/latest";
+
     public static final String TVRENAMER_REPOSITORY_URL =
-        TVRENAMER_PROJECT_URL + "/source";
+        "https://github.com/StephKoenig/tvrenamer";
     public static final String TVRENAMER_LICENSE_URL =
         "http://www.gnu.org/licenses/gpl-2.0.html";
 
-    private static final String TVRENAMER_SUPPORT_EMAIL =
-        "support@tvrenamer.org";
-    public static final String EMAIL_LINK = "mailto:" + TVRENAMER_SUPPORT_EMAIL;
+    // Fork: no support email link (project uses GitHub Issues).
+    // Keep EMAIL_LINK defined for now to avoid widespread churn; AboutDialog no longer uses it.
+    public static final String EMAIL_LINK = "";
 
     public static final String LICENSE_TEXT_1 = "Licensed under the ";
     public static final String LICENSE_TEXT_2 = "GNU General Public License v2";

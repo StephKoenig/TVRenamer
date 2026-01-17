@@ -63,8 +63,10 @@ launch4j {
     jreMinVersion = "17"
 }
 
-// Generate tvrenamer.version at build time from Git commit count.
-// Version format: 1.0.<commitCount>
+// Build metadata generated at build time.
+// - tvrenamer.version: 1.0.<gitCommitCount>
+// - tvrenamer.builddate: YYMMDD (UTC)
+// - tvrenamer.commit: full git SHA (or "unknown")
 def computeCommitCount = {
     try {
         def proc = ["git", "rev-list", "--count", "HEAD"].execute(null, project.rootDir)
@@ -78,40 +80,85 @@ def computeCommitCount = {
     return "0"
 }
 
-tasks.register('generateVersionFile') {
+def computeCommitSha = {
+    try {
+        def proc = ["git", "rev-parse", "HEAD"].execute(null, project.rootDir)
+        proc.waitFor()
+        if (proc.exitValue() == 0) {
+            return proc.in.text.trim()
+        }
+    } catch (Exception ignored) {
+        // Fall through to default below
+    }
+    return "unknown"
+}
+
+def computeBuildDateYYMMDDUtc = {
+    try {
+        def tz = java.util.TimeZone.getTimeZone("UTC")
+        def df = new java.text.SimpleDateFormat("yyMMdd")
+        df.setTimeZone(tz)
+        return df.format(new Date())
+    } catch (Exception ignored) {
+        // Fall through to default below
+    }
+    return "000000"
+}
+
+tasks.register('generateBuildMetadataFiles') {
     outputs.file(layout.buildDirectory.file("generated/version/tvrenamer.version"))
+    outputs.file(layout.buildDirectory.file("generated/version/tvrenamer.builddate"))
+    outputs.file(layout.buildDirectory.file("generated/version/tvrenamer.commit"))
     doLast {
         def count = computeCommitCount()
-        def versionText = "1.0.${count}\n"
-        def outFile = layout.buildDirectory.file("generated/version/tvrenamer.version").get().asFile
-        outFile.parentFile.mkdirs()
-        outFile.text = versionText
+        def sha = computeCommitSha()
+        def builtOn = computeBuildDateYYMMDDUtc()
+
+        def outDir = layout.buildDirectory.dir("generated/version").get().asFile
+        outDir.mkdirs()
+
+        new File(outDir, "tvrenamer.version").text = "1.0.${count}\n"
+        new File(outDir, "tvrenamer.builddate").text = "${builtOn}\n"
+        new File(outDir, "tvrenamer.commit").text = "${sha}\n"
     }
 }
 
 def generatedVersionFile = layout.buildDirectory.file("generated/version/tvrenamer.version")
+def generatedBuildDateFile = layout.buildDirectory.file("generated/version/tvrenamer.builddate")
+def generatedCommitFile = layout.buildDirectory.file("generated/version/tvrenamer.commit")
 
 tasks.named('processResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    // Ensure the generated version file replaces the static resource version.
+    // Ensure generated build metadata replaces any static resources.
     exclude("tvrenamer.version")
+    exclude("tvrenamer.builddate")
+    exclude("tvrenamer.commit")
 
-    dependsOn(tasks.named('generateVersionFile'))
+    dependsOn(tasks.named('generateBuildMetadataFiles'))
 
-    // Add the generated version file into the root of the resources output.
+    // Add the generated metadata files into the root of the resources output.
     from(generatedVersionFile) {
         into ""
         rename { "tvrenamer.version" }
     }
+    from(generatedBuildDateFile) {
+        into ""
+        rename { "tvrenamer.builddate" }
+    }
+    from(generatedCommitFile) {
+        into ""
+        rename { "tvrenamer.commit" }
+    }
 
-    // Workaround: ensure the version file is present in build/resources/main even if Gradle's
+    // Workaround: ensure the files are present in build/resources/main even if Gradle's
     // CopySpec input isn't picked up as expected on some environments.
     doLast {
         copy {
             from(generatedVersionFile)
+            from(generatedBuildDateFile)
+            from(generatedCommitFile)
             into(layout.buildDirectory.dir("resources/main").get().asFile)
-            rename { "tvrenamer.version" }
         }
     }
 }
@@ -119,24 +166,35 @@ tasks.named('processResources') {
 tasks.named('processTestResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    // Tests also need a tvrenamer.version on the classpath to avoid static init failures.
-    // Ensure we use the generated version and do not rely on the source file.
+    // Tests also need build metadata on the classpath to avoid static init failures.
+    // Ensure we use the generated metadata and do not rely on any source files.
     exclude("tvrenamer.version")
+    exclude("tvrenamer.builddate")
+    exclude("tvrenamer.commit")
 
-    dependsOn(tasks.named('generateVersionFile'))
+    dependsOn(tasks.named('generateBuildMetadataFiles'))
 
     from(generatedVersionFile) {
         into ""
         rename { "tvrenamer.version" }
     }
+    from(generatedBuildDateFile) {
+        into ""
+        rename { "tvrenamer.builddate" }
+    }
+    from(generatedCommitFile) {
+        into ""
+        rename { "tvrenamer.commit" }
+    }
 
-    // Workaround: ensure the version file is present in build/resources/test even if Gradle's
+    // Workaround: ensure the files are present in build/resources/test even if Gradle's
     // CopySpec input isn't picked up as expected on some environments.
     doLast {
         copy {
             from(generatedVersionFile)
+            from(generatedBuildDateFile)
+            from(generatedCommitFile)
             into(layout.buildDirectory.dir("resources/test").get().asFile)
-            rename { "tvrenamer.version" }
         }
     }
 }
@@ -148,12 +206,20 @@ shadowJar {
     archiveClassifier.set('all')
     mergeServiceFiles()
 
-    dependsOn(tasks.named('generateVersionFile'))
+    dependsOn(tasks.named('generateBuildMetadataFiles'))
 
-    // Force the generated version file into the JAR root.
+    // Force the generated build metadata files into the JAR root.
     from(layout.buildDirectory.file("generated/version/tvrenamer.version")) {
         into ""
         rename { "tvrenamer.version" }
+    }
+    from(layout.buildDirectory.file("generated/version/tvrenamer.builddate")) {
+        into ""
+        rename { "tvrenamer.builddate" }
+    }
+    from(layout.buildDirectory.file("generated/version/tvrenamer.commit")) {
+        into ""
+        rename { "tvrenamer.commit" }
     }
 }
 
