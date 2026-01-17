@@ -2,6 +2,7 @@ package org.tvrenamer.view;
 
 import static org.tvrenamer.model.util.Constants.*;
 
+import java.util.logging.Logger;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -15,17 +16,18 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
-
 import org.tvrenamer.controller.UpdateChecker;
 import org.tvrenamer.controller.UrlLauncher;
-
-import java.util.logging.Logger;
+import org.tvrenamer.model.util.Environment;
 
 /**
  * The About Dialog box.
  */
 final class AboutDialog extends Dialog {
-    private static final Logger logger = Logger.getLogger(AboutDialog.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        AboutDialog.class.getName()
+    );
 
     private final UIStarter ui;
     private Shell aboutShell;
@@ -34,6 +36,7 @@ final class AboutDialog extends Dialog {
      * Static inner class to check if there's an update available
      */
     private class UpdateNotifier extends SelectionAdapter {
+
         /**
          * The link has been clicked.
          *
@@ -45,11 +48,17 @@ final class AboutDialog extends Dialog {
             UpdateChecker.notifyOfUpdate(updateIsAvailable -> {
                 if (updateIsAvailable) {
                     logger.fine(NEW_VERSION_AVAILABLE);
-                    ui.showMessageBox(SWTMessageBoxType.DLG_OK, NEW_VERSION_TITLE,
-                                      NEW_VERSION_AVAILABLE);
+                    ui.showMessageBox(
+                        SWTMessageBoxType.DLG_OK,
+                        NEW_VERSION_TITLE,
+                        NEW_VERSION_AVAILABLE
+                    );
                 } else {
-                    ui.showMessageBox(SWTMessageBoxType.DLG_WARN, NO_NEW_VERSION_TITLE,
-                                      NO_NEW_VERSION_AVAILABLE);
+                    ui.showMessageBox(
+                        SWTMessageBoxType.DLG_WARN,
+                        NO_NEW_VERSION_TITLE,
+                        NO_NEW_VERSION_AVAILABLE
+                    );
                 }
             });
         }
@@ -70,6 +79,7 @@ final class AboutDialog extends Dialog {
         // Create the dialog window
         aboutShell = new Shell(getParent(), getStyle());
         aboutShell.setText(ABOUT_LABEL);
+        aboutShell.setImage(UIStarter.readImageFromPath(APPLICATION_ICON_PATH));
 
         // Add the contents of the dialog window
         createContents();
@@ -114,22 +124,47 @@ final class AboutDialog extends Dialog {
 
         Label applicationLabel = new Label(aboutShell, SWT.NONE);
         FontData defaultFont = ui.getDefaultSystemFont();
-        applicationLabel.setFont(new Font(aboutShell.getDisplay(), defaultFont.getName(),
-            defaultFont.getHeight() + 4, SWT.BOLD));
-        applicationLabel.setText(APPLICATION_NAME);
-        applicationLabel.setLayoutData(new GridData(GridData.BEGINNING, GridData.CENTER, true, true));
+        applicationLabel.setFont(
+            new Font(
+                aboutShell.getDisplay(),
+                defaultFont.getName(),
+                defaultFont.getHeight() + 4,
+                SWT.BOLD
+            )
+        );
+        applicationLabel.setText(APPLICATION_DISPLAY_NAME);
+        applicationLabel.setLayoutData(
+            new GridData(GridData.BEGINNING, GridData.CENTER, true, true)
+        );
 
         Label versionLabel = new Label(aboutShell, SWT.NONE);
-        versionLabel.setFont(new Font(aboutShell.getDisplay(),
-                                      defaultFont.getName(),
-                                      defaultFont.getHeight() + 2,
-                                      SWT.BOLD));
+        versionLabel.setFont(
+            new Font(
+                aboutShell.getDisplay(),
+                defaultFont.getName(),
+                defaultFont.getHeight() + 2,
+                SWT.BOLD
+            )
+        );
 
         versionLabel.setText(VERSION_LABEL);
-        versionLabel.setLayoutData(new GridData(GridData.BEGINNING, GridData.CENTER, true, true));
+        versionLabel.setLayoutData(
+            new GridData(GridData.BEGINNING, GridData.CENTER, true, true)
+        );
+
+        String builtOn = Environment.readBuildDateYYMMDD();
+        if (builtOn != null && !builtOn.isBlank()) {
+            Label builtOnLabel = new Label(aboutShell, SWT.NONE);
+            builtOnLabel.setLayoutData(
+                new GridData(GridData.BEGINNING, GridData.CENTER, true, true)
+            );
+            builtOnLabel.setText("Built on: " + builtOn);
+        }
 
         Label descriptionLabel = new Label(aboutShell, SWT.NONE);
-        descriptionLabel.setLayoutData(new GridData(GridData.BEGINNING, GridData.CENTER, true, true));
+        descriptionLabel.setLayoutData(
+            new GridData(GridData.BEGINNING, GridData.CENTER, true, true)
+        );
         descriptionLabel.setText(TVRENAMER_DESCRIPTION);
     }
 
@@ -149,7 +184,9 @@ final class AboutDialog extends Dialog {
     private void createUrlLink(String intro, String url, String label) {
         final Link link = new Link(aboutShell, SWT.NONE);
         link.setText(intro + "<a href=\"" + url + "\">" + label + "</a>");
-        link.setLayoutData(new GridData(GridData.BEGINNING, GridData.CENTER, true, true));
+        link.setLayoutData(
+            new GridData(GridData.BEGINNING, GridData.CENTER, true, true)
+        );
         link.addSelectionListener(new UrlLauncher(url));
     }
 
@@ -159,10 +196,23 @@ final class AboutDialog extends Dialog {
      */
     private void createLinks() {
         createUrlLink(LICENSE_TEXT_1, TVRENAMER_LICENSE_URL, LICENSE_TEXT_2);
-        createUrlLink("", TVRENAMER_PROJECT_URL, PROJECT_PAGE);
-        createUrlLink("", TVRENAMER_ISSUES_URL, ISSUE_TRACKER);
-        createUrlLink("", EMAIL_LINK, SEND_SUPPORT_EMAIL);
-        createUrlLink("", TVRENAMER_REPOSITORY_URL, SOURCE_CODE_LINK);
+
+        // Fork links
+        createUrlLink(
+            "",
+            "https://github.com/StephKoenig/tvrenamer",
+            PROJECT_PAGE
+        );
+        createUrlLink(
+            "",
+            "https://github.com/StephKoenig/tvrenamer/issues",
+            ISSUE_TRACKER
+        );
+        createUrlLink(
+            "",
+            "https://github.com/StephKoenig/tvrenamer",
+            SOURCE_CODE_LINK
+        );
     }
 
     /**
@@ -186,12 +236,14 @@ final class AboutDialog extends Dialog {
         okButton.setLayoutData(gridDataOK);
         okButton.setFocus();
 
-        okButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent event) {
-                aboutShell.close();
+        okButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    aboutShell.close();
+                }
             }
-        });
+        );
 
         // Set the OK button as the default, so
         // user can press Enter to dismiss

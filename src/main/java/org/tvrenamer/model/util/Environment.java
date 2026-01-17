@@ -46,47 +46,103 @@ public class Environment {
     // call anything less than three bytes a fail.
     private static final int MIN_BYTES_FOR_VERSION = 3;
 
-    static String readVersionNumber() {
-        byte[] buffer = new byte[10];
+    private static String readResourceTrimmed(
+        final String resourcePath,
+        final int maxBytes,
+        final int minBytes,
+        final String notFoundMessage,
+        final String tooShortMessage
+    ) {
+        byte[] buffer = new byte[maxBytes];
 
-        // Runtime: the version file must be present on the classpath.
         try (
-            InputStream versionStream = Environment.class.getResourceAsStream(
-                "/tvrenamer.version"
+            InputStream stream = Environment.class.getResourceAsStream(
+                resourcePath
             )
         ) {
-            if (versionStream == null) {
-                throw new RuntimeException(
-                    "Version file '/tvrenamer.version' not found on classpath"
-                );
+            if (stream == null) {
+                throw new RuntimeException(notFoundMessage);
             }
 
-            int bytesRead = versionStream.read(buffer);
-            if (bytesRead < MIN_BYTES_FOR_VERSION) {
-                throw new RuntimeException(
-                    "Unable to extract version from version file"
-                );
+            int bytesRead = stream.read(buffer);
+            if (bytesRead < minBytes) {
+                throw new RuntimeException(tooShortMessage);
             }
+
             return StringUtils.makeString(buffer).trim();
         } catch (IOException ioe) {
             logger.log(
                 Level.WARNING,
-                "Exception when reading version file",
+                "Exception when reading resource " + resourcePath,
                 ioe
             );
             throw new RuntimeException(
-                "Exception when reading version file",
+                "Exception when reading resource " + resourcePath,
                 ioe
             );
         } catch (RuntimeException re) {
             // Preserve the original message for easier diagnostics
             throw re;
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Exception when reading version file", e);
-            throw new RuntimeException(
-                "Exception when reading version file",
+            logger.log(
+                Level.WARNING,
+                "Exception when reading resource " + resourcePath,
                 e
             );
+            throw new RuntimeException(
+                "Exception when reading resource " + resourcePath,
+                e
+            );
+        }
+    }
+
+    static String readVersionNumber() {
+        return readResourceTrimmed(
+            "/tvrenamer.version",
+            32,
+            MIN_BYTES_FOR_VERSION,
+            "Version file '/tvrenamer.version' not found on classpath",
+            "Unable to extract version from version file"
+        );
+    }
+
+    /**
+     * Read the build date (YYMMDD, UTC) from the generated build metadata resource.
+     *
+     * @return build date in YYMMDD format, or empty string if unavailable
+     */
+    public static String readBuildDateYYMMDD() {
+        try {
+            return readResourceTrimmed(
+                "/tvrenamer.builddate",
+                32,
+                1,
+                "Build date file '/tvrenamer.builddate' not found on classpath",
+                "Unable to extract build date from build date file"
+            );
+        } catch (RuntimeException ignored) {
+            // Best-effort: show nothing rather than crashing the UI.
+            return "";
+        }
+    }
+
+    /**
+     * Read the git commit SHA from the generated build metadata resource.
+     *
+     * @return full commit SHA, or empty string if unavailable
+     */
+    public static String readCommitSha() {
+        try {
+            return readResourceTrimmed(
+                "/tvrenamer.commit",
+                128,
+                1,
+                "Commit file '/tvrenamer.commit' not found on classpath",
+                "Unable to extract commit from commit file"
+            );
+        } catch (RuntimeException ignored) {
+            // Best-effort: show nothing rather than crashing the UI.
+            return "";
         }
     }
 }
