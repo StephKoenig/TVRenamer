@@ -115,6 +115,9 @@ public final class ResultsTable
     // This drives the bottom progress bar smoothly (byte-based) instead of file-count chunks.
     private FileMonitor.AggregateCopyProgress aggregateCopyProgress = null;
 
+    // Overall copy totals computed at the start of a move batch (copy+delete only).
+    private volatile long overallCopyTotalBytes = 0L;
+
     private final Queue<FileEpisode> currentFailures =
         new ConcurrentLinkedQueue<>();
 
@@ -185,6 +188,18 @@ public final class ResultsTable
     }
 
     /**
+     * Set the overall copy total for the current batch (copy+delete only).
+     *
+     * This is computed up-front from the queued moves so the overall progress bar reflects
+     * a stable denominator across the entire batch.
+     *
+     * @param totalBytes total bytes expected to be copied in this batch
+     */
+    public void setOverallCopyTotalBytes(final long totalBytes) {
+        this.overallCopyTotalBytes = Math.max(0L, totalBytes);
+    }
+
+    /**
      * Update overall copy progress for the bottom progress bar.
      *
      * This is intended for copy+delete operations only (cross-filesystem moves).
@@ -201,6 +216,11 @@ public final class ResultsTable
             return;
         }
 
+        // Prefer the batch-computed total (stable denominator) if available.
+        final long resolvedTotal = (overallCopyTotalBytes > 0L)
+            ? overallCopyTotalBytes
+            : totalBytes;
+
         display.asyncExec(() -> {
             if (shell == null || shell.isDisposed()) {
                 return;
@@ -209,7 +229,7 @@ public final class ResultsTable
                 return;
             }
 
-            if (totalBytes <= 0) {
+            if (resolvedTotal <= 0) {
                 totalProgressBar.setSelection(0);
                 return;
             }
@@ -220,8 +240,11 @@ public final class ResultsTable
                 totalProgressBar.setMaximum(max);
             }
 
-            long safeCopied = Math.max(0L, Math.min(copiedBytes, totalBytes));
-            double ratio = (double) safeCopied / (double) totalBytes;
+            long safeCopied = Math.max(
+                0L,
+                Math.min(copiedBytes, resolvedTotal)
+            );
+            double ratio = (double) safeCopied / (double) resolvedTotal;
             int sel = (int) Math.round(ratio * max);
 
             totalProgressBar.setSelection(Math.max(0, Math.min(sel, max)));
@@ -924,6 +947,32 @@ public final class ResultsTable
         }
 
         try {
+            // Compute overall copy total up-front (copy+delete only).
+            //
+            // IMPORTANT: whether a move will use rename vs copy+delete depends on whether the source and the
+            // *actual destination directory for that file* are on the same filesystem. We therefore mirror the
+            // disk-check logic here and sum sizes only for those that will require copy+delete.
+            long totalCopyBytes = 0L;
+            for (final FileMover m : pendingMoves) {
+                if (m == null) {
+                    continue;
+                }
+                try {
+                    // Mirror FileMover's logic: copy+delete when source and destination are not on the same disk.
+                    final boolean sameDisk =
+                        org.tvrenamer.controller.util.FileUtilities.areSameDisk(
+                            m.getCurrentPath(),
+                            m.getMoveToDirectory()
+                        );
+                    if (!sameDisk) {
+                        totalCopyBytes += m.getFileSize();
+                    }
+                } catch (Exception ignored) {
+                    // best-effort
+                }
+            }
+            setOverallCopyTotalBytes(totalCopyBytes);
+
             MoveRunner mover = new MoveRunner(pendingMoves);
             mover.setUpdater(new ProgressBarUpdater(this));
             activeMover = mover;
@@ -1279,6 +1328,7 @@ public final class ResultsTable
             aggregateCopyProgress.reset();
         }
         aggregateCopyProgress = null;
+        overallCopyTotalBytes = 0L;
 
         ui.setAppIcon();
         if (currentFailures.size() > 0) {
