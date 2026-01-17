@@ -1,26 +1,49 @@
 package org.tvrenamer.view;
 
-import org.eclipse.swt.graphics.Image;
-
-import org.tvrenamer.model.util.Constants;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.eclipse.swt.graphics.Image;
+import org.tvrenamer.model.util.Constants;
 
 public class ItemState {
+
     private final Image image;
     private final String ordering;
 
     private ItemState(String ordering, String imageFilename) {
         this.ordering = ordering;
-        this.image = UIStarter.readImageFromPath(Constants.SUBLINK_PATH + imageFilename);
+        this.image = UIStarter.readImageFromPath(
+            Constants.SUBLINK_PATH + imageFilename
+        );
     }
 
-    public static final ItemState SUCCESS = new ItemState("a", "16-em-check.png");
-    public static final ItemState OPTIONS = new ItemState("b", "16-circle-green-add.png");
-    public static final ItemState ADDED = new ItemState("c", "16-circle-blue.png");
-    public static final ItemState DOWNLOADING = new ItemState("d", "16-clock.png");
-    public static final ItemState RENAMING = new ItemState("e", "16-em-pencil.png");
+    public static final ItemState SUCCESS = new ItemState(
+        "a",
+        "16-em-check.png"
+    );
+    public static final ItemState OPTIONS = new ItemState(
+        "b",
+        "16-circle-green-add.png"
+    );
+    public static final ItemState ADDED = new ItemState(
+        "c",
+        "16-circle-blue.png"
+    );
+    public static final ItemState DOWNLOADING = new ItemState(
+        "d",
+        "16-clock.png"
+    );
+
+    // Dedicated icon for "action required" (e.g., user must select a show).
+    public static final ItemState ACTION_REQUIRED = new ItemState(
+        "d2",
+        "16-comment-question.png"
+    );
+
+    public static final ItemState RENAMING = new ItemState(
+        "e",
+        "16-em-pencil.png"
+    );
     public static final ItemState FAIL = new ItemState("f", "16-em-cross.png");
 
     private static final ItemState[] STANDARD_STATUSES = {
@@ -28,11 +51,13 @@ public class ItemState {
         OPTIONS,
         ADDED,
         DOWNLOADING,
+        ACTION_REQUIRED,
         RENAMING,
-        FAIL
+        FAIL,
     };
 
-    private static final Map<Image, ItemState> IMAGES = new ConcurrentHashMap<>();
+    private static final Map<Image, ItemState> IMAGES =
+        new ConcurrentHashMap<>();
 
     static {
         for (ItemState state : STANDARD_STATUSES) {
