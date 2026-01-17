@@ -1,8 +1,5 @@
 package org.tvrenamer.controller;
 
-import org.tvrenamer.controller.util.FileUtilities;
-import org.tvrenamer.model.util.Environment;
-
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -12,8 +9,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.util.FileUtilities;
+import org.tvrenamer.model.util.Environment;
 
 public class TestUtils extends FileUtilities {
+
     static final Logger logger = Logger.getLogger(TestUtils.class.getName());
 
     public static final Charset TVDB_CHARSET = Charset.forName("ISO-8859-1");
@@ -36,7 +36,10 @@ public class TestUtils extends FileUtilities {
      *    that is, true if the file already existed, or if we created it;
      *    false if it we could not create the file
      */
-    public static boolean createFile(final Path rootDir, final String filepath) {
+    public static boolean createFile(
+        final Path rootDir,
+        final String filepath
+    ) {
         Path file = rootDir.resolve(filepath);
         if (Files.notExists(file)) {
             try {
@@ -52,7 +55,11 @@ public class TestUtils extends FileUtilities {
                     return false;
                 }
             } catch (IOException ioe) {
-                logger.log(Level.WARNING, "exception trying to create file " + file, ioe);
+                logger.log(
+                    Level.WARNING,
+                    "exception trying to create file " + file,
+                    ioe
+                );
                 return false;
             }
         }
@@ -73,11 +80,10 @@ public class TestUtils extends FileUtilities {
      */
     public static boolean setReadOnly(final Path path) {
         if (Environment.IS_WINDOWS) {
-            // The POSIX permissions are hopeless, so try reverting to the old
-            // java.io functionality.  But this really doesn't work, either.
-            // TODO: find a library that we can use, just for testing, that
-            // will set ACLs on Windows file systems to actually make the
-            // directory not-modifiable.
+            // Pragmatic: Java's read-only attribute is not equivalent to denying writes via NTFS ACLs,
+            // but it's the best-effort option available here without pulling in platform-specific ACL tooling.
+            // Tests that require a reliably non-writable path should verify the result (e.g. Files.isWritable)
+            // and skip when the environment cannot enforce it.
             return path.toFile().setReadOnly();
         } else {
             try {

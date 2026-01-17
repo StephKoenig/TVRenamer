@@ -10,35 +10,35 @@ Notes are grouped by area and summarized at a high level. Where helpful, the sou
 
 These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
 
-1. **Harden XPath usage for potential concurrency**
-   - **Why:** Shared static `XPath` instance may not be thread-safe; safer patterns are straightforward.
-   - **Where:** `org.tvrenamer.controller.util.XPathUtilities`
-   - **Effort:** Small (per-call creation or `ThreadLocal`)
-
-2. **Improve show selection heuristics when ambiguous**
+1. **Improve show selection heuristics when ambiguous**
    - **Why:** Avoid “choose first match” surprises; reduce incorrect auto-matches.
    - **Where:** `org.tvrenamer.model.ShowName` / `ShowStore`
    - **Effort:** Medium (tie-breakers and/or user prompt; can start with better tie-breakers only)
 
-3. **Stabilize Windows permission-related tests**
-   - **Why:** Flaky/ineffective Windows “read-only” simulation leads to unreliable tests.
-   - **Where:** `org.tvrenamer.controller.TestUtils` — `setReadOnly(Path)`
-   - **Effort:** Medium (capability checks/skip strategy, or a dedicated ACL helper)
+2. **Stabilize Windows permission-related tests (DONE)**
+   - **Why:** Windows “read-only” simulation is unreliable without ACL tooling; tests should not be flaky.
+   - **Where:** `org.tvrenamer.controller.TestUtils` — `setReadOnly(Path)` and related move tests
+   - **Effort:** Medium (capability checks + skip strategy)
 
-4. **Generalize “map to list” helper in MoveRunner**
-   - **Why:** Reduce custom boilerplate; modernize with standard library constructs.
-   - **Where:** `org.tvrenamer.controller.MoveRunner` — helper noted by TODO
-   - **Effort:** Small (likely `Map.computeIfAbsent(...)`)
-
-5. **Expand conflict detection beyond exact filename matches**
+3. **Expand conflict detection beyond exact filename matches**
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)
 
-6. **Make XML / special-character encoding more robust**
+4. **Make XML / special-character encoding more robust**
    - **Why:** Reduce edge cases where episode titles / metadata contain characters that break XML or display oddly.
    - **Where:** `org.tvrenamer.controller.util.StringUtils.encodeSpecialCharacters(...)`
    - **Effort:** Small-to-medium (define scope + tests)
+
+5. **Consider canonicalization of file paths in EpisodeDb**
+   - **Why:** Reduce duplication/confusion when multiple path strings refer to the same file.
+   - **Where:** `org.tvrenamer.model.EpisodeDb.currentLocationOf(...)`
+   - **Effort:** Medium (Windows/UNC-safe normalization strategy)
+
+6. **Improve handling of “unparsed” files**
+   - **Why:** Provide actionable feedback and better UX for files that fail parsing.
+   - **Where:** `org.tvrenamer.model.EpisodeDb` — add logic where it currently inserts unparsed episodes
+   - **Effort:** Medium
 
 ---
 
@@ -51,21 +51,16 @@ These are suggested “first picks” from the backlog below—items that are li
 - Source (original note):
   - `org.tvrenamer.controller.FileMover` — `finishMove(...)`
 
-
 ---
 
 ## 2) Move conflict detection & generalization
 
-### Generalize helper used for building map lists
-**Context:** `MoveRunner` has a helper for “get list value from map, creating list if absent”.  
-**Why it matters:** It’s a generally useful pattern and likely appears in other places or could.
+### Generalize helper used for building map lists (DONE)
+**Context:** `MoveRunner` had a helper for “get list value from map, creating list if absent”.  
+**Status:** Updated to use `Map.computeIfAbsent(...)` (standard library), removing custom boilerplate.
 
-- Source:
-  - `org.tvrenamer.controller.MoveRunner` — helper: “TODO: make this a generic facility?”
-
-**Potential follow-ups:**
-- Replace with `Map.computeIfAbsent(...)` (if not already feasible given target Java version / style).
-- Introduce a small util method (if used across multiple classes), but prefer standard library constructs.
+- Source (original note):
+  - `org.tvrenamer.controller.MoveRunner` — helper previously marked with a TODO
 
 ### Expand conflict detection beyond exact filename matches
 **Context:** Conflict detection currently assumes “exact filename match” is the primary conflict type, but the code anticipates more nuanced matching.  
@@ -124,20 +119,12 @@ These are suggested “first picks” from the backlog below—items that are li
 - Replace ad-hoc encoding with a well-tested XML escaping strategy where applicable.
 - Add tests for tricky titles (ampersands, apostrophes, unicode punctuation, etc.).
 
-### Confirm thread-safety of shared XPath instance
-**Context:** `XPathUtilities` uses one static `XPath` instance for all requests.  
-**Why it matters:** `XPath` implementations may not be thread-safe; sharing could cause concurrency bugs if used across threads.
+### Harden XPath usage for potential concurrency (DONE)
+**Context:** `XPathUtilities` used one shared static `XPath` instance for all requests.  
+**Status:** Updated to use a `ThreadLocal<XPath>` so background-thread callers can safely evaluate XPath expressions.
 
-- Source:
-  - `org.tvrenamer.controller.util.XPathUtilities`
-  - Note: “We just create this one XPath object and use it for all shows, all episodes. TODO: is there any issue with this?”
-
-**Potential follow-ups:**
-- Verify actual usage patterns (single-threaded vs multi-threaded calls).
-- If multi-threaded, consider:
-  - `ThreadLocal<XPath>`
-  - create a new `XPath` per use (likely cheap enough)
-  - synchronize access (last resort)
+- Source (original note):
+  - `org.tvrenamer.controller.util.XPathUtilities` — shared `XPath` instance
 
 ---
 
