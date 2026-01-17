@@ -325,6 +325,11 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         okButton.setText("OK");
         okButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         okButton.addListener(SWT.Selection, e -> {
+            // Ensure the currently highlighted candidate is actually recorded for the currently
+            // selected ambiguous show before we validate/close. Without this, users can click
+            // a candidate and then click OK, but the selection map may not be updated.
+            applyCurrentSelectionOnly();
+
             // Only allow OK when everything is resolved
             if (!allResolved()) {
                 return;
