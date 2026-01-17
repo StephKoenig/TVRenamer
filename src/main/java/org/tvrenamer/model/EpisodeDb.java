@@ -122,10 +122,22 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         if (key == null) {
             return null;
         }
-        FileEpisode ep = episodes.get(key);
+
+        // Always work with canonical keys so we keep the EpisodeDb mapping stable.
+        String canonicalKey = canonicalizeKey(Paths.get(key));
+
+        FileEpisode ep = episodes.get(canonicalKey);
         if (ep == null) {
-            return null;
+            // Backward compatibility: older entries may have been stored under a non-canonical key.
+            ep = episodes.get(key);
+            if (ep != null) {
+                episodes.remove(key);
+                episodes.put(canonicalKey, ep);
+            } else {
+                return null;
+            }
         }
+
         Path currentLocation = ep.getPath();
         if (
             fileIsVisible(currentLocation) &&
@@ -134,28 +146,33 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
             // OK, the file is good! But that could be true even if
             // it were moved. Now try to see if it's been moved, or if
             // it's still where we think it is.
-            String direct = currentLocation.toString();
-            if (key.equals(direct)) {
-                return key;
+            String canonicalDirect = canonicalizeKey(currentLocation);
+
+            // If the canonical keys match, we're done.
+            if (canonicalKey.equals(canonicalDirect)) {
+                return canonicalKey;
             }
-            // Even if the strings don't match directly, we're not going
-            // to change anything if they both refer to the same file.
-            // Note: path canonicalization policy (including UNC/SMB edge cases) is tracked in docs/todo.md
-            // under "Consider canonicalization of file paths in EpisodeDb".
-            Path keyPath = Paths.get(key);
+
+            // If both paths refer to the same file, normalize the key so the map stays consistent.
+            // (We avoid toRealPath-based canonicalization; see canonicalizeKey(...) for rationale.)
+            Path keyPath = Paths.get(canonicalKey);
             if (FileUtilities.isSameFile(currentLocation, keyPath)) {
-                return key;
+                // Ensure we are stored under the canonical key.
+                if (!episodes.containsKey(canonicalKey)) {
+                    episodes.put(canonicalKey, ep);
+                }
+                return canonicalKey;
             }
-            // The file has been moved. We update our database, and inform the
-            // caller of the new key.
-            episodes.remove(key);
-            episodes.put(direct, ep);
-            return direct;
+
+            // The file has been moved. Update our database key to the canonical path and return it.
+            episodes.remove(canonicalKey);
+            episodes.put(canonicalDirect, ep);
+            return canonicalDirect;
         } else {
             // The file has disappeared out from under us (or, bizarrely, been replaced
             // by a directory? Anything is possible...). Remove it from the db and let
             // the caller know by returning null.
-            episodes.remove(key);
+            episodes.remove(canonicalKey);
             return null;
         }
     }
@@ -164,8 +181,7 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         final Queue<FileEpisode> contents,
         final Path path
     ) {
-        final Path absPath = path.toAbsolutePath();
-        final String key = absPath.toString();
+        final String key = canonicalizeKey(path);
         if (episodes.containsKey(key)) {
             logger.info("already in table: " + key);
         } else {
@@ -329,6 +345,26 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         );
         t.setDaemon(true);
         t.start();
+    }
+
+    /**
+     * Canonicalize file keys so the same file is less likely to appear multiple times
+     * due to path string differences (relative vs absolute, ".." segments, etc.).
+     *
+     * We intentionally avoid calling {@code Path#toRealPath()} here because it can
+     * be slow or fail on network shares/UNC paths. This is a "string-level"
+     * canonicalization only.
+     */
+    private static String canonicalizeKey(final Path path) {
+        if (path == null) {
+            return "";
+        }
+        try {
+            return path.toAbsolutePath().normalize().toString();
+        } catch (Exception ignored) {
+            // Best-effort fallback
+            return path.toAbsolutePath().toString();
+        }
     }
 
     @Override
