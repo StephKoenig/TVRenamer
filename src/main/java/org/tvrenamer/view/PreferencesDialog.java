@@ -217,6 +217,16 @@ class PreferencesDialog extends Dialog {
     private Text disambiguationsIdText;
     private Table disambiguationsTable;
 
+    // Matching validation / dirty tracking (Commit 4: scaffolding only; no online validation yet)
+    private static final String MATCHING_STATUS_VALID = "✓";
+    private static final String MATCHING_STATUS_INVALID = "✗";
+    private static final String MATCHING_STATUS_INCOMPLETE = "Incomplete";
+    private static final String MATCHING_STATUS_VALIDATING = "Validating...";
+    private static final String MATCHING_DIRTY_KEY = "tvrenamer.matching.dirty";
+
+    // Save gating: disable Save when any dirty row is invalid/incomplete
+    private Button saveButton;
+
     private TabFolder tabFolder;
     private Shell preferencesShell;
 
@@ -873,6 +883,11 @@ class PreferencesDialog extends Dialog {
                     upsertOverride(from, to);
                     overridesFromText.setText("");
                     overridesToText.setText("");
+                    validateMatchingRowBestEffort(
+                        overridesTable,
+                        overridesTable.getSelectionIndex()
+                    );
+                    updateSaveEnabledFromMatchingValidation();
                 }
             }
         );
@@ -934,13 +949,16 @@ class PreferencesDialog extends Dialog {
         oColFrom.setText("Extracted show");
         TableColumn oColTo = new TableColumn(overridesTable, SWT.LEFT);
         oColTo.setText("Replace with");
+        TableColumn oColStatus = new TableColumn(overridesTable, SWT.LEFT);
+        oColStatus.setText("Status");
 
-        // Populate table from prefs
+        // Populate table from prefs (not dirty; no validation required)
         for (Map.Entry<String, String> e : prefs
             .getShowNameOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(overridesTable, SWT.NONE);
-            ti.setText(new String[] { e.getKey(), e.getValue() });
+            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
+            ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : overridesTable.getColumns()) {
             c.pack();
@@ -1034,6 +1052,11 @@ class PreferencesDialog extends Dialog {
                     upsertDisambiguation(q, id);
                     disambiguationsQueryText.setText("");
                     disambiguationsIdText.setText("");
+                    validateMatchingRowBestEffort(
+                        disambiguationsTable,
+                        disambiguationsTable.getSelectionIndex()
+                    );
+                    updateSaveEnabledFromMatchingValidation();
                 }
             }
         );
@@ -1095,12 +1118,18 @@ class PreferencesDialog extends Dialog {
         dColQuery.setText("Query string");
         TableColumn dColId = new TableColumn(disambiguationsTable, SWT.LEFT);
         dColId.setText("Series ID");
+        TableColumn dColStatus = new TableColumn(
+            disambiguationsTable,
+            SWT.LEFT
+        );
+        dColStatus.setText("Status");
 
         for (Map.Entry<String, String> e : prefs
             .getShowDisambiguationOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
-            ti.setText(new String[] { e.getKey(), e.getValue() });
+            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
+            ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : disambiguationsTable.getColumns()) {
             c.pack();
@@ -1257,12 +1286,12 @@ class PreferencesDialog extends Dialog {
             }
         );
 
-        Button saveButton = new Button(bottomButtonsComposite, SWT.PUSH);
+        saveButton = new Button(bottomButtonsComposite, SWT.PUSH);
         GridData saveButtonGridData = new GridData(
             GridData.END,
             GridData.CENTER,
-            true,
-            true
+            false,
+            false
         );
         saveButtonGridData.minimumWidth = 150;
         saveButtonGridData.widthHint = 150;
@@ -1290,6 +1319,10 @@ class PreferencesDialog extends Dialog {
      * Save the preferences to the xml file
      */
     private boolean savePreferences() {
+        // Block save if there are invalid/incomplete dirty matching rows.
+        if (!matchingIsSaveable()) {
+            return false;
+        }
         // Validate the move destination BEFORE committing it into UserPreferences.
         // This prevents the main window (ResultsTable) from reacting to preference changes
         // and showing a second error popup while the Preferences dialog is still open.
@@ -1410,6 +1443,86 @@ class PreferencesDialog extends Dialog {
 
         UserPreferences.store(prefs);
         return true;
+    }
+
+    private boolean matchingIsSaveable() {
+        return !hasInvalidDirtyMatchingRows();
+    }
+
+    private void updateSaveEnabledFromMatchingValidation() {
+        if (saveButton == null || saveButton.isDisposed()) {
+            return;
+        }
+        saveButton.setEnabled(matchingIsSaveable());
+    }
+
+    private boolean hasInvalidDirtyMatchingRows() {
+        return (
+            hasInvalidDirtyMatchingRows(overridesTable) ||
+            hasInvalidDirtyMatchingRows(disambiguationsTable)
+        );
+    }
+
+    private boolean hasInvalidDirtyMatchingRows(final Table table) {
+        if (table == null || table.isDisposed()) {
+            return false;
+        }
+        for (TableItem ti : table.getItems()) {
+            boolean dirty = Boolean.TRUE.equals(ti.getData(MATCHING_DIRTY_KEY));
+            if (!dirty) {
+                continue;
+            }
+            String status = safeCell(ti, 2);
+            if (
+                status.isBlank() ||
+                MATCHING_STATUS_INCOMPLETE.equals(status) ||
+                MATCHING_STATUS_INVALID.equals(status)
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Commit 4: best-effort local validation (online provider validation comes in later commit).
+    // For now we mark dirty rows as either "Incomplete" or "✓" (syntactically complete).
+    private void validateMatchingRowBestEffort(
+        final Table table,
+        final int idx
+    ) {
+        if (table == null || table.isDisposed()) {
+            return;
+        }
+        if (idx < 0 || idx >= table.getItemCount()) {
+            return;
+        }
+        TableItem ti = table.getItem(idx);
+
+        // Mark dirty
+        ti.setData(MATCHING_DIRTY_KEY, Boolean.TRUE);
+
+        String key = safeCell(ti, 0).trim();
+        String val = safeCell(ti, 1).trim();
+
+        if (key.isEmpty() || val.isEmpty()) {
+            ti.setText(2, MATCHING_STATUS_INCOMPLETE);
+            return;
+        }
+
+        // Placeholder: complete == OK for now (real validation in later commit).
+        ti.setText(2, MATCHING_STATUS_VALID);
+    }
+
+    private static String safeCell(final TableItem ti, final int col) {
+        if (ti == null) {
+            return "";
+        }
+        try {
+            String s = ti.getText(col);
+            return (s == null) ? "" : s;
+        } catch (RuntimeException e) {
+            return "";
+        }
     }
 
     /**
