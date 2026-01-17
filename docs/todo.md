@@ -97,6 +97,11 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Where:** `org.tvrenamer.controller.util.StringUtils` and provider fetch paths
    - **Effort:** Medium (API cleanup + call-site audit + tests)
 
+8. **Unify show matching rules UI (Overrides + Disambiguations)**
+   - **Why:** Users need one place to view/edit/delete/validate all show-matching rules; reduces confusion and makes troubleshooting easier.
+   - **Where:** Preferences UI (Overrides tab / new “Show Matching” tab), `UserPreferences` storage, and `ShowStore` resolution flow
+   - **Effort:** Medium (UI table + validation + persistence wiring)
+
 ---
 
 ## 1) File moving / filesystem behavior
@@ -233,6 +238,15 @@ These are suggested “first picks” from the backlog below—items that are li
 ---
 
 ## 6) Show matching / selection heuristics
+
+### Future: allow pinning a show ID by extracted show name (not just query string)
+**Context:** Today, disambiguation selections are stored as `query string -> series id`, and name overrides are stored as `extracted show -> override text`. A future enhancement would allow a direct “pin by name” rule that bypasses ambiguity even without crafting/maintaining a query string.
+**Why it matters:** Provides a simpler, more robust advanced option for users who know the correct show and want to avoid repeated prompts even if normalization rules change.
+
+- Potential shape:
+  - `extracted show (or post-override show text) -> series id`
+- Likely UI location:
+  - unified “Show Matching Rules” editor alongside Overrides and Disambiguations
 
 ### Improve selection when multiple show matches exist
 **Context:** When there are multiple exact hits, the code “chooses first one” and notes potential better criteria. When no exact match, it suggests better selection methods like Levenshtein distance.
