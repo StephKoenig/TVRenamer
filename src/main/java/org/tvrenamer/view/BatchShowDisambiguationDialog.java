@@ -41,6 +41,22 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
     private static final int MAX_OPTIONS_PER_SHOW = 5;
 
+    private static final String TITLE_BASE = "Select Shows";
+    private static final String TITLE_DOWNLOADING_PREFIX =
+        "Select Shows (Downloading ";
+    private static final String TITLE_DOWNLOADING_SUFFIX = ")";
+
+    // Use Unicode escape sequences to avoid source-encoding issues on Windows (e.g., cp1252).
+    // Frames are quadrant circle characters (escaped).
+    private static final char[] DOWNLOADING_FRAMES = new char[] {
+        '\u25D0',
+        '\u25D3',
+        '\u25D1',
+        '\u25D2',
+    };
+    private int downloadingFrameIdx = 0;
+    private boolean downloading = false;
+
     private final Shell parent;
     private final Map<String, ShowStore.PendingDisambiguation> pending;
 
@@ -89,7 +105,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         }
 
         dialogShell = new Shell(parent, getStyle());
-        dialogShell.setText("Select Shows");
+        dialogShell.setText(TITLE_BASE);
 
         // Match main window icon (best-effort).
         // We intentionally load a fresh Image here; SWT Shell takes ownership for display purposes.
@@ -101,13 +117,21 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         themePalette = ThemeManager.createPalette(dialogShell.getDisplay());
         ThemeManager.applyPalette(dialogShell, themePalette);
 
-        // Treat closing the window via the title-bar X as Cancel.
+        // Treat closing the window via the title-bar X as "OK" if at least one selection exists.
+        // Otherwise treat it as Cancel to avoid returning an empty selection map.
         dialogShell.addListener(SWT.Close, e -> {
-            // Mark as cancelled so caller leaves pending queued, and mark that the close button was used
-            // so the caller can avoid immediate re-open loops.
-            cancelled = true;
-            closedViaWindowX = true;
-            selections.clear();
+            // Best-effort: persist any currently highlighted candidate for the currently selected row.
+            applyCurrentSelectionOnly();
+
+            if (hasAnySelections()) {
+                cancelled = false;
+                closedViaWindowX = true;
+                // keep selections
+            } else {
+                cancelled = true;
+                closedViaWindowX = true;
+                selections.clear();
+            }
         });
 
         createContents(dialogShell);
@@ -115,6 +139,9 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         dialogShell.setMinimumSize(900, 370);
         dialogShell.pack();
         dialogShell.open();
+
+        // Start in downloading mode; caller will stop it when discovery completes.
+        setDownloading(true);
 
         Display display = parent.getDisplay();
         while (!dialogShell.isDisposed()) {
@@ -226,15 +253,6 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         metaLayout.horizontalSpacing = 8;
         meta.setLayout(metaLayout);
 
-        Label showNameLabel = new Label(meta, SWT.NONE);
-        showNameLabel.setText("Extracted show:");
-
-        showNameValueLabel = new Label(meta, SWT.NONE);
-        showNameValueLabel.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, false)
-        );
-        showNameValueLabel.setText("");
-
         Label exampleFileLabel = new Label(meta, SWT.NONE);
         exampleFileLabel.setText("Example file:");
 
@@ -245,12 +263,22 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         exampleFileValueLabel.setText("");
         exampleFileValueLabel.setToolTipText("");
 
+        Label showNameLabel = new Label(meta, SWT.NONE);
+        showNameLabel.setText("Extracted show:");
+
+        showNameValueLabel = new Label(meta, SWT.NONE);
+        showNameValueLabel.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false)
+        );
+        showNameValueLabel.setText("");
+        showNameValueLabel.setToolTipText("");
+
         Label candidatesLabel = new Label(parent, SWT.NONE);
-        candidatesLabel.setText("Choose a match:");
+        candidatesLabel.setText("Click a match:");
 
         rightCandidatesTable = new Table(
             parent,
-            SWT.BORDER | SWT.FULL_SELECTION | SWT.SINGLE
+            SWT.BORDER | SWT.FULL_SELECTION | SWT.SINGLE | SWT.CHECK
         );
         rightCandidatesTable.setHeaderVisible(true);
         rightCandidatesTable.setLinesVisible(true);
@@ -288,15 +316,85 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         // Prefer horizontal scrolling over an overly wide table.
         colAliases.setWidth(260);
 
-        // Persist selection on single-click as well (so users can click a candidate, then click OK).
-        rightCandidatesTable.addListener(SWT.Selection, e ->
-            applyCurrentSelectionOnly()
-        );
+        // Checkbox-based selection:
+        // - Each candidate row has a checkbox.
+        // - At most one can be checked at a time.
+        // - It can be unchecked so that none are selected.
+        // - Clicking anywhere on a row toggles its checkbox.
+        rightCandidatesTable.addListener(SWT.Selection, e -> {
+            // Clicking a row (not just the checkbox) should toggle the checkbox.
+            // SWT will also send events where detail==SWT.CHECK for direct checkbox clicks.
+            TableItem clicked = (e == null) ? null : (TableItem) e.item;
+            if (clicked == null) {
+                return;
+            }
 
-        // Double-click (default selection) applies selection and advances.
-        rightCandidatesTable.addListener(SWT.DefaultSelection, e ->
-            applyCurrentSelectionAndAdvance()
-        );
+            // Toggle checkbox state on row click as well as checkbox click.
+            // If the user clicked the checkbox, SWT may have already toggled it.
+            // If the user clicked the row, it won't toggle automatically, so we toggle here.
+            if (e.detail != SWT.CHECK) {
+                clicked.setChecked(!clicked.getChecked());
+            }
+
+            // Enforce at most one checked at a time.
+            if (clicked.getChecked()) {
+                for (TableItem ti : rightCandidatesTable.getItems()) {
+                    if (ti != clicked) {
+                        ti.setChecked(false);
+                    }
+                }
+            }
+
+            // Apply/clear selection for the currently selected ambiguous show.
+            int leftIdx = leftTable.getSelectionIndex();
+            if (leftIdx < 0) {
+                updateOkEnabled();
+                return;
+            }
+            TableItem leftItem = leftTable.getItem(leftIdx);
+            Object data = leftItem.getData();
+            if (!(data instanceof String)) {
+                updateOkEnabled();
+                return;
+            }
+            String queryString = (String) data;
+
+            if (!clicked.getChecked()) {
+                selections.remove(queryString);
+                leftItem.setText(2, "Not selected");
+                updateOkEnabled();
+                return;
+            }
+
+            Object candData = clicked.getData();
+            if (candData instanceof ShowOption) {
+                ShowOption chosen = (ShowOption) candData;
+                selections.put(queryString, chosen.getIdString());
+                leftItem.setText(2, "Selected");
+            }
+
+            updateOkEnabled();
+        });
+
+        // Double-click (default selection) is an expert shortcut:
+        // check the row, apply selection, and advance.
+        rightCandidatesTable.addListener(SWT.DefaultSelection, e -> {
+            int idx = rightCandidatesTable.getSelectionIndex();
+            if (idx < 0) {
+                return;
+            }
+            TableItem ti = rightCandidatesTable.getItem(idx);
+            if (ti == null) {
+                return;
+            }
+            ti.setChecked(true);
+            for (TableItem other : rightCandidatesTable.getItems()) {
+                if (other != ti) {
+                    other.setChecked(false);
+                }
+            }
+            applyCurrentSelectionAndAdvance();
+        });
     }
 
     private void createButtons(final Composite parent) {
@@ -325,16 +423,18 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         okButton.setText("OK");
         okButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         okButton.addListener(SWT.Selection, e -> {
-            // Ensure the currently highlighted candidate is actually recorded for the currently
-            // selected ambiguous show before we validate/close. Without this, users can click
-            // a candidate and then click OK, but the selection map may not be updated.
+            // With checkbox-based selection, the selections map is updated on checkbox toggles.
+            // Keep a best-effort apply for keyboard-only flows where the user might not toggle
+            // the checkbox explicitly.
             applyCurrentSelectionOnly();
 
-            // Only allow OK when everything is resolved
-            if (!allResolved()) {
+            // Enable OK when at least one show has a selection, even if not all are resolved.
+            if (!hasAnySelections()) {
                 return;
             }
+
             cancelled = false;
+            // Do NOT clear selections here; caller expects selections to be returned from open().
             close();
         });
 
@@ -378,6 +478,72 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         }
     }
 
+    /**
+     * Merge newly discovered pending disambiguations into the dialog without resetting user choices.
+     * New items are appended at the bottom in discovery order.
+     */
+    public void mergePending(
+        final Map<String, ShowStore.PendingDisambiguation> latest
+    ) {
+        if (latest == null || latest.isEmpty()) {
+            return;
+        }
+        if (dialogShell == null || dialogShell.isDisposed()) {
+            return;
+        }
+        if (leftTable == null || leftTable.isDisposed()) {
+            return;
+        }
+
+        boolean addedAny = false;
+
+        for (Map.Entry<
+            String,
+            ShowStore.PendingDisambiguation
+        > entry : latest.entrySet()) {
+            String queryString = entry.getKey();
+            ShowStore.PendingDisambiguation pd = entry.getValue();
+            if (queryString == null || queryString.isBlank() || pd == null) {
+                continue;
+            }
+
+            if (pending.containsKey(queryString)) {
+                continue;
+            }
+
+            pending.put(queryString, pd);
+
+            TableItem item = new TableItem(leftTable, SWT.NONE);
+            item.setData(queryString);
+
+            String extracted = safe(pd.extractedShowName);
+            String exampleFile = safe(pd.exampleFileName);
+
+            String filesCol = exampleFile.isEmpty() ? "" : "1 file";
+            String statusCol = selections.containsKey(queryString)
+                ? "Selected"
+                : "Not selected";
+
+            item.setText(new String[] { extracted, filesCol, statusCol });
+            addedAny = true;
+        }
+
+        if (addedAny) {
+            for (TableColumn c : leftTable.getColumns()) {
+                c.pack();
+            }
+            leftTable.getParent().layout(true, true);
+
+            // Force paint: some SWT themes won't repaint immediately on background-driven updates.
+            leftTable.redraw();
+            leftTable.update();
+            dialogShell.redraw();
+            dialogShell.update();
+
+            updateOkEnabled();
+        }
+    }
+
     private void onLeftSelectionChanged() {
         int idx = leftTable.getSelectionIndex();
         if (idx < 0) {
@@ -407,12 +573,16 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
         populateCandidates(pd.options);
 
-        // If already selected for this query, preselect it in candidate table
+        // If already selected for this query, check it in candidate table.
+        // Otherwise leave everything unchecked.
         String chosenId = selections.get(queryString);
         if (chosenId != null && !chosenId.isBlank()) {
             selectCandidateById(chosenId);
-        } else if (rightCandidatesTable.getItemCount() > 0) {
-            rightCandidatesTable.setSelection(0);
+        } else {
+            rightCandidatesTable.deselectAll();
+            for (TableItem ti : rightCandidatesTable.getItems()) {
+                ti.setChecked(false);
+            }
         }
 
         rightCandidatesTable.getParent().layout(true, true);
@@ -495,6 +665,13 @@ public final class BatchShowDisambiguationDialog extends Dialog {
                 ShowOption opt = (ShowOption) data;
                 if (id.equals(opt.getIdString())) {
                     rightCandidatesTable.setSelection(i);
+                    ti.setChecked(true);
+                    // Ensure others are unchecked.
+                    for (TableItem other : rightCandidatesTable.getItems()) {
+                        if (other != ti) {
+                            other.setChecked(false);
+                        }
+                    }
                     return;
                 }
             }
@@ -536,16 +713,39 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         }
         String queryString = (String) data;
 
-        int candIdx = rightCandidatesTable.getSelectionIndex();
-        if (candIdx < 0) {
-            return false;
+        // Prefer the checked row, if any.
+        TableItem checked = null;
+        for (TableItem ti : rightCandidatesTable.getItems()) {
+            if (ti.getChecked()) {
+                checked = ti;
+                break;
+            }
         }
-        TableItem candItem = rightCandidatesTable.getItem(candIdx);
+
+        // If nothing is checked, fall back to the currently highlighted row (keyboard-only flow),
+        // but do not implicitly "select" it unless the user confirms (OK/DefaultSelection).
+        TableItem candItem = checked;
+        if (candItem == null) {
+            int candIdx = rightCandidatesTable.getSelectionIndex();
+            if (candIdx < 0) {
+                return false;
+            }
+            candItem = rightCandidatesTable.getItem(candIdx);
+        }
+
         Object candData = candItem.getData();
         if (!(candData instanceof ShowOption)) {
             return false;
         }
         ShowOption chosen = (ShowOption) candData;
+
+        // If we got here via fallback, ensure the chosen row is checked to make state explicit.
+        candItem.setChecked(true);
+        for (TableItem other : rightCandidatesTable.getItems()) {
+            if (other != candItem) {
+                other.setChecked(false);
+            }
+        }
 
         selections.put(queryString, chosen.getIdString());
 
@@ -586,11 +786,67 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         return true;
     }
 
+    private boolean hasAnySelections() {
+        for (Map.Entry<String, String> e : selections.entrySet()) {
+            String queryString = e.getKey();
+            String chosenId = e.getValue();
+            if (queryString == null || queryString.isBlank()) {
+                continue;
+            }
+            if (chosenId == null || chosenId.isBlank()) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+
     private void updateOkEnabled() {
         if (okButton == null || okButton.isDisposed()) {
             return;
         }
-        okButton.setEnabled(allResolved());
+        okButton.setEnabled(hasAnySelections());
+    }
+
+    /**
+     * Enable/disable the animated "Downloading" title state.
+     * Caller is responsible for stopping it when discovery completes.
+     */
+    public void setDownloading(final boolean downloading) {
+        this.downloading = downloading;
+        if (dialogShell == null || dialogShell.isDisposed()) {
+            return;
+        }
+
+        if (!downloading) {
+            dialogShell.setText(TITLE_BASE);
+            return;
+        }
+
+        // Use a lightweight self-rescheduling runnable to animate the quadrants spinner.
+        Display display = dialogShell.getDisplay();
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                if (!BatchShowDisambiguationDialog.this.downloading) {
+                    return;
+                }
+                if (dialogShell == null || dialogShell.isDisposed()) {
+                    return;
+                }
+                char frame = DOWNLOADING_FRAMES[downloadingFrameIdx];
+                downloadingFrameIdx =
+                    (downloadingFrameIdx + 1) % DOWNLOADING_FRAMES.length;
+
+                dialogShell.setText(
+                    TITLE_DOWNLOADING_PREFIX + frame + TITLE_DOWNLOADING_SUFFIX
+                );
+
+                display.timerExec(200, this);
+            }
+        };
+
+        display.timerExec(0, tick);
     }
 
     private static String safe(final String s) {
