@@ -395,18 +395,31 @@ public class FileUtilities {
             OutputStream fos = Files.newOutputStream(dest);
             InputStream fis = Files.newInputStream(source)
         ) {
-            byte[] buffer = new byte[32768];
+            // Use a larger buffer to improve throughput on fast disks / networks (e.g., SMB).
+            // 4095 KB as requested.
+            final int bufferSize = 4095 * 1024;
+            byte[] buffer = new byte[bufferSize];
+
             int n;
             long copied = 0L;
+
+            // Throttle progress notifications to reduce overhead on fast links.
+            // We still copy in large chunks, but only notify every ~4MB (or at end).
+            final long notifyEveryBytes = 4L * 1024L * 1024L;
+            long nextNotifyAt = notifyEveryBytes;
+
             while (-1 != (n = fis.read(buffer))) {
                 fos.write(buffer, 0, n);
                 copied += n;
-                if (observer != null) {
+
+                if (observer != null && copied >= nextNotifyAt) {
                     observer.setProgressStatus(
                         StringUtils.formatFileSize(copied)
                     );
                     observer.setProgressValue(copied);
+                    nextNotifyAt = copied + notifyEveryBytes;
                 }
+
                 if (Thread.currentThread().isInterrupted()) {
                     logger.fine(
                         "copyWithUpdates interrupted; stopping copy of " +
@@ -415,6 +428,13 @@ public class FileUtilities {
                     break;
                 }
             }
+
+            // Final notification (ensure UI reaches 100%).
+            if (observer != null) {
+                observer.setProgressStatus(StringUtils.formatFileSize(copied));
+                observer.setProgressValue(copied);
+            }
+
             if (-1 == n) {
                 ok = true;
             }
