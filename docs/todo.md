@@ -45,6 +45,11 @@ This section summarizes TODOs that have been addressed, including what changed a
    - **Where:** `org.tvrenamer.controller.util.StringUtils` and `org.tvrenamer.controller.TheTVDBProvider`
    - **What we did:** Use robust URL encode/decode, stop mutating downloaded XML payloads, and treat “special character encoding” as conservative display normalization only.
 
+8. **Improve move/copy throughput and overall progress reporting**
+   - **Why:** Copy+delete can be slow on fast networks; overall progress should be smooth and accurate for multi-file batches.
+   - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`, `org.tvrenamer.view.FileMonitor`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.view.ProgressBarUpdater`
+   - **What we did:** Increased copy buffer to 4 MiB and throttled UI progress callbacks to ~1 MiB; implemented byte-accurate aggregate progress for copy+delete moves only so the bottom bar advances smoothly across the entire batch and resets after completion.
+
 
 ---
 
@@ -57,32 +62,27 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Where:** `org.tvrenamer.model.ShowName` / `ShowStore`
    - **Effort:** Medium (tie-breakers and/or user prompt; can start with better tie-breakers only)
 
-2. **Improve move/copy throughput and overall progress reporting**
-   - **Why:** Current copy+delete can feel slow on fast networks; the bottom progress bar should reflect overall move progress (move/copy only), and reset after each batch.
-   - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`, `org.tvrenamer.view.ProgressBarUpdater`, `org.tvrenamer.view.FileMonitor`, `org.tvrenamer.view.ResultsTable` move pipeline
-   - **Effort:** Medium (larger copy chunks + throttled progress updates + aggregate progress wiring)
-
-3. **Expand conflict detection beyond exact filename matches**
+2. **Expand conflict detection beyond exact filename matches**
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)
 
-4. **Consider canonicalization of file paths in EpisodeDb**
+3. **Consider canonicalization of file paths in EpisodeDb**
    - **Why:** Reduce duplication/confusion when multiple path strings refer to the same file.
    - **Where:** `org.tvrenamer.model.EpisodeDb.currentLocationOf(...)`
    - **Effort:** Medium (Windows/UNC-safe normalization strategy)
 
-5. **Improve handling of “unparsed” files**
+4. **Improve handling of “unparsed” files**
    - **Why:** Provide actionable feedback and better UX for files that fail parsing.
    - **Where:** `org.tvrenamer.model.EpisodeDb` — add logic where it currently inserts unparsed episodes
    - **Effort:** Medium
 
-6. **Preserve file attributes / metadata on copy (where feasible)**
+5. **Preserve file attributes / metadata on copy (where feasible)**
    - **Why:** Cross-filesystem moves may copy+delete; users may care about attributes beyond mtime (ACLs, ownership, timestamps).
    - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`
    - **Effort:** Medium (define policy + platform constraints + tests)
 
-7. **Make string handling more explicit (URL vs XML vs display vs filename)**
+6. **Make string handling more explicit (URL vs XML vs display vs filename)**
    - **Why:** Avoid conflating encoding responsibilities; reduces corruption risks and improves correctness.
    - **Where:** `org.tvrenamer.controller.util.StringUtils` and provider fetch paths
    - **Effort:** Medium (API cleanup + call-site audit + tests)
