@@ -236,6 +236,15 @@ gh run download <run-id> --dir ./artifacts
 
 ## Manual GitHub Release procedure (using tested CI artifacts)
 
+### Release notes format (Markdown)
+When creating/editing a GitHub Release, write release notes in **Markdown** and use this structure:
+
+1. **New features / improvements** (first)
+2. **Bug fixes** (second)
+3. Optional: Requirements / Artifacts / CI run link
+
+This makes releases easy to scan and consistent across versions.
+
 This project intentionally does **not** auto-release on every successful build. Releases are created manually when you decide the current state is ready.
 
 ### Versioning
