@@ -153,11 +153,10 @@ public class Constants {
     public static final String PREFER_DVD_ORDER_TOOLTIP =
         "If checked, TVRenamer will prefer DVD ordering/titles when available. " +
         "If DVD ordering is not present for a show, TVRenamer will fall back to aired order.";
-    public static final String DELETE_ROWS_TEXT =
-        "Delete rows after successful move [?]";
+    public static final String DELETE_ROWS_TEXT = "Clear completed rows [?]";
     public static final String DELETE_ROWS_TOOLTIP =
         "If checked, after a file has been successfully " +
-        "moved/renamed, delete the row from the table.";
+        "moved/renamed, clear the completed row from the table.";
     public static final String RENAME_TOKEN_TEXT = "Rename Tokens [?]";
     public static final String RENAME_FORMAT_TEXT = "Rename Format [?]";
     public static final String RENAME_SELECTED_TOOLTIP =

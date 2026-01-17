@@ -404,8 +404,8 @@ public class FileUtilities {
             long copied = 0L;
 
             // Throttle progress notifications to reduce overhead on fast links.
-            // Notify every ~1 MiB (or at end).
-            final long notifyEveryBytes = 1L * 1024L * 1024L;
+            // Notify every ~4 MiB (or at end). This also aligns per-row progress update cadence.
+            final long notifyEveryBytes = 4L * 1024L * 1024L;
             long nextNotifyAt = notifyEveryBytes;
 
             while (-1 != (n = fis.read(buffer))) {

@@ -167,6 +167,34 @@ public final class ResultsTable
         episodeMap.preload();
     }
 
+    private void updateClearCompletedButtonEnabled() {
+        // Button only exists after setupTopButtons runs; best-effort lookup.
+        Object btnObj = shell.getData("tvrenamer.clearCompletedButton");
+        if (!(btnObj instanceof Button)) {
+            return;
+        }
+        Button btn = (Button) btnObj;
+        if (btn.isDisposed()) {
+            return;
+        }
+
+        // If auto-clear is enabled, the button is not meaningful.
+        if (prefs.isDeleteRowAfterMove()) {
+            btn.setEnabled(false);
+            return;
+        }
+
+        boolean anyCompleted = false;
+        for (final TableItem item : swtTable.getItems()) {
+            Object completed = item.getData("tvrenamer.moveCompleted");
+            if (Boolean.TRUE.equals(completed)) {
+                anyCompleted = true;
+                break;
+            }
+        }
+        btn.setEnabled(anyCompleted);
+    }
+
     Display getDisplay() {
         return display;
     }
@@ -923,6 +951,10 @@ public final class ResultsTable
                     );
                     continue;
                 }
+                // Track whether this row has been successfully processed so "Clear Completed"
+                // can remove it later when auto-clear is disabled.
+                item.setData("tvrenamer.moveCompleted", Boolean.FALSE);
+
                 FileMover pendingMove = new FileMover(episode);
 
                 // Lazily create an aggregate tracker for overall copy progress.
@@ -1232,6 +1264,8 @@ public final class ResultsTable
         if (swtTable.getItemCount() == 0) {
             ShowStore.clearPendingDisambiguations();
         }
+
+        updateClearCompletedButtonEnabled();
     }
 
     private void deleteSelectedTableItems() {
@@ -1430,11 +1464,19 @@ public final class ResultsTable
                 label.getParent().layout(true, true);
             }
 
+            // Mark as completed for "Clear Completed" behavior when auto-clear is disabled.
+            if (item != null && !item.isDisposed()) {
+                item.setData("tvrenamer.moveCompleted", Boolean.TRUE);
+            }
+
             if (prefs.isDeleteRowAfterMove()) {
                 deleteTableItem(item);
             } else {
                 updateTableItemAfterMove(item);
             }
+
+            // Refresh the Clear Completed button enabled state (best-effort).
+            updateClearCompletedButtonEnabled();
         } else {
             currentFailures.add(episode);
             logger.fine("failed to move item: " + episode);
@@ -1553,9 +1595,46 @@ public final class ResultsTable
                     // Clearing the list leaves no rows that could be resolved, so clear any
                     // pending show disambiguations to avoid stale "Resolve ambiguous shows" prompts.
                     ShowStore.clearPendingDisambiguations();
+
+                    updateClearCompletedButtonEnabled();
                 }
             }
         );
+
+        final Button clearCompletedButton = new Button(
+            topButtonsComposite,
+            SWT.PUSH
+        );
+        clearCompletedButton.setText("Clear Completed");
+        clearCompletedButton.setToolTipText(
+            "Remove rows that were successfully processed (when auto-clear is disabled)."
+        );
+        clearCompletedButton.setEnabled(false);
+        clearCompletedButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    // Only relevant when auto-clear is disabled.
+                    if (prefs.isDeleteRowAfterMove()) {
+                        return;
+                    }
+
+                    for (final TableItem item : swtTable.getItems()) {
+                        Object completed = item.getData(
+                            "tvrenamer.moveCompleted"
+                        );
+                        if (Boolean.TRUE.equals(completed)) {
+                            deleteTableItem(item);
+                        }
+                    }
+
+                    updateClearCompletedButtonEnabled();
+                }
+            }
+        );
+
+        // Store button for later enable/disable refresh.
+        shell.setData("tvrenamer.clearCompletedButton", clearCompletedButton);
 
         setupUpdateStuff(topButtonsComposite);
     }

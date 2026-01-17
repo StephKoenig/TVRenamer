@@ -48,7 +48,7 @@ This section summarizes TODOs that have been addressed, including what changed a
 8. **Improve move/copy throughput and overall progress reporting**
    - **Why:** Copy+delete can be slow on fast networks; overall progress should be smooth and accurate for multi-file batches.
    - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`, `org.tvrenamer.view.FileMonitor`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.view.ProgressBarUpdater`
-   - **What we did:** Increased copy buffer to 4 MiB and throttled UI progress callbacks to ~1 MiB; implemented byte-accurate aggregate progress for copy+delete moves only so the bottom bar advances smoothly across the entire batch and resets after completion.
+   - **What we did:** Increased copy buffer to 4 MiB and throttled UI progress callbacks to ~4 MiB; implemented byte-accurate aggregate progress for copy+delete moves only so the bottom bar advances smoothly across the entire batch and resets after completion.
 
 
 ---
@@ -77,12 +77,17 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Where:** `org.tvrenamer.model.EpisodeDb` — add logic where it currently inserts unparsed episodes
    - **Effort:** Medium
 
-5. **Preserve file attributes / metadata on copy (where feasible)**
+5. **QOL: “Clear Completed” behavior + button**
+   - **Why:** When auto-clear is off, users need a one-click way to remove completed rows; preference wording should match behavior.
+   - **Where:** `org.tvrenamer.view.PreferencesDialog` (label text), `org.tvrenamer.view.ResultsTable` (Clear Completed button)
+   - **Effort:** Small (UI text + button enabled state + clear action)
+
+6. **Preserve file attributes / metadata on copy (where feasible)**
    - **Why:** Cross-filesystem moves may copy+delete; users may care about attributes beyond mtime (ACLs, ownership, timestamps).
    - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`
    - **Effort:** Medium (define policy + platform constraints + tests)
 
-6. **Make string handling more explicit (URL vs XML vs display vs filename)**
+7. **Make string handling more explicit (URL vs XML vs display vs filename)**
    - **Why:** Avoid conflating encoding responsibilities; reduces corruption risks and improves correctness.
    - **Where:** `org.tvrenamer.controller.util.StringUtils` and provider fetch paths
    - **Effort:** Medium (API cleanup + call-site audit + tests)
