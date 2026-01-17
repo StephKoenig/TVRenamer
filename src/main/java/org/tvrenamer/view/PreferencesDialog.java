@@ -203,10 +203,16 @@ class PreferencesDialog extends Dialog {
     private Button preferDvdOrderCheckbox;
     private ThemePalette themePalette;
 
+    // Matching (Overrides + Disambiguations)
     // Overrides (Show name -> Show name)
     private Text overridesFromText;
     private Text overridesToText;
     private List overridesList;
+
+    // Disambiguations (query string -> series id)
+    private Text disambiguationsQueryText;
+    private Text disambiguationsIdText;
+    private List disambiguationsList;
 
     private TabFolder tabFolder;
     private Shell preferencesShell;
@@ -936,7 +942,7 @@ class PreferencesDialog extends Dialog {
             overridesList.add(e.getKey() + " => " + e.getValue());
         }
 
-        // --- Disambiguations section placeholder (next commits will implement table editor) ---
+        // --- Disambiguations section (Query string -> Series ID) ---
         Label spacer = new Label(overridesGroup, SWT.NONE);
         spacer.setLayoutData(
             new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
@@ -944,19 +950,146 @@ class PreferencesDialog extends Dialog {
 
         Label disambiguationsHeader = new Label(overridesGroup, SWT.NONE);
         disambiguationsHeader.setText(
-            "Disambiguations (Query string → Series ID) [coming next]"
+            "Disambiguations (Query string → Series ID)"
         );
         disambiguationsHeader.setLayoutData(
             new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
         );
 
-        Label disambiguationsNote = new Label(overridesGroup, SWT.WRAP);
-        disambiguationsNote.setText(
-            "This section will allow editing pinned show selections (query string → series ID)."
+        Label queryLabel = new Label(overridesGroup, SWT.NONE);
+        queryLabel.setText("Query string");
+        queryLabel.setToolTipText(
+            "Provider query string (normalized). Example: the rookie"
         );
-        disambiguationsNote.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1)
+
+        disambiguationsQueryText = createText("", overridesGroup, false);
+        new Label(overridesGroup, SWT.NONE); // spacer
+
+        Label idLabel = new Label(overridesGroup, SWT.NONE);
+        idLabel.setText("Series ID");
+        idLabel.setToolTipText(
+            "Provider series id (e.g., TVDB seriesid). Example: 361753"
         );
+
+        disambiguationsIdText = createText("", overridesGroup, false);
+        new Label(overridesGroup, SWT.NONE); // spacer
+
+        // Keep consistent layout behavior with Overrides inputs.
+        disambiguationsQueryText.addListener(SWT.FocusOut, e ->
+            overridesGroup.layout(true, true)
+        );
+        disambiguationsIdText.addListener(SWT.FocusOut, e ->
+            overridesGroup.layout(true, true)
+        );
+
+        Composite disambiguationButtons = new Composite(
+            overridesGroup,
+            SWT.NONE
+        );
+        disambiguationButtons.setLayout(new GridLayout(3, true));
+        GridData disambButtonsGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false,
+            3,
+            1
+        );
+        disambButtonsGridData.minimumHeight = 35;
+        disambiguationButtons.setLayoutData(disambButtonsGridData);
+
+        Button disambAddButton = new Button(disambiguationButtons, SWT.PUSH);
+        disambAddButton.setText("Add / Update");
+        GridData disambAddGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false
+        );
+        disambAddGridData.minimumWidth = 110;
+        disambAddGridData.heightHint = 30;
+        disambAddButton.setLayoutData(disambAddGridData);
+        disambAddButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    String q = disambiguationsQueryText.getText().trim();
+                    String id = disambiguationsIdText.getText().trim();
+                    if (q.isEmpty() || id.isEmpty()) {
+                        return;
+                    }
+                    upsertDisambiguation(q, id);
+                    disambiguationsQueryText.setText("");
+                    disambiguationsIdText.setText("");
+                }
+            }
+        );
+
+        Button disambRemoveButton = new Button(disambiguationButtons, SWT.PUSH);
+        disambRemoveButton.setText("Remove");
+        GridData disambRemoveGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false
+        );
+        disambRemoveGridData.minimumWidth = 90;
+        disambRemoveGridData.heightHint = 30;
+        disambRemoveButton.setLayoutData(disambRemoveGridData);
+        disambRemoveButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    int idx = disambiguationsList.getSelectionIndex();
+                    if (idx >= 0) {
+                        String entry = disambiguationsList.getItem(idx);
+                        String from = entry.split("=>")[0].trim();
+                        removeDisambiguation(from);
+                    }
+                }
+            }
+        );
+
+        Button disambClearButton = new Button(disambiguationButtons, SWT.PUSH);
+        disambClearButton.setText("Clear");
+        GridData disambClearGridData = new GridData(
+            SWT.FILL,
+            SWT.CENTER,
+            true,
+            false
+        );
+        disambClearGridData.minimumWidth = 90;
+        disambClearGridData.heightHint = 30;
+        disambClearButton.setLayoutData(disambClearGridData);
+        disambClearButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent event) {
+                    disambiguationsList.removeAll();
+                }
+            }
+        );
+
+        Label disambListLabel = new Label(overridesGroup, SWT.NONE);
+        disambListLabel.setText("Disambiguations list");
+        disambListLabel.setLayoutData(
+            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
+        );
+
+        disambiguationsList = new List(
+            overridesGroup,
+            SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL
+        );
+        disambiguationsList.setLayoutData(
+            new GridData(SWT.FILL, SWT.FILL, true, true, 3, 1)
+        );
+
+        // Populate list from current prefs
+        for (Map.Entry<String, String> e : prefs
+            .getShowDisambiguationOverrides()
+            .entrySet()) {
+            disambiguationsList.add(e.getKey() + " => " + e.getValue());
+        }
 
         item.setControl(overridesGroup);
     }
@@ -984,6 +1117,34 @@ class PreferencesDialog extends Dialog {
             String existingFrom = entry.split("=>")[0].trim();
             if (existingFrom.equalsIgnoreCase(from)) {
                 overridesList.remove(i);
+                break;
+            }
+        }
+    }
+
+    private void upsertDisambiguation(String queryString, String seriesId) {
+        // Remove any existing entry for this key (case-insensitive)
+        int removeIdx = -1;
+        for (int i = 0; i < disambiguationsList.getItemCount(); i++) {
+            String entry = disambiguationsList.getItem(i);
+            String existingFrom = entry.split("=>")[0].trim();
+            if (existingFrom.equalsIgnoreCase(queryString)) {
+                removeIdx = i;
+                break;
+            }
+        }
+        if (removeIdx >= 0) {
+            disambiguationsList.remove(removeIdx);
+        }
+        disambiguationsList.add(queryString + " => " + seriesId);
+    }
+
+    private void removeDisambiguation(String queryString) {
+        for (int i = 0; i < disambiguationsList.getItemCount(); i++) {
+            String entry = disambiguationsList.getItem(i);
+            String existingFrom = entry.split("=>")[0].trim();
+            if (existingFrom.equalsIgnoreCase(queryString)) {
+                disambiguationsList.remove(i);
                 break;
             }
         }
@@ -1177,6 +1338,22 @@ class PreferencesDialog extends Dialog {
             }
         }
         prefs.setShowNameOverrides(overrides);
+
+        // Show disambiguations (query string -> series id)
+        Map<String, String> disambiguations = new LinkedHashMap<>();
+        if (disambiguationsList != null && !disambiguationsList.isDisposed()) {
+            for (String entry : disambiguationsList.getItems()) {
+                String[] parts = entry.split("=>");
+                if (parts.length == 2) {
+                    String from = parts[0].trim();
+                    String to = parts[1].trim();
+                    if (!from.isEmpty() && !to.isEmpty()) {
+                        disambiguations.put(from, to);
+                    }
+                }
+            }
+        }
+        prefs.setShowDisambiguationOverrides(disambiguations);
 
         UserPreferences.store(prefs);
         return true;
