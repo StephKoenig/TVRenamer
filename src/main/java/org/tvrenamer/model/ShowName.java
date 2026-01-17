@@ -108,6 +108,9 @@ public class ShowName {
                 for (ShowInformationListener informationListener : listeners) {
                     informationListener.downloadSucceeded(show);
                 }
+                // Clear listeners once notified so future lookups can re-trigger downloads if needed.
+                // This avoids "stuck" sessions where a previously evaluated query never re-queues.
+                listeners.clear();
             }
         }
 
@@ -117,6 +120,8 @@ public class ShowName {
                 for (ShowInformationListener informationListener : listeners) {
                     informationListener.downloadFailed(failedShow);
                 }
+                // Clear listeners once notified so future lookups can re-trigger downloads if needed.
+                listeners.clear();
             }
         }
 
@@ -126,6 +131,8 @@ public class ShowName {
                 listeners.forEach(
                     ShowInformationListener::apiHasBeenDeprecated
                 );
+                // Clear listeners once notified so future lookups can re-trigger downloads if needed.
+                listeners.clear();
             }
         }
 
@@ -319,6 +326,18 @@ public class ShowName {
     }
 
     /**
+     * Clear any previously collected provider show options for this ShowName.
+     *
+     * This is important when the same show/query is looked up repeatedly within a single
+     * session (e.g., user adds/removes files multiple times). Without clearing, subsequent
+     * provider searches would append new options onto the existing list, causing duplicate
+     * candidates in the resolve dialog.
+     */
+    public void clearShowOptions() {
+        showOptions.clear();
+    }
+
+    /**
      * Find out if this ShowName has received its options from the provider yet.
      *
      * @return true if this ShowName has show options; false otherwise
@@ -379,6 +398,21 @@ public class ShowName {
         FailedShow standIn = new FailedShow(foundName, err);
         queryString.setShowOption(standIn);
         return standIn;
+    }
+
+    /**
+     * Create a stand-in FailedShow for cases where the show lookup is intentionally
+     * deferred pending user disambiguation, without caching that failure in the
+     * QueryString mapping.
+     *
+     * This prevents "show selection required" from poisoning the in-memory cache for
+     * this query string across the current session.
+     *
+     * @param err a TVRenamerIOException describing the deferred state (may be null)
+     * @return a FailedShow instance (NOT cached into the QueryString mapping)
+     */
+    public FailedShow getNonCachingFailedShow(TVRenamerIOException err) {
+        return new FailedShow(foundName, err);
     }
 
     /**

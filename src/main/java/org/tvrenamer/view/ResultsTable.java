@@ -472,6 +472,14 @@ public final class ResultsTable
     // Guard against re-entrancy / multiple dialogs opening at once.
     private volatile boolean batchDisambiguationDialogOpen = false;
 
+    // Debounce reopening the batch dialog after the user cancels/closes it.
+    // Pending ambiguities may still exist (by design), and ShowStore may notify again.
+    // We treat the window close button as cancel, so both paths should cool down.
+    private volatile long batchDisambiguationReopenNotBeforeMs = 0L;
+
+    // Small cooldown to prevent immediate re-open loops if pending ambiguities remain.
+    private static final int BATCH_DISAMBIGUATION_REOPEN_COOLDOWN_MS = 1500;
+
     private void markAllSelectShowPending() {
         // Mark only rows that are actually blocked on show disambiguation.
         // We do this by matching the row's provider query string against the current pending disambiguations.
@@ -534,6 +542,15 @@ public final class ResultsTable
         logger.info(
             "Batch show disambiguation: checking for pending ambiguities..."
         );
+
+        // Debounce: if the user just cancelled/closed the dialog, don't immediately reopen it.
+        long now = System.currentTimeMillis();
+        if (now < batchDisambiguationReopenNotBeforeMs) {
+            logger.info(
+                "Batch show disambiguation: within cancel/close cooldown; not reopening yet."
+            );
+            return false;
+        }
 
         // If the table is empty, there is nothing to resolve. Clear any stale pending
         // disambiguations so we don't show a "Resolve ambiguous shows" dialog later.
@@ -619,8 +636,13 @@ public final class ResultsTable
             Map<String, String> selections = dialog.open();
             if (selections == null) {
                 logger.info(
-                    "Batch show disambiguation: user cancelled dialog; leaving pending ambiguities queued."
+                    "Batch show disambiguation: user cancelled/closed dialog; leaving pending ambiguities queued."
                 );
+
+                // Debounce reopening to avoid immediate re-open loops when pending ambiguities remain.
+                batchDisambiguationReopenNotBeforeMs =
+                    System.currentTimeMillis() +
+                    BATCH_DISAMBIGUATION_REOPEN_COOLDOWN_MS;
 
                 // User cancelled: keep the pending queue, but make the UI state explicit.
                 // Any rows that are blocked on show disambiguation should show "Select Show..."

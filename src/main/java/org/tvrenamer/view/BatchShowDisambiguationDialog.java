@@ -90,9 +90,18 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         dialogShell = new Shell(parent, getStyle());
         dialogShell.setText("Resolve ambiguous shows");
 
+        // Treat closing the window via the title-bar X as Cancel.
+        dialogShell.addListener(SWT.Close, e -> {
+            // Mark as cancelled so caller leaves pending queued, and mark that the close button was used
+            // so the caller can avoid immediate re-open loops.
+            cancelled = true;
+            closedViaWindowX = true;
+            selections.clear();
+        });
+
         createContents(dialogShell);
 
-        dialogShell.setMinimumSize(900, 520);
+        dialogShell.setMinimumSize(900, 370);
         dialogShell.pack();
         dialogShell.open();
 
@@ -103,7 +112,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
             }
         }
 
-        // If dialogShell closed by cancel path, we return null.
+        // If dialogShell closed by cancel path or by window X, we return null.
         if (cancelled) {
             return null;
         }
@@ -112,6 +121,10 @@ public final class BatchShowDisambiguationDialog extends Dialog {
     }
 
     private boolean cancelled = false;
+
+    // When the user closes the dialog via the window close button (X), treat it as Cancel.
+    // This prevents the dialog from immediately reopening due to pending disambiguation callbacks.
+    private boolean closedViaWindowX = false;
 
     private void createContents(final Shell shell) {
         GridLayout layout = new GridLayout(1, false);
@@ -167,7 +180,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         leftTable.setLinesVisible(true);
 
         GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
-        gd.minimumHeight = 250;
+        gd.minimumHeight = 100;
         leftTable.setLayoutData(gd);
 
         TableColumn colShow = new TableColumn(leftTable, SWT.LEFT);
@@ -221,7 +234,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         rightCandidatesTable.setLinesVisible(true);
 
         GridData tableData = new GridData(SWT.FILL, SWT.FILL, true, true);
-        tableData.minimumHeight = 250;
+        tableData.minimumHeight = 100;
         rightCandidatesTable.setLayoutData(tableData);
 
         TableColumn colName = new TableColumn(rightCandidatesTable, SWT.LEFT);
@@ -261,6 +274,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         );
         cancelButton.addListener(SWT.Selection, e -> {
             cancelled = true;
+            closedViaWindowX = false;
             selections.clear();
             close();
         });
