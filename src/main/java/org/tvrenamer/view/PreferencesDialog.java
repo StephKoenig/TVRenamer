@@ -222,21 +222,16 @@ class PreferencesDialog extends Dialog {
     private Table disambiguationsTable;
 
     // Matching validation / dirty tracking
-    // Use Unicode escape sequences to avoid source-encoding issues on Windows (e.g., cp1252).
-    private static final String MATCHING_STATUS_VALID = "\u2713"; // ✓
-    private static final String MATCHING_STATUS_INVALID = "\u2717"; // ✗
     private static final String MATCHING_STATUS_INCOMPLETE = "Incomplete";
     private static final String MATCHING_DIRTY_KEY = "tvrenamer.matching.dirty";
 
-    // Spinner frames (quarter-circle) for "Validating"
-    // Frames are quadrant circle characters (escaped).
-    private static final char[] VALIDATING_FRAMES = new char[] {
-        '\u25D0',
-        '\u25D3',
-        '\u25D1',
-        '\u25D2',
-    };
-    private int validatingFrameIdx = 0;
+    // Status icons (reuse the same assets as the main results table).
+    private static final org.eclipse.swt.graphics.Image MATCHING_ICON_OK =
+        ItemState.SUCCESS.getIcon();
+    private static final org.eclipse.swt.graphics.Image MATCHING_ICON_ERROR =
+        ItemState.FAIL.getIcon();
+    private static final org.eclipse.swt.graphics.Image MATCHING_ICON_VALIDATING =
+        ItemState.DOWNLOADING.getIcon();
 
     // Save gating: disable Save when any dirty row is invalid/incomplete/validating
     private Button saveButton;
@@ -995,14 +990,13 @@ class PreferencesDialog extends Dialog {
         TableColumn oColStatus = new TableColumn(overridesTable, SWT.LEFT);
         oColStatus.setText("Status");
 
-        // Populate table from prefs (not dirty; no validation required)
+        // Populate table from prefs (not dirty; treat as OK by default).
         for (Map.Entry<String, String> e : prefs
             .getShowNameOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(overridesTable, SWT.NONE);
-            ti.setText(
-                new String[] { e.getKey(), e.getValue(), MATCHING_STATUS_VALID }
-            );
+            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
+            ti.setImage(2, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : overridesTable.getColumns()) {
@@ -1197,9 +1191,8 @@ class PreferencesDialog extends Dialog {
             .getShowDisambiguationOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
-            ti.setText(
-                new String[] { e.getKey(), e.getValue(), MATCHING_STATUS_VALID }
-            );
+            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
+            ti.setImage(2, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : disambiguationsTable.getColumns()) {
@@ -1545,17 +1538,19 @@ class PreferencesDialog extends Dialog {
             }
             String status = safeCell(ti, 2).trim();
 
-            // Dirty rows must be validated; block save for blank/incomplete/invalid/validating.
+            // Dirty rows must be validated; block save for blank/incomplete or if still validating/error.
             if (status.isEmpty()) {
                 return true;
             }
             if (MATCHING_STATUS_INCOMPLETE.equals(status)) {
                 return true;
             }
-            if (MATCHING_STATUS_INVALID.equals(status)) {
+
+            org.eclipse.swt.graphics.Image img = ti.getImage(2);
+            if (img == MATCHING_ICON_VALIDATING) {
                 return true;
             }
-            if (status.startsWith("Validating")) {
+            if (img == MATCHING_ICON_ERROR) {
                 return true;
             }
         }
@@ -1643,18 +1638,14 @@ class PreferencesDialog extends Dialog {
                     }
 
                     if (finalResult.valid) {
-                        ti.setText(2, MATCHING_STATUS_VALID);
+                        ti.setText(2, "");
+                        ti.setImage(2, MATCHING_ICON_OK);
                     } else {
-                        ti.setText(2, MATCHING_STATUS_INVALID);
+                        ti.setText(2, "");
+                        ti.setImage(2, MATCHING_ICON_ERROR);
                     }
-                    // Put the message as tooltip on the row for now (no dedicated message column yet).
-                    ti.setText(
-                        new String[] {
-                            safeCell(ti, 0),
-                            safeCell(ti, 1),
-                            ti.getText(2),
-                        }
-                    );
+
+                    // Store the message for future tooltip rendering (not yet surfaced in UI).
                     ti.setData(
                         "tvrenamer.matching.validationMessage",
                         finalResult.message
@@ -1763,9 +1754,8 @@ class PreferencesDialog extends Dialog {
             return;
         }
         // initial label
-        ti.setText(2, "Validating " + VALIDATING_FRAMES[validatingFrameIdx]);
-        validatingFrameIdx =
-            (validatingFrameIdx + 1) % VALIDATING_FRAMES.length;
+        ti.setText(2, "");
+        ti.setImage(2, MATCHING_ICON_VALIDATING);
 
         Display display = table.getDisplay();
         display.timerExec(
@@ -1785,18 +1775,13 @@ class PreferencesDialog extends Dialog {
                         return; // replaced/stale
                     }
 
-                    String status = safeCell(ti, 2);
-                    if (!status.startsWith("Validating")) {
-                        return; // finished
+                    // Stop animating once validation completes (icon no longer "clock").
+                    org.eclipse.swt.graphics.Image img = ti.getImage(2);
+                    if (img != MATCHING_ICON_VALIDATING) {
+                        return;
                     }
 
-                    ti.setText(
-                        2,
-                        "Validating " + VALIDATING_FRAMES[validatingFrameIdx]
-                    );
-                    validatingFrameIdx =
-                        (validatingFrameIdx + 1) % VALIDATING_FRAMES.length;
-
+                    // Keep clock icon; re-schedule to continue while validating.
                     display.timerExec(200, this);
                 }
             }
