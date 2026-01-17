@@ -38,6 +38,9 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.tvrenamer.controller.util.FileUtilities;
 import org.tvrenamer.controller.util.StringUtils;
@@ -204,15 +207,15 @@ class PreferencesDialog extends Dialog {
     private ThemePalette themePalette;
 
     // Matching (Overrides + Disambiguations)
-    // Overrides (Show name -> Show name)
+    // Overrides (Extracted show -> replacement show text)
     private Text overridesFromText;
     private Text overridesToText;
-    private List overridesList;
+    private Table overridesTable;
 
     // Disambiguations (query string -> series id)
     private Text disambiguationsQueryText;
     private Text disambiguationsIdText;
-    private List disambiguationsList;
+    private Table disambiguationsTable;
 
     private TabFolder tabFolder;
     private Shell preferencesShell;
@@ -797,7 +800,7 @@ class PreferencesDialog extends Dialog {
         );
         ThemeManager.applyPalette(overridesGroup, themePalette);
 
-        // --- Overrides section (existing UI for now; will be replaced by table editor) ---
+        // --- Overrides section (Extracted show -> Replacement text) ---
         Label overridesHeader = new Label(overridesGroup, SWT.NONE);
         overridesHeader.setText(
             "Overrides (Extracted show → Replacement text)"
@@ -807,7 +810,7 @@ class PreferencesDialog extends Dialog {
         );
 
         Label fromLabel = new Label(overridesGroup, SWT.NONE);
-        fromLabel.setText("From (extracted show name)");
+        fromLabel.setText("Extracted show");
         fromLabel.setToolTipText(
             "Exact match (case-insensitive). Example: Stars"
         );
@@ -816,7 +819,7 @@ class PreferencesDialog extends Dialog {
         new Label(overridesGroup, SWT.NONE); // spacer
 
         Label toLabel = new Label(overridesGroup, SWT.NONE);
-        toLabel.setText("To (correct show name)");
+        toLabel.setText("Replace with");
         toLabel.setToolTipText(
             "Replacement name used for TVDB search. Example: Stars (2024)"
         );
@@ -834,11 +837,9 @@ class PreferencesDialog extends Dialog {
             overridesGroup.layout(true, true)
         );
 
-        Composite buttons = new Composite(overridesGroup, SWT.NONE);
-        buttons.setLayout(new GridLayout(3, true));
-        // Explicit sizing hints prevent SWT from "collapsing" this row when focus moves
-        // between Text controls (observed as buttons disappearing until hover).
-        GridData buttonsGridData = new GridData(
+        Composite overrideButtons = new Composite(overridesGroup, SWT.NONE);
+        overrideButtons.setLayout(new GridLayout(3, true));
+        GridData overrideButtonsGridData = new GridData(
             SWT.FILL,
             SWT.CENTER,
             true,
@@ -846,21 +847,21 @@ class PreferencesDialog extends Dialog {
             3,
             1
         );
-        buttonsGridData.minimumHeight = 35;
-        buttons.setLayoutData(buttonsGridData);
+        overrideButtonsGridData.minimumHeight = 35;
+        overrideButtons.setLayoutData(overrideButtonsGridData);
 
-        Button addButton = new Button(buttons, SWT.PUSH);
-        addButton.setText("Add / Update");
-        GridData addButtonGridData = new GridData(
+        Button overrideAddButton = new Button(overrideButtons, SWT.PUSH);
+        overrideAddButton.setText("Add / Update");
+        GridData overrideAddGridData = new GridData(
             SWT.FILL,
             SWT.CENTER,
             true,
             false
         );
-        addButtonGridData.minimumWidth = 110;
-        addButtonGridData.heightHint = 30;
-        addButton.setLayoutData(addButtonGridData);
-        addButton.addSelectionListener(
+        overrideAddGridData.minimumWidth = 110;
+        overrideAddGridData.heightHint = 30;
+        overrideAddButton.setLayoutData(overrideAddGridData);
+        overrideAddButton.addSelectionListener(
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
@@ -876,71 +877,84 @@ class PreferencesDialog extends Dialog {
             }
         );
 
-        Button removeButton = new Button(buttons, SWT.PUSH);
-        removeButton.setText("Remove");
-        GridData removeButtonGridData = new GridData(
+        Button overrideRemoveButton = new Button(overrideButtons, SWT.PUSH);
+        overrideRemoveButton.setText("Remove");
+        GridData overrideRemoveGridData = new GridData(
             SWT.FILL,
             SWT.CENTER,
             true,
             false
         );
-        removeButtonGridData.minimumWidth = 90;
-        removeButtonGridData.heightHint = 30;
-        removeButton.setLayoutData(removeButtonGridData);
-        removeButton.addSelectionListener(
+        overrideRemoveGridData.minimumWidth = 90;
+        overrideRemoveGridData.heightHint = 30;
+        overrideRemoveButton.setLayoutData(overrideRemoveGridData);
+        overrideRemoveButton.addSelectionListener(
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
-                    int idx = overridesList.getSelectionIndex();
+                    int idx = overridesTable.getSelectionIndex();
                     if (idx >= 0) {
-                        String entry = overridesList.getItem(idx);
-                        String from = entry.split("=>")[0].trim();
-                        removeOverride(from);
+                        overridesTable.remove(idx);
                     }
                 }
             }
         );
 
-        Button clearButton = new Button(buttons, SWT.PUSH);
-        clearButton.setText("Clear");
-        GridData clearButtonGridData = new GridData(
+        Button overrideClearButton = new Button(overrideButtons, SWT.PUSH);
+        overrideClearButton.setText("Clear");
+        GridData overrideClearGridData = new GridData(
             SWT.FILL,
             SWT.CENTER,
             true,
             false
         );
-        clearButtonGridData.minimumWidth = 90;
-        clearButtonGridData.heightHint = 30;
-        clearButton.setLayoutData(clearButtonGridData);
-        clearButton.addSelectionListener(
+        overrideClearGridData.minimumWidth = 90;
+        overrideClearGridData.heightHint = 30;
+        overrideClearButton.setLayoutData(overrideClearGridData);
+        overrideClearButton.addSelectionListener(
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
-                    overridesList.removeAll();
+                    overridesTable.removeAll();
                 }
             }
         );
 
-        Label listLabel = new Label(overridesGroup, SWT.NONE);
-        listLabel.setText("Overrides list");
-        listLabel.setLayoutData(
-            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
-        );
-
-        overridesList = new List(
+        overridesTable = new Table(
             overridesGroup,
-            SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL
+            SWT.BORDER | SWT.FULL_SELECTION | SWT.SINGLE
         );
-        overridesList.setLayoutData(
+        overridesTable.setHeaderVisible(true);
+        overridesTable.setLinesVisible(true);
+        overridesTable.setLayoutData(
             new GridData(SWT.FILL, SWT.FILL, true, true, 3, 1)
         );
 
-        // Populate list from current prefs
+        TableColumn oColFrom = new TableColumn(overridesTable, SWT.LEFT);
+        oColFrom.setText("Extracted show");
+        TableColumn oColTo = new TableColumn(overridesTable, SWT.LEFT);
+        oColTo.setText("Replace with");
+
+        // Populate table from prefs
         for (Map.Entry<String, String> e : prefs
             .getShowNameOverrides()
             .entrySet()) {
-            overridesList.add(e.getKey() + " => " + e.getValue());
+            TableItem ti = new TableItem(overridesTable, SWT.NONE);
+            ti.setText(new String[] { e.getKey(), e.getValue() });
         }
+        for (TableColumn c : overridesTable.getColumns()) {
+            c.pack();
+        }
+
+        // Clicking a row loads it into the edit fields for easy update
+        overridesTable.addListener(SWT.Selection, e -> {
+            int idx = overridesTable.getSelectionIndex();
+            if (idx >= 0) {
+                TableItem ti = overridesTable.getItem(idx);
+                overridesFromText.setText(ti.getText(0));
+                overridesToText.setText(ti.getText(1));
+            }
+        });
 
         // --- Disambiguations section (Query string -> Series ID) ---
         Label spacer = new Label(overridesGroup, SWT.NONE);
@@ -974,7 +988,6 @@ class PreferencesDialog extends Dialog {
         disambiguationsIdText = createText("", overridesGroup, false);
         new Label(overridesGroup, SWT.NONE); // spacer
 
-        // Keep consistent layout behavior with Overrides inputs.
         disambiguationsQueryText.addListener(SWT.FocusOut, e ->
             overridesGroup.layout(true, true)
         );
@@ -1040,11 +1053,9 @@ class PreferencesDialog extends Dialog {
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
-                    int idx = disambiguationsList.getSelectionIndex();
+                    int idx = disambiguationsTable.getSelectionIndex();
                     if (idx >= 0) {
-                        String entry = disambiguationsList.getItem(idx);
-                        String from = entry.split("=>")[0].trim();
-                        removeDisambiguation(from);
+                        disambiguationsTable.remove(idx);
                     }
                 }
             }
@@ -1065,86 +1076,132 @@ class PreferencesDialog extends Dialog {
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
-                    disambiguationsList.removeAll();
+                    disambiguationsTable.removeAll();
                 }
             }
         );
 
-        Label disambListLabel = new Label(overridesGroup, SWT.NONE);
-        disambListLabel.setText("Disambiguations list");
-        disambListLabel.setLayoutData(
-            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
-        );
-
-        disambiguationsList = new List(
+        disambiguationsTable = new Table(
             overridesGroup,
-            SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL
+            SWT.BORDER | SWT.FULL_SELECTION | SWT.SINGLE
         );
-        disambiguationsList.setLayoutData(
+        disambiguationsTable.setHeaderVisible(true);
+        disambiguationsTable.setLinesVisible(true);
+        disambiguationsTable.setLayoutData(
             new GridData(SWT.FILL, SWT.FILL, true, true, 3, 1)
         );
 
-        // Populate list from current prefs
+        TableColumn dColQuery = new TableColumn(disambiguationsTable, SWT.LEFT);
+        dColQuery.setText("Query string");
+        TableColumn dColId = new TableColumn(disambiguationsTable, SWT.LEFT);
+        dColId.setText("Series ID");
+
         for (Map.Entry<String, String> e : prefs
             .getShowDisambiguationOverrides()
             .entrySet()) {
-            disambiguationsList.add(e.getKey() + " => " + e.getValue());
+            TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
+            ti.setText(new String[] { e.getKey(), e.getValue() });
         }
+        for (TableColumn c : disambiguationsTable.getColumns()) {
+            c.pack();
+        }
+
+        disambiguationsTable.addListener(SWT.Selection, e -> {
+            int idx = disambiguationsTable.getSelectionIndex();
+            if (idx >= 0) {
+                TableItem ti = disambiguationsTable.getItem(idx);
+                disambiguationsQueryText.setText(ti.getText(0));
+                disambiguationsIdText.setText(ti.getText(1));
+            }
+        });
 
         item.setControl(overridesGroup);
     }
 
     private void upsertOverride(String from, String to) {
-        // Remove any existing entry for this key (case-insensitive)
-        int removeIdx = -1;
-        for (int i = 0; i < overridesList.getItemCount(); i++) {
-            String entry = overridesList.getItem(i);
-            String existingFrom = entry.split("=>")[0].trim();
-            if (existingFrom.equalsIgnoreCase(from)) {
-                removeIdx = i;
-                break;
+        // Update selected row if present; otherwise upsert by key (case-insensitive).
+        int selected = (overridesTable == null)
+            ? -1
+            : overridesTable.getSelectionIndex();
+        if (selected >= 0) {
+            TableItem ti = overridesTable.getItem(selected);
+            ti.setText(new String[] { from, to });
+            return;
+        }
+
+        int updateIdx = -1;
+        if (overridesTable != null) {
+            for (int i = 0; i < overridesTable.getItemCount(); i++) {
+                TableItem ti = overridesTable.getItem(i);
+                if (ti.getText(0).trim().equalsIgnoreCase(from)) {
+                    updateIdx = i;
+                    break;
+                }
             }
+            if (updateIdx >= 0) {
+                overridesTable
+                    .getItem(updateIdx)
+                    .setText(new String[] { from, to });
+                return;
+            }
+
+            TableItem ti = new TableItem(overridesTable, SWT.NONE);
+            ti.setText(new String[] { from, to });
         }
-        if (removeIdx >= 0) {
-            overridesList.remove(removeIdx);
-        }
-        overridesList.add(from + " => " + to);
     }
 
     private void removeOverride(String from) {
-        for (int i = 0; i < overridesList.getItemCount(); i++) {
-            String entry = overridesList.getItem(i);
-            String existingFrom = entry.split("=>")[0].trim();
-            if (existingFrom.equalsIgnoreCase(from)) {
-                overridesList.remove(i);
+        if (overridesTable == null) {
+            return;
+        }
+        for (int i = 0; i < overridesTable.getItemCount(); i++) {
+            TableItem ti = overridesTable.getItem(i);
+            if (ti.getText(0).trim().equalsIgnoreCase(from)) {
+                overridesTable.remove(i);
                 break;
             }
         }
     }
 
     private void upsertDisambiguation(String queryString, String seriesId) {
-        // Remove any existing entry for this key (case-insensitive)
-        int removeIdx = -1;
-        for (int i = 0; i < disambiguationsList.getItemCount(); i++) {
-            String entry = disambiguationsList.getItem(i);
-            String existingFrom = entry.split("=>")[0].trim();
-            if (existingFrom.equalsIgnoreCase(queryString)) {
-                removeIdx = i;
-                break;
+        int selected = (disambiguationsTable == null)
+            ? -1
+            : disambiguationsTable.getSelectionIndex();
+        if (selected >= 0) {
+            TableItem ti = disambiguationsTable.getItem(selected);
+            ti.setText(new String[] { queryString, seriesId });
+            return;
+        }
+
+        int updateIdx = -1;
+        if (disambiguationsTable != null) {
+            for (int i = 0; i < disambiguationsTable.getItemCount(); i++) {
+                TableItem ti = disambiguationsTable.getItem(i);
+                if (ti.getText(0).trim().equalsIgnoreCase(queryString)) {
+                    updateIdx = i;
+                    break;
+                }
             }
+            if (updateIdx >= 0) {
+                disambiguationsTable
+                    .getItem(updateIdx)
+                    .setText(new String[] { queryString, seriesId });
+                return;
+            }
+
+            TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
+            ti.setText(new String[] { queryString, seriesId });
         }
-        if (removeIdx >= 0) {
-            disambiguationsList.remove(removeIdx);
-        }
-        disambiguationsList.add(queryString + " => " + seriesId);
     }
 
     private void removeDisambiguation(String queryString) {
-        for (int i = 0; i < disambiguationsList.getItemCount(); i++) {
-            String entry = disambiguationsList.getItem(i);
-            String existingFrom = entry.split("=>")[0].trim();
-            if (existingFrom.equalsIgnoreCase(queryString)) {
-                disambiguationsList.remove(i);
+        if (disambiguationsTable == null) {
+            return;
+        }
+        for (int i = 0; i < disambiguationsTable.getItemCount(); i++) {
+            TableItem ti = disambiguationsTable.getItem(i);
+            if (ti.getText(0).trim().equalsIgnoreCase(queryString)) {
+                disambiguationsTable.remove(i);
                 break;
             }
         }
@@ -1325,15 +1382,12 @@ class PreferencesDialog extends Dialog {
 
         // Show name overrides (exact match, case-insensitive)
         Map<String, String> overrides = new LinkedHashMap<>();
-        if (overridesList != null && !overridesList.isDisposed()) {
-            for (String entry : overridesList.getItems()) {
-                String[] parts = entry.split("=>");
-                if (parts.length == 2) {
-                    String from = parts[0].trim();
-                    String to = parts[1].trim();
-                    if (!from.isEmpty() && !to.isEmpty()) {
-                        overrides.put(from, to);
-                    }
+        if (overridesTable != null && !overridesTable.isDisposed()) {
+            for (TableItem ti : overridesTable.getItems()) {
+                String from = ti.getText(0).trim();
+                String to = ti.getText(1).trim();
+                if (!from.isEmpty() && !to.isEmpty()) {
+                    overrides.put(from, to);
                 }
             }
         }
@@ -1341,15 +1395,14 @@ class PreferencesDialog extends Dialog {
 
         // Show disambiguations (query string -> series id)
         Map<String, String> disambiguations = new LinkedHashMap<>();
-        if (disambiguationsList != null && !disambiguationsList.isDisposed()) {
-            for (String entry : disambiguationsList.getItems()) {
-                String[] parts = entry.split("=>");
-                if (parts.length == 2) {
-                    String from = parts[0].trim();
-                    String to = parts[1].trim();
-                    if (!from.isEmpty() && !to.isEmpty()) {
-                        disambiguations.put(from, to);
-                    }
+        if (
+            disambiguationsTable != null && !disambiguationsTable.isDisposed()
+        ) {
+            for (TableItem ti : disambiguationsTable.getItems()) {
+                String from = ti.getText(0).trim();
+                String to = ti.getText(1).trim();
+                if (!from.isEmpty() && !to.isEmpty()) {
+                    disambiguations.put(from, to);
                 }
             }
         }
