@@ -1,8 +1,5 @@
 package org.tvrenamer.model;
 
-import org.tvrenamer.controller.AddEpisodeListener;
-import org.tvrenamer.controller.util.FileUtilities;
-
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -13,14 +10,21 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.AddEpisodeListener;
+import org.tvrenamer.controller.util.FileUtilities;
 
 public class EpisodeDb implements java.beans.PropertyChangeListener {
 
-    private static final Logger logger = Logger.getLogger(EpisodeDb.class.getName());
+    private static final Logger logger = Logger.getLogger(
+        EpisodeDb.class.getName()
+    );
     private static final UserPreferences prefs = UserPreferences.getInstance();
 
-    private final Map<String, FileEpisode> episodes = new ConcurrentHashMap<>(1000);
+    private final Map<String, FileEpisode> episodes = new ConcurrentHashMap<>(
+        1000
+    );
     private List<String> ignoreKeywords = prefs.getIgnoreKeywords();
 
     public EpisodeDb() {
@@ -123,7 +127,10 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
             return null;
         }
         Path currentLocation = ep.getPath();
-        if (fileIsVisible(currentLocation) && Files.isRegularFile(currentLocation)) {
+        if (
+            fileIsVisible(currentLocation) &&
+            Files.isRegularFile(currentLocation)
+        ) {
             // OK, the file is good! But that could be true even if
             // it were moved. Now try to see if it's been moved, or if
             // it's still where we think it is.
@@ -152,8 +159,10 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         }
     }
 
-    private void addFileToQueue(final Queue<FileEpisode> contents,
-            final Path path) {
+    private void addFileToQueue(
+        final Queue<FileEpisode> contents,
+        final Path path
+    ) {
         final Path absPath = path.toAbsolutePath();
         final String key = absPath.toString();
         if (episodes.containsKey(key)) {
@@ -164,16 +173,20 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         }
     }
 
-    private void addFileIfVisible(final Queue<FileEpisode> contents,
-            final Path path) {
+    private void addFileIfVisible(
+        final Queue<FileEpisode> contents,
+        final Path path
+    ) {
         if (fileIsVisible(path) && Files.isRegularFile(path)) {
             addFileToQueue(contents, path);
         }
     }
 
-    private void addFilesRecursively(final Queue<FileEpisode> contents,
-            final Path parent,
-            final Path filename) {
+    private void addFilesRecursively(
+        final Queue<FileEpisode> contents,
+        final Path parent,
+        final Path filename
+    ) {
         if (parent == null) {
             logger.warning("cannot add files; parent is null");
             return;
@@ -185,12 +198,20 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         final Path fullpath = parent.resolve(filename);
         if (fileIsVisible(fullpath)) {
             if (Files.isDirectory(fullpath)) {
-                try (DirectoryStream<Path> files = Files.newDirectoryStream(fullpath)) {
+                try (
+                    DirectoryStream<Path> files = Files.newDirectoryStream(
+                        fullpath
+                    )
+                ) {
                     if (files != null) {
                         // recursive call
-                        files.forEach(pth -> addFilesRecursively(contents,
+                        files.forEach(pth ->
+                            addFilesRecursively(
+                                contents,
                                 fullpath,
-                                pth.getFileName()));
+                                pth.getFileName()
+                            )
+                        );
                     }
                 } catch (IOException ioe) {
                     logger.warning("IO Exception descending " + fullpath);
@@ -211,7 +232,9 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
      */
     public void addFolderToQueue(final String pathname) {
         if (!prefs.isRecursivelyAddFolders()) {
-            logger.warning("cannot add folder when preference \"add files recursively\" is off");
+            logger.warning(
+                "cannot add folder when preference \"add files recursively\" is off"
+            );
             return;
         }
 
@@ -260,7 +283,11 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         for (final String fileName : fileNames) {
             final Path path = Paths.get(fileName);
             if (descend) {
-                addFilesRecursively(contents, path.getParent(), path.getFileName());
+                addFilesRecursively(
+                    contents,
+                    path.getParent(),
+                    path.getFileName()
+                );
             } else {
                 addFileIfVisible(contents, path);
             }
@@ -271,20 +298,44 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
     /**
      * Add the contents of the preload folder to the queue.
      *
+     * This can involve scanning a large directory tree, so it runs on a background
+     * thread to avoid blocking the UI thread.
+     *
      */
     public void preload() {
-        if (prefs.isRecursivelyAddFolders()) {
-            String preload = prefs.getPreloadFolder();
-            if (preload != null) {
-                // TODO: do in separate thread
-                addFolderToQueue(preload);
-            }
+        if (!prefs.isRecursivelyAddFolders()) {
+            return;
         }
+
+        final String preload = prefs.getPreloadFolder();
+        if (preload == null) {
+            return;
+        }
+
+        final Thread t = new Thread(
+            () -> {
+                try {
+                    addFolderToQueue(preload);
+                } catch (Exception e) {
+                    logger.log(
+                        Level.WARNING,
+                        "Exception while preloading folder: " + preload,
+                        e
+                    );
+                }
+            },
+            "EpisodeDbPreload"
+        );
+        t.setDaemon(true);
+        t.start();
     }
 
     @Override
     public void propertyChange(java.beans.PropertyChangeEvent evt) {
-        if ("preference".equals(evt.getPropertyName()) && (evt.getNewValue() == UserPreference.IGNORE_REGEX)) {
+        if (
+            "preference".equals(evt.getPropertyName()) &&
+            (evt.getNewValue() == UserPreference.IGNORE_REGEX)
+        ) {
             ignoreKeywords = prefs.getIgnoreKeywords();
             for (FileEpisode ep : episodes.values()) {
                 ep.setIgnoreReason(ignorableReason(ep.getFilepath()));
@@ -303,7 +354,8 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         return "{EpisodeDb with " + episodes.size() + " files}";
     }
 
-    private final Queue<AddEpisodeListener> listeners = new ConcurrentLinkedQueue<>();
+    private final Queue<AddEpisodeListener> listeners =
+        new ConcurrentLinkedQueue<>();
 
     /**
      * Register interest in files and folders that are added to the queue.
