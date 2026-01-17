@@ -64,10 +64,20 @@ launch4j {
 }
 
 // Build metadata generated at build time.
-// - tvrenamer.version: 1.0.<gitCommitCount>
+// - tvrenamer.version: 1.0.<buildNumber>, where buildNumber is:
+//     - GitHub Actions run number when available (monotonically increasing per workflow), else
+//     - git commit count (best-effort).
 // - tvrenamer.builddate: YYMMDD (UTC)
 // - tvrenamer.commit: full git SHA (or "unknown")
-def computeCommitCount = {
+def computeBuildNumber = {
+    // Prefer GitHub Actions run number when available.
+    // This avoids shallow-clone / history differences and is naturally monotonic in CI.
+    def ghaRunNumber = System.getenv("GITHUB_RUN_NUMBER")
+    if (ghaRunNumber != null && ghaRunNumber.trim()) {
+        return ghaRunNumber.trim()
+    }
+
+    // Fallback: git commit count
     try {
         def proc = ["git", "rev-list", "--count", "HEAD"].execute(null, project.rootDir)
         proc.waitFor()
@@ -110,14 +120,14 @@ tasks.register('generateBuildMetadataFiles') {
     outputs.file(layout.buildDirectory.file("generated/version/tvrenamer.builddate"))
     outputs.file(layout.buildDirectory.file("generated/version/tvrenamer.commit"))
     doLast {
-        def count = computeCommitCount()
+        def buildNumber = computeBuildNumber()
         def sha = computeCommitSha()
         def builtOn = computeBuildDateYYMMDDUtc()
 
         def outDir = layout.buildDirectory.dir("generated/version").get().asFile
         outDir.mkdirs()
 
-        new File(outDir, "tvrenamer.version").text = "1.0.${count}\n"
+        new File(outDir, "tvrenamer.version").text = "1.0.${buildNumber}\n"
         new File(outDir, "tvrenamer.builddate").text = "${builtOn}\n"
         new File(outDir, "tvrenamer.commit").text = "${sha}\n"
     }
