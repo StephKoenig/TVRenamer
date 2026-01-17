@@ -221,6 +221,9 @@ class PreferencesDialog extends Dialog {
     private Text disambiguationsIdText;
     private Table disambiguationsTable;
 
+    // Matching hover "tooltip" label (SWT TableItem has no setToolTipText()).
+    private Label matchingHoverTipLabel;
+
     // Matching validation / dirty tracking
     private static final String MATCHING_STATUS_INCOMPLETE = "Incomplete";
     private static final String MATCHING_DIRTY_KEY = "tvrenamer.matching.dirty";
@@ -824,6 +827,13 @@ class PreferencesDialog extends Dialog {
         );
         ThemeManager.applyPalette(overridesGroup, themePalette);
 
+        // Shared "tooltip" label for validation messages (SWT TableItem has no setToolTipText()).
+        matchingHoverTipLabel = new Label(overridesGroup, SWT.WRAP);
+        matchingHoverTipLabel.setText("");
+        matchingHoverTipLabel.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1)
+        );
+
         // --- Overrides section (Extracted show -> Replacement text) ---
         Label overridesHeader = new Label(overridesGroup, SWT.NONE);
         overridesHeader.setText(
@@ -1010,6 +1020,35 @@ class PreferencesDialog extends Dialog {
                 TableItem ti = overridesTable.getItem(idx);
                 overridesFromText.setText(ti.getText(0));
                 overridesToText.setText(ti.getText(1));
+            }
+        });
+
+        // Hover: show stored validation message in the shared label (best-effort).
+        overridesTable.addListener(SWT.MouseMove, e -> {
+            if (
+                matchingHoverTipLabel == null ||
+                matchingHoverTipLabel.isDisposed()
+            ) {
+                return;
+            }
+
+            // Hit-test the hovered row and show its validation message (best-effort).
+            TableItem ti = overridesTable.getItem(
+                new org.eclipse.swt.graphics.Point(e.x, e.y)
+            );
+            String next = (ti == null)
+                ? ""
+                : String.valueOf(
+                      ti.getData("tvrenamer.matching.validationMessage")
+                  );
+
+            // Avoid forcing layouts on every mouse move; only update when text actually changes.
+            String current = matchingHoverTipLabel.getText();
+            if (current == null) {
+                current = "";
+            }
+            if (!current.equals(next)) {
+                matchingHoverTipLabel.setText(next);
             }
         });
 
@@ -1205,6 +1244,35 @@ class PreferencesDialog extends Dialog {
                 TableItem ti = disambiguationsTable.getItem(idx);
                 disambiguationsQueryText.setText(ti.getText(0));
                 disambiguationsIdText.setText(ti.getText(1));
+            }
+        });
+
+        // Hover: show stored validation message in the shared label (best-effort).
+        disambiguationsTable.addListener(SWT.MouseMove, e -> {
+            if (
+                matchingHoverTipLabel == null ||
+                matchingHoverTipLabel.isDisposed()
+            ) {
+                return;
+            }
+
+            // Hit-test the hovered row and show its validation message (best-effort).
+            TableItem ti = disambiguationsTable.getItem(
+                new org.eclipse.swt.graphics.Point(e.x, e.y)
+            );
+            String next = (ti == null)
+                ? ""
+                : String.valueOf(
+                      ti.getData("tvrenamer.matching.validationMessage")
+                  );
+
+            // Avoid forcing layouts on every mouse move; only update when text actually changes.
+            String current = matchingHoverTipLabel.getText();
+            if (current == null) {
+                current = "";
+            }
+            if (!current.equals(next)) {
+                matchingHoverTipLabel.setText(next);
             }
         });
 
@@ -1645,12 +1713,15 @@ class PreferencesDialog extends Dialog {
                         ti.setImage(2, MATCHING_ICON_ERROR);
                     }
 
-                    // Store the message for future tooltip rendering (not yet surfaced in UI).
-                    ti.setData(
-                        "tvrenamer.matching.validationMessage",
-                        finalResult.message
-                    );
+                    // Store the validation message for tooltip rendering.
+                    String msg = finalResult.message;
+                    if (msg == null) {
+                        msg = "";
+                    }
+                    ti.setData("tvrenamer.matching.validationMessage", msg);
 
+                    // TableItem does not support tooltips; PreferencesDialog uses a shared tooltip label
+                    // that is updated on hover (see Matching tab hover listener).
                     updateSaveEnabledFromMatchingValidation();
                 });
             },
