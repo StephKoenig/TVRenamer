@@ -12,7 +12,10 @@ public class ProgressBarUpdater implements ProgressUpdater {
     private final Display display;
     private final TaskItem taskItem;
     private final ProgressBar progressBar;
-    private final int barSize;
+
+    // We use the progress bar as a file-count based progress indicator for move/copy operations.
+    // Renames are effectively instant and are not intended to contribute to overall progress.
+    private final int barMax;
 
     /**
      * Constructs a ProgressBarUpdater for the given ResultsTable.
@@ -28,9 +31,11 @@ public class ProgressBarUpdater implements ProgressUpdater {
 
         // progressBar may be null or disposed if UI is shutting down
         if (progressBar != null && !progressBar.isDisposed()) {
-            this.barSize = progressBar.getMaximum();
+            // Use a fixed range for smooth updates.
+            this.barMax = Math.max(1, progressBar.getMaximum());
+            progressBar.setMaximum(this.barMax);
         } else {
-            this.barSize = 0;
+            this.barMax = 0;
         }
 
         if (taskItem != null && !taskItem.isDisposed()) {
@@ -40,8 +45,8 @@ public class ProgressBarUpdater implements ProgressUpdater {
     }
 
     /**
-     * Cleans up the progress bar and the task item
-     *
+     * Cleans up the progress bar and the task item.
+     * Resets the bottom bar after the batch completes.
      */
     @Override
     public void finish() {
@@ -56,13 +61,16 @@ public class ProgressBarUpdater implements ProgressUpdater {
             if (taskItem != null && !taskItem.isDisposed()) {
                 taskItem.setOverlayImage(null);
                 taskItem.setProgressState(SWT.DEFAULT);
+                taskItem.setProgress(0);
             }
             ui.finishAllMoves();
         });
     }
 
     /**
-     * Updates the progress bar and the task item
+     * Updates the bottom progress bar and the Windows taskbar progress by file-count.
+     *
+     * This reflects move/copy batch progress only. Renames are excluded by design.
      *
      * @param totalNumFiles
      *            the total number of files to be moved during the duration
@@ -78,22 +86,21 @@ public class ProgressBarUpdater implements ProgressUpdater {
         if (totalNumFiles <= 0) {
             return;
         }
-        if (barSize <= 0) {
+        if (barMax <= 0) {
             return;
         }
 
-        final float progress =
-            (float) (totalNumFiles - nRemaining) / totalNumFiles;
+        final int completed = Math.max(0, totalNumFiles - nRemaining);
+        final float progress = (float) completed / (float) totalNumFiles;
+
         display.asyncExec(() -> {
             if (progressBar == null || progressBar.isDisposed()) {
                 return;
             }
-            progressBar.setSelection(Math.round(progress * barSize));
 
-            if (taskItem != null) {
-                if (taskItem.isDisposed()) {
-                    return;
-                }
+            progressBar.setSelection(Math.round(progress * barMax));
+
+            if (taskItem != null && !taskItem.isDisposed()) {
                 taskItem.setProgress(Math.round(progress * 100));
             }
         });
