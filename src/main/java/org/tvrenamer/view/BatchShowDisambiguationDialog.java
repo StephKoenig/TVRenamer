@@ -284,6 +284,16 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         );
         colAliases.setText("Aliases");
 
+        // Cap the aliases column width: aliases can be extremely long.
+        // Prefer horizontal scrolling over an overly wide table.
+        colAliases.setWidth(260);
+
+        // Persist selection on single-click as well (so users can click a candidate, then click OK).
+        rightCandidatesTable.addListener(SWT.Selection, e ->
+            applyCurrentSelectionOnly()
+        );
+
+        // Double-click (default selection) applies selection and advances.
         rightCandidatesTable.addListener(SWT.DefaultSelection, e ->
             applyCurrentSelectionAndAdvance()
         );
@@ -457,6 +467,16 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         for (TableColumn c : rightCandidatesTable.getColumns()) {
             c.pack();
         }
+
+        // Re-apply a max width for Aliases after pack(), since aliases can be very long.
+        // Column order: Name, Year, ID, Aliases
+        if (rightCandidatesTable.getColumnCount() >= 4) {
+            TableColumn aliasesCol = rightCandidatesTable.getColumn(3);
+            int maxAliasesWidth = 260;
+            if (aliasesCol.getWidth() > maxAliasesWidth) {
+                aliasesCol.setWidth(maxAliasesWidth);
+            }
+        }
     }
 
     private void selectCandidateById(final String id) {
@@ -477,32 +497,14 @@ public final class BatchShowDisambiguationDialog extends Dialog {
     }
 
     private void applyCurrentSelectionAndAdvance() {
+        if (!applyCurrentSelectionOnly()) {
+            return;
+        }
+
         int leftIdx = leftTable.getSelectionIndex();
         if (leftIdx < 0) {
             return;
         }
-        TableItem leftItem = leftTable.getItem(leftIdx);
-        Object data = leftItem.getData();
-        if (!(data instanceof String)) {
-            return;
-        }
-        String queryString = (String) data;
-
-        int candIdx = rightCandidatesTable.getSelectionIndex();
-        if (candIdx < 0) {
-            return;
-        }
-        TableItem candItem = rightCandidatesTable.getItem(candIdx);
-        Object candData = candItem.getData();
-        if (!(candData instanceof ShowOption)) {
-            return;
-        }
-        ShowOption chosen = (ShowOption) candData;
-
-        selections.put(queryString, chosen.getIdString());
-
-        // Update left status cell
-        leftItem.setText(2, "Selected");
 
         // Move to next unresolved row if any
         int next = findNextUnresolvedIndex(leftIdx + 1);
@@ -515,6 +517,38 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         }
 
         updateOkEnabled();
+    }
+
+    private boolean applyCurrentSelectionOnly() {
+        int leftIdx = leftTable.getSelectionIndex();
+        if (leftIdx < 0) {
+            return false;
+        }
+        TableItem leftItem = leftTable.getItem(leftIdx);
+        Object data = leftItem.getData();
+        if (!(data instanceof String)) {
+            return false;
+        }
+        String queryString = (String) data;
+
+        int candIdx = rightCandidatesTable.getSelectionIndex();
+        if (candIdx < 0) {
+            return false;
+        }
+        TableItem candItem = rightCandidatesTable.getItem(candIdx);
+        Object candData = candItem.getData();
+        if (!(candData instanceof ShowOption)) {
+            return false;
+        }
+        ShowOption chosen = (ShowOption) candData;
+
+        selections.put(queryString, chosen.getIdString());
+
+        // Update left status cell
+        leftItem.setText(2, "Selected");
+
+        updateOkEnabled();
+        return true;
     }
 
     private int findNextUnresolvedIndex(int start) {
