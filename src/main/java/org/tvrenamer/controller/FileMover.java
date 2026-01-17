@@ -91,7 +91,7 @@ public class FileMover implements Callable<Boolean> {
      *
      * @return the Path where the file is currently located
      */
-    Path getCurrentPath() {
+    public Path getCurrentPath() {
         return episode.getPath();
     }
 
@@ -100,7 +100,7 @@ public class FileMover implements Callable<Boolean> {
      *
      * @return the size of the file
      */
-    long getFileSize() {
+    public long getFileSize() {
         return episode.getFileSize();
     }
 
@@ -126,7 +126,7 @@ public class FileMover implements Callable<Boolean> {
      *
      * @return the directory we should move the file to, as a Path.
      */
-    Path getMoveToDirectory() {
+    public Path getMoveToDirectory() {
         return destRoot;
     }
 
