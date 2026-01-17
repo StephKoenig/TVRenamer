@@ -190,6 +190,63 @@ final class AboutDialog extends Dialog {
         link.addSelectionListener(new UrlLauncher(url));
     }
 
+    private void createPipeSeparatedLinkGroup(
+        final String label1,
+        final String url1,
+        final String label2,
+        final String url2
+    ) {
+        createPipeSeparatedLinkGroup(label1, url1, label2, url2, null, null);
+    }
+
+    private void createPipeSeparatedLinkGroup(
+        final String label1,
+        final String url1,
+        final String label2,
+        final String url2,
+        final String label3,
+        final String url3
+    ) {
+        final Link link = new Link(aboutShell, SWT.NONE);
+
+        String text =
+            "<a href=\"" +
+            url1 +
+            "\">" +
+            label1 +
+            "</a> | <a href=\"" +
+            url2 +
+            "\">" +
+            label2 +
+            "</a>";
+
+        if (label3 != null && url3 != null) {
+            text = text + " | <a href=\"" + url3 + "\">" + label3 + "</a>";
+        }
+
+        link.setText(text);
+        link.setLayoutData(
+            new GridData(GridData.BEGINNING, GridData.CENTER, true, true)
+        );
+        link.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    if (e == null || e.text == null) {
+                        return;
+                    }
+                    String href = e.text;
+                    if (
+                        href.startsWith("http://") ||
+                        href.startsWith("https://")
+                    ) {
+                        new UrlLauncher(href).widgetSelected(e);
+                    }
+                }
+            }
+        );
+    }
+
     /**
      * Creates the links
      *
@@ -197,21 +254,20 @@ final class AboutDialog extends Dialog {
     private void createLinks() {
         createUrlLink(LICENSE_TEXT_1, TVRENAMER_LICENSE_URL, LICENSE_TEXT_2);
 
-        // Fork links
-        createUrlLink(
-            "",
+        createPipeSeparatedLinkGroup(
+            PROJECT_PAGE,
             "https://github.com/StephKoenig/tvrenamer",
-            PROJECT_PAGE
-        );
-        createUrlLink(
-            "",
+            ISSUE_TRACKER,
             "https://github.com/StephKoenig/tvrenamer/issues",
-            ISSUE_TRACKER
+            SOURCE_CODE_LINK,
+            "https://github.com/StephKoenig/tvrenamer"
         );
-        createUrlLink(
-            "",
-            "https://github.com/StephKoenig/tvrenamer",
-            SOURCE_CODE_LINK
+
+        createPipeSeparatedLinkGroup(
+            "Original Project Page",
+            "https://github.com/tvrenamer/tvrenamer",
+            "Original Web Site",
+            "https://www.tvrenamer.org/"
         );
     }
 
