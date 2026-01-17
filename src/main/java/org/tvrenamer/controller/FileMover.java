@@ -219,12 +219,21 @@ public class FileMover implements Callable<Boolean> {
         }
     }
 
-    private void finishMove(final Path actualDest) {
-        // TODO: why do we set the file modification time to "now"? Would like to
-        // at least make this behavior configurable.
+    private void finishMove(
+        final Path actualDest,
+        final FileTime originalMtime
+    ) {
         try {
-            FileTime now = FileTime.fromMillis(System.currentTimeMillis());
-            Files.setLastModifiedTime(actualDest, now);
+            if (userPrefs.isPreserveFileModificationTime()) {
+                // Preserve original timestamp (default behavior for the fork).
+                if (originalMtime != null) {
+                    Files.setLastModifiedTime(actualDest, originalMtime);
+                }
+            } else {
+                // Legacy behavior: set mtime to "now".
+                FileTime now = FileTime.fromMillis(System.currentTimeMillis());
+                Files.setLastModifiedTime(actualDest, now);
+            }
         } catch (IOException ioe) {
             // The file moved, but we couldn't set mtime. Keep behavior (mark failure),
             // but improve diagnostics.
@@ -260,6 +269,16 @@ public class FileMover implements Callable<Boolean> {
         logger.fine("Going to move\n  '" + srcPath + "'\n  '" + destPath + "'");
         episode.setMoving();
 
+        // Capture original mtime before moving. Best-effort: if we can't read it, we fall back
+        // to leaving the destination mtime unchanged (for preserve mode) or setting "now"
+        // (for legacy mode).
+        FileTime originalMtime = null;
+        try {
+            originalMtime = Files.getLastModifiedTime(srcPath);
+        } catch (Exception ignored) {
+            // best-effort
+        }
+
         if (tryRename) {
             Path actualDest = FileUtilities.renameFile(srcPath, destPath);
             if (actualDest == null) {
@@ -294,7 +313,7 @@ public class FileMover implements Callable<Boolean> {
         }
 
         episode.setPath(destPath);
-        finishMove(destPath);
+        finishMove(destPath, originalMtime);
     }
 
     /**

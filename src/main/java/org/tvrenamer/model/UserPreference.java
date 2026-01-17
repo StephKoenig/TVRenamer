@@ -16,6 +16,9 @@ public enum UserPreference {
     PREFER_DVD_ORDER,
     THEME_MODE,
 
+    // File timestamp policy (e.g., preserve original mtime vs set to now) for move/rename operations.
+    FILE_MTIME_POLICY,
+
     // Since these are only meaningful at startup, they probably should not be watched
     UPDATE_CHECK,
     @SuppressWarnings("unused")
