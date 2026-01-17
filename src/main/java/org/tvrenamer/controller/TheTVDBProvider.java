@@ -215,6 +215,10 @@ public class TheTVDBProvider {
      */
     public static void getShowOptions(final ShowName showName)
         throws TVRenamerIOException, DiscontinuedApiException {
+        // Reset accumulated options so repeated lookups within the same session
+        // (e.g., add/remove cycles) don't append duplicates into the resolve dialog.
+        showName.clearShowOptions();
+
         DocumentBuilder bld;
         try {
             bld = DocumentBuilderFactory.newInstance().newDocumentBuilder();

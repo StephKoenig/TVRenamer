@@ -29,6 +29,8 @@ The screenshot currently references the upstream wiki:
 ### New / improved in this fork
  * **DVD ordering** option
  * **Overrides** to map “show name → show name” when matching is incorrect
+ * **Batch show disambiguation**: when TVDB returns multiple candidates for a show, TVRenamer prompts you to select the correct one (shows name/year/id/aliases).
+ * **Remembered show selections**: your disambiguation choice is persisted and reused for future lookups of the same show query.
  * SMB/network renaming: supported for many Windows setups (report edge cases)
  * Theme support: **Light**, **Dark**, and **Auto** (OS-detected). (requires restart.)
 

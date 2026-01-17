@@ -506,7 +506,7 @@ public class ShowStore {
                                 ")"
                         );
                         queuePendingDisambiguation(showName, options);
-                        showOption = showName.getFailedShow(
+                        showOption = showName.getNonCachingFailedShow(
                             new TVRenamerIOException("show selection required")
                         );
                     } else {
