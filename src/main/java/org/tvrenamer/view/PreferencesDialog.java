@@ -222,17 +222,18 @@ class PreferencesDialog extends Dialog {
     private Table disambiguationsTable;
 
     // Matching validation / dirty tracking
-    private static final String MATCHING_STATUS_VALID = "✓";
-    private static final String MATCHING_STATUS_INVALID = "✗";
+    private static final String MATCHING_STATUS_VALID = "OK";
+    private static final String MATCHING_STATUS_INVALID = "ERROR";
     private static final String MATCHING_STATUS_INCOMPLETE = "Incomplete";
     private static final String MATCHING_DIRTY_KEY = "tvrenamer.matching.dirty";
 
     // Spinner frames (quarter-circle) for "Validating"
+    // Keep this ASCII-only to avoid font/charset issues on some Windows setups.
     private static final char[] VALIDATING_FRAMES = new char[] {
-        '\u25D0',
-        '\u25D3',
-        '\u25D1',
-        '\u25D2',
+        '|',
+        '/',
+        '-',
+        '\\',
     };
     private int validatingFrameIdx = 0;
 
@@ -830,7 +831,7 @@ class PreferencesDialog extends Dialog {
         // --- Overrides section (Extracted show -> Replacement text) ---
         Label overridesHeader = new Label(overridesGroup, SWT.NONE);
         overridesHeader.setText(
-            "Overrides (Extracted show → Replacement text)"
+            "Overrides (Extracted show -> Replacement text)"
         );
         overridesHeader.setLayoutData(
             new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
@@ -902,9 +903,13 @@ class PreferencesDialog extends Dialog {
                     overridesToText.setText("");
 
                     // Validate the selected row (or the upserted row) asynchronously.
+                    int idx = overridesTable.getSelectionIndex();
+                    if (idx < 0) {
+                        idx = overridesTable.getItemCount() - 1;
+                    }
                     validateMatchingRowOnline(
                         overridesTable,
-                        overridesTable.getSelectionIndex(),
+                        idx,
                         MatchingRowType.OVERRIDE
                     );
                 }
@@ -935,7 +940,7 @@ class PreferencesDialog extends Dialog {
         );
 
         Button overrideClearButton = new Button(overrideButtons, SWT.PUSH);
-        overrideClearButton.setText("Clear");
+        overrideClearButton.setText("Clear All");
         GridData overrideClearGridData = new GridData(
             SWT.FILL,
             SWT.CENTER,
@@ -949,7 +954,18 @@ class PreferencesDialog extends Dialog {
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
-                    overridesTable.removeAll();
+                    MessageBox box = new MessageBox(
+                        preferencesShell,
+                        SWT.ICON_WARNING | SWT.OK | SWT.CANCEL
+                    );
+                    box.setText("Clear All");
+                    box.setMessage(
+                        "Are you sure?\r\nThis will remove all entries."
+                    );
+                    if (box.open() == SWT.OK) {
+                        overridesTable.removeAll();
+                        updateSaveEnabledFromMatchingValidation();
+                    }
                 }
             }
         );
@@ -960,9 +976,16 @@ class PreferencesDialog extends Dialog {
         );
         overridesTable.setHeaderVisible(true);
         overridesTable.setLinesVisible(true);
-        overridesTable.setLayoutData(
-            new GridData(SWT.FILL, SWT.FILL, true, true, 3, 1)
+        GridData overridesTableData = new GridData(
+            SWT.FILL,
+            SWT.FILL,
+            true,
+            true,
+            3,
+            1
         );
+        overridesTableData.minimumHeight = 110;
+        overridesTable.setLayoutData(overridesTableData);
 
         TableColumn oColFrom = new TableColumn(overridesTable, SWT.LEFT);
         oColFrom.setText("Extracted show");
@@ -1001,7 +1024,7 @@ class PreferencesDialog extends Dialog {
 
         Label disambiguationsHeader = new Label(overridesGroup, SWT.NONE);
         disambiguationsHeader.setText(
-            "Disambiguations (Query string → Series ID)"
+            "Disambiguations (Query string -> Series ID)"
         );
         disambiguationsHeader.setLayoutData(
             new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
@@ -1073,9 +1096,13 @@ class PreferencesDialog extends Dialog {
                     disambiguationsIdText.setText("");
 
                     // Validate the selected row (or the upserted row) asynchronously.
+                    int idx = disambiguationsTable.getSelectionIndex();
+                    if (idx < 0) {
+                        idx = disambiguationsTable.getItemCount() - 1;
+                    }
                     validateMatchingRowOnline(
                         disambiguationsTable,
-                        disambiguationsTable.getSelectionIndex(),
+                        idx,
                         MatchingRowType.DISAMBIGUATION
                     );
                 }
@@ -1106,7 +1133,7 @@ class PreferencesDialog extends Dialog {
         );
 
         Button disambClearButton = new Button(disambiguationButtons, SWT.PUSH);
-        disambClearButton.setText("Clear");
+        disambClearButton.setText("Clear All");
         GridData disambClearGridData = new GridData(
             SWT.FILL,
             SWT.CENTER,
@@ -1120,7 +1147,18 @@ class PreferencesDialog extends Dialog {
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent event) {
-                    disambiguationsTable.removeAll();
+                    MessageBox box = new MessageBox(
+                        preferencesShell,
+                        SWT.ICON_WARNING | SWT.OK | SWT.CANCEL
+                    );
+                    box.setText("Clear All");
+                    box.setMessage(
+                        "Are you sure?\r\nThis will remove all entries."
+                    );
+                    if (box.open() == SWT.OK) {
+                        disambiguationsTable.removeAll();
+                        updateSaveEnabledFromMatchingValidation();
+                    }
                 }
             }
         );
@@ -1131,9 +1169,16 @@ class PreferencesDialog extends Dialog {
         );
         disambiguationsTable.setHeaderVisible(true);
         disambiguationsTable.setLinesVisible(true);
-        disambiguationsTable.setLayoutData(
-            new GridData(SWT.FILL, SWT.FILL, true, true, 3, 1)
+        GridData disambiguationsTableData = new GridData(
+            SWT.FILL,
+            SWT.FILL,
+            true,
+            true,
+            3,
+            1
         );
+        disambiguationsTableData.minimumHeight = 110;
+        disambiguationsTable.setLayoutData(disambiguationsTableData);
 
         TableColumn dColQuery = new TableColumn(disambiguationsTable, SWT.LEFT);
         dColQuery.setText("Query string");
