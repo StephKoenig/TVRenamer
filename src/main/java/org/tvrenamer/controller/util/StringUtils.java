@@ -11,39 +11,44 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 public class StringUtils {
-    private static final Logger logger = Logger.getLogger(StringUtils.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        StringUtils.class.getName()
+    );
 
     private static final Locale THIS_LOCALE = Locale.getDefault();
 
-    public static final Map<Character, String> SANITISE
-        = Collections.unmodifiableMap(new HashMap<Character, String>()
-        {
-            // provide a replacement for anything that's not valid in Windows
-            // this list is: \ / : * ? " < > |
-            // see http://msdn.microsoft.com/en-us/library/aa365247%28VS.85%29.aspx for more information
-            {
-                put('\\', "-"); // replace backslash with hyphen
-                put('/', "-");  // replace forward slash with hyphen
-                put(':', "-");  // replace colon with a hyphen
-                put('|', "-");  // replace vertical bar with hyphen
-                put('*', "-");  // replace asterisk with hyphen; for example,
-                                // the episode "C**tgate" of Veep should become "C--tgate", not "Ctgate"
-                put('?', "");   // remove question marks
-                put('<', "");   // remove less-than symbols
-                put('>', "");   // remove greater-than symbols
-                put('"', "'");  // replace double quote with apostrophe
-                put('`', "'");  // replace backquote with apostrophe
+    public static final Map<Character, String> SANITISE =
+        Collections.unmodifiableMap(
+            new HashMap<Character, String>() {
+                // provide a replacement for anything that's not valid in Windows
+                // this list is: \ / : * ? " < > |
+                // see http://msdn.microsoft.com/en-us/library/aa365247%28VS.85%29.aspx for more information
+                {
+                    put('\\', "-"); // replace backslash with hyphen
+                    put('/', "-"); // replace forward slash with hyphen
+                    put(':', "-"); // replace colon with a hyphen
+                    put('|', "-"); // replace vertical bar with hyphen
+                    put('*', "-"); // replace asterisk with hyphen; for example,
+                    // the episode "C**tgate" of Veep should become "C--tgate", not "Ctgate"
+                    put('?', ""); // remove question marks
+                    put('<', ""); // remove less-than symbols
+                    put('>', ""); // remove greater-than symbols
+                    put('"', "'"); // replace double quote with apostrophe
+                    put('`', "'"); // replace backquote with apostrophe
+                }
             }
-        });
+        );
     public static final Set<Character> ILLEGAL_CHARACTERS = SANITISE.keySet();
 
-    private static final ThreadLocal<DecimalFormat> DIGITS =
-        new ThreadLocal<DecimalFormat>() {
-            @Override
-            protected DecimalFormat initialValue() {
-                return new DecimalFormat("##0");
-            }
-        };
+    private static final ThreadLocal<DecimalFormat> DIGITS = new ThreadLocal<
+        DecimalFormat
+    >() {
+        @Override
+        protected DecimalFormat initialValue() {
+            return new DecimalFormat("##0");
+        }
+    };
 
     private static final ThreadLocal<DecimalFormat> TWO_OR_THREE =
         new ThreadLocal<DecimalFormat>() {
@@ -53,21 +58,23 @@ public class StringUtils {
             }
         };
 
-    private static final ThreadLocal<DecimalFormat> KB_FORMAT =
-        new ThreadLocal<DecimalFormat>() {
-            @Override
-            protected DecimalFormat initialValue() {
-                return new DecimalFormat("#.# kB");
-            }
-        };
+    private static final ThreadLocal<DecimalFormat> KB_FORMAT = new ThreadLocal<
+        DecimalFormat
+    >() {
+        @Override
+        protected DecimalFormat initialValue() {
+            return new DecimalFormat("#.# kB");
+        }
+    };
 
-    private static final ThreadLocal<DecimalFormat> MB_FORMAT =
-        new ThreadLocal<DecimalFormat>() {
-            @Override
-            protected DecimalFormat initialValue() {
-                return new DecimalFormat("#.# MB");
-            }
-        };
+    private static final ThreadLocal<DecimalFormat> MB_FORMAT = new ThreadLocal<
+        DecimalFormat
+    >() {
+        @Override
+        protected DecimalFormat initialValue() {
+            return new DecimalFormat("#.# MB");
+        }
+    };
 
     /**
      * Simply returns the given String rendered in all lower-case letters.<p>
@@ -188,8 +195,9 @@ public class StringUtils {
     public static String removeLast(String input, String match) {
         int idx = toLower(input).lastIndexOf(match);
         if (idx > 0) {
-            input = input.substring(0, idx)
-                + input.substring(idx + match.length(), input.length());
+            input =
+                input.substring(0, idx) +
+                input.substring(idx + match.length(), input.length());
         }
         return input;
     }
@@ -251,7 +259,9 @@ public class StringUtils {
      *    characters (space, underscore, dot, hyphen) removed.
      */
     public static String trimFoundShow(final String extracted) {
-        return extracted.replaceFirst("^[ _.-]+", "").replaceFirst("[ _.-]+$", "");
+        return extracted
+            .replaceFirst("^[ _.-]+", "")
+            .replaceFirst("[ _.-]+$", "");
     }
 
     /*
@@ -265,7 +275,11 @@ public class StringUtils {
      * @return a version of the substring, from start to end, of the original string,
      *    which contains no illegal characters
      */
-    private static String replaceIllegalCharacters(final String title, final int start, final int end) {
+    private static String replaceIllegalCharacters(
+        final String title,
+        final int start,
+        final int end
+    ) {
         StringBuilder sanitised = new StringBuilder(end + 1);
         for (int i = start; i <= end; i++) {
             char c = title.charAt(i);
@@ -350,7 +364,7 @@ public class StringUtils {
      */
     private static boolean isLowerCaseWithHyphens(String s) {
         boolean status = false;
-        for (int i=0; i<s.length(); i++) {
+        for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             if (Character.isUpperCase(c)) {
                 return false;
@@ -415,7 +429,10 @@ public class StringUtils {
 
         // borrowed from http://stackoverflow.com/a/17099039
         // condenses acronyms (".S.H.I.E.L.D." -> " SHIELD")
-        rval = rval.replaceAll("(?<=(^|[. ])[\\S&&\\D])[.](?=[\\S&&\\D]([.]|$))", "");
+        rval = rval.replaceAll(
+            "(?<=(^|[. ])[\\S&&\\D])[.](?=[\\S&&\\D]([.]|$))",
+            ""
+        );
 
         // Replaces most remaining punctuation with spaces
 
@@ -448,10 +465,19 @@ public class StringUtils {
             return "";
         }
 
-        String rval = input.replaceAll("%20", " ");
-        rval = rval.replaceAll("%25", "&");
-
-        return rval;
+        // Robust URL decoding (reverse of encodeUrlCharacters).
+        // Use Java's decoder for percent-escapes and '+' handling.
+        try {
+            return java.net.URLDecoder.decode(
+                input,
+                java.nio.charset.StandardCharsets.UTF_8
+            );
+        } catch (Exception ignored) {
+            // Best-effort fallback to legacy behavior.
+            String rval = input.replaceAll("%20", " ");
+            rval = rval.replaceAll("%25", "&");
+            return rval;
+        }
     }
 
     /**
@@ -466,10 +492,19 @@ public class StringUtils {
             return "";
         }
 
-        String rval = input.replaceAll(" ", "%20");
-        rval = rval.replaceAll("&", "%25");
-
-        return rval;
+        // Robust URL encoding for query parameters.
+        // Note: URLEncoder encodes spaces as '+' which is valid for query strings.
+        try {
+            return java.net.URLEncoder.encode(
+                input,
+                java.nio.charset.StandardCharsets.UTF_8
+            );
+        } catch (Exception ignored) {
+            // Best-effort fallback to legacy behavior.
+            String rval = input.replaceAll(" ", "%20");
+            rval = rval.replaceAll("&", "%25");
+            return rval;
+        }
     }
 
     /**
@@ -549,9 +584,9 @@ public class StringUtils {
         if (length < 1024) {
             return length + " Bytes";
         } else if (length < 1024 << 10) {
-            return KB_FORMAT.get().format((double)length / 1024);
+            return KB_FORMAT.get().format((double) length / 1024);
         } else {
-            return MB_FORMAT.get().format((double)length / 1024 / 1024);
+            return MB_FORMAT.get().format((double) length / 1024 / 1024);
         }
     }
 
@@ -579,16 +614,27 @@ public class StringUtils {
             return "";
         }
 
-        // TODO: determine other characters that need to be replaced (eg "'", "-")
+        // This method historically attempted to "encode" downloaded XML and also
+        // partially URL-encode spaces. That behavior is incorrect for XML payloads
+        // and can corrupt provider responses.
+        //
+        // Kept for backward compatibility: treat it as a no-op for XML documents.
+        // For non-XML strings, return a conservative "display-safe" string.
         logger.finest("Input before encoding: [" + input + "]");
-        input = input.replaceAll("& ", "&amp; ");
 
-        // Don't encode string within xml data strings
-        if (!input.startsWith("<?xml")) {
-            input = input.replaceAll(" ", "%20");
+        // If this looks like XML, do not modify it.
+        String trimmed = input.trim();
+        if (trimmed.startsWith("<?xml") || trimmed.startsWith("<")) {
+            return input;
         }
-        logger.finest("Input after encoding: [" + input + "]");
-        return input;
+
+        // Display-safe (NOT URL-safe): avoid control characters and normalize whitespace.
+        String out = input;
+        out = out.replace('\u0000', ' ');
+        out = out.replaceAll("[\\r\\n\\t]+", " ").trim();
+
+        logger.finest("Input after encoding: [" + out + "]");
+        return out;
     }
 
     /**
@@ -604,12 +650,8 @@ public class StringUtils {
             return "";
         }
 
-        input = input.replaceAll("&amp; ", "& ");
-
-        // Don't encode string within xml data strings
-        if (!input.startsWith("<?xml")) {
-            input = input.replaceAll("%20", " ");
-        }
+        // encodeSpecialCharacters is now effectively a no-op for XML and a conservative
+        // display normalizer for other strings, so decoding is also effectively a no-op.
         return input;
     }
 
