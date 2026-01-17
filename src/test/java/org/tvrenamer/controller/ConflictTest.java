@@ -1,14 +1,12 @@
 package org.tvrenamer.controller;
 
-import org.junit.Test;
-
-import org.tvrenamer.model.EpisodeTestData;
-import org.tvrenamer.model.util.Constants;
-
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.junit.Test;
+import org.tvrenamer.model.EpisodeTestData;
+import org.tvrenamer.model.util.Constants;
 
 /**
  * ConflictTest -- test file moving functionality when there is a conflict.
@@ -27,27 +25,34 @@ import java.util.concurrent.CompletableFuture;
  */
 public class ConflictTest extends MoveTest {
 
-    private static final EpisodeTestData bigBang0322 = new EpisodeTestData.Builder()
-        .inputFilename("big.bang.theory.322.mp4")
-        .filenameShow("big.bang.theory")
-        .properShowName("The Big Bang Theory")
-        .seasonNumString("3")
-        .episodeNumString("22")
-        .filenameSuffix(".mp4")
-        .episodeTitle("The Staircase Implementation")
-        .episodeId("2063661")
-        .replacementMask("%S S%0sE%0e %t")
-        .expectedReplacement("The Big Bang Theory S03E22 The Staircase Implementation")
-        .build();
+    private static final EpisodeTestData bigBang0322 =
+        new EpisodeTestData.Builder()
+            .inputFilename("big.bang.theory.322.mp4")
+            .filenameShow("big.bang.theory")
+            .properShowName("The Big Bang Theory")
+            .seasonNumString("3")
+            .episodeNumString("22")
+            .filenameSuffix(".mp4")
+            .episodeTitle("The Staircase Implementation")
+            .episodeId("2063661")
+            .replacementMask("%S S%0sE%0e %t")
+            .expectedReplacement(
+                "The Big Bang Theory S03E22 The Staircase Implementation"
+            )
+            .build();
 
-    private void makeConflict(final EpisodeTestData epdata,
-                              final FileMover mover)
-    {
+    private void makeConflict(
+        final EpisodeTestData epdata,
+        final FileMover mover
+    ) {
         Path baseDestDir = mover.getMoveToDirectory();
-        Path desiredDestDir = baseDestDir.resolve(Constants.DUPLICATES_DIRECTORY);
-        String desiredFilename = epdata.expectedReplacement
-            + mover.versionString()
-            + epdata.filenameSuffix;
+        Path desiredDestDir = baseDestDir.resolve(
+            Constants.DUPLICATES_DIRECTORY
+        );
+        String desiredFilename =
+            epdata.expectedReplacement +
+            mover.versionString() +
+            epdata.filenameSuffix;
 
         // Create a file in the way, so that we will not be able to move the
         // source file to the desired destination
@@ -67,13 +72,22 @@ public class ConflictTest extends MoveTest {
         setValues(bigBang0322);
         assertReady();
 
+        // Default behavior now preserves original modification time.
+        long originalMtime = 0L;
+        try {
+            originalMtime = java.nio.file.Files.getLastModifiedTime(
+                srcFile
+            ).toMillis();
+        } catch (java.io.IOException ioe) {
+            org.junit.Assert.fail("could not obtain timestamp of " + srcFile);
+        }
+
         FileMover mover = new FileMover(episode);
         makeConflict(bigBang0322, mover);
         mover.call();
-        long now = System.currentTimeMillis();
 
         assertMoved();
-        assertTimestamp(now);
+        assertTimestamp(originalMtime);
     }
 
     @Test
