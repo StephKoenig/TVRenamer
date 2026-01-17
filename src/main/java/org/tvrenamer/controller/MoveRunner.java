@@ -2,6 +2,8 @@ package org.tvrenamer.controller;
 
 import static org.tvrenamer.model.util.Constants.*;
 
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -254,22 +256,73 @@ public class MoveRunner implements Runnable {
         List<FileMover> listOfMoves,
         String destDir
     ) {
-        Map<String, List<FileMover>> desiredFilenames = new HashMap<>();
+        // Group by a "base name" so that:
+        // - exact filename matches (including extension) still conflict, AND
+        // - files that differ only by extension (e.g., .mp4 vs .mkv) are also treated as conflicts.
+        //
+        // This is a pragmatic step toward "episode identity" conflict detection without requiring
+        // metadata inspection. It reduces the chance of silently producing two near-identical
+        // destination names with different extensions.
+        Map<String, List<FileMover>> desiredBaseNames = new HashMap<>();
         for (FileMover move : listOfMoves) {
-            getListValue(desiredFilenames, move.getDesiredDestName()).add(move);
+            final String desired = move.getDesiredDestName();
+            final String base = baseName(desired);
+            getListValue(desiredBaseNames, base).add(move);
         }
-        for (String desiredFilename : desiredFilenames.keySet()) {
-            List<FileMover> moves = desiredFilenames.get(desiredFilename);
-            Set<Path> existing = existingConflicts(
-                destDir,
-                desiredFilename,
-                moves
-            );
+
+        for (String base : desiredBaseNames.keySet()) {
+            List<FileMover> moves = desiredBaseNames.get(base);
+
+            // Check for any existing files in the destination directory whose base name matches.
+            Set<Path> existing = existingConflictsByBaseName(destDir, base);
+
             int nFiles = existing.size() + moves.size();
             if (nFiles > 1) {
                 addIndices(moves, existing);
             }
         }
+    }
+
+    private static String baseName(final String filename) {
+        if (filename == null) {
+            return "";
+        }
+        int dot = filename.lastIndexOf('.');
+        if (dot <= 0) {
+            return filename;
+        }
+        return filename.substring(0, dot);
+    }
+
+    private static Set<Path> existingConflictsByBaseName(
+        final String destDirName,
+        final String desiredBaseName
+    ) {
+        Set<Path> hits = new HashSet<>();
+        if (desiredBaseName == null || desiredBaseName.isBlank()) {
+            return hits;
+        }
+
+        Path destDir = Paths.get(destDirName);
+        if (!Files.exists(destDir) || !Files.isDirectory(destDir)) {
+            return hits;
+        }
+
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(destDir)) {
+            for (Path p : files) {
+                if (p == null) {
+                    continue;
+                }
+                String name = p.getFileName().toString();
+                if (desiredBaseName.equals(baseName(name))) {
+                    hits.add(p);
+                }
+            }
+        } catch (IOException ignored) {
+            // best-effort: if we can't scan, fall back to no detected existing conflicts
+        }
+
+        return hits;
     }
 
     /**
