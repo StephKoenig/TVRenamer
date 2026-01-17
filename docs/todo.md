@@ -10,52 +10,47 @@ Notes are grouped by area and summarized at a high level. Where helpful, the sou
 
 These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
 
-1. **Make file modification-time behavior configurable**
-   - **Why:** Users often care about preserving original timestamps; current behavior forces mtime to “now”.
-   - **Where:** `org.tvrenamer.controller.FileMover` — `finishMove(...)`
-   - **Effort:** Small-to-medium (preference + UI + apply in move/copy paths)
-
-2. **Fix Preferences dialog token drop insertion position**
-   - **Why:** Current drag/drop appends tokens rather than inserting where dropped; easy UX win.
-   - **Where:** `org.tvrenamer.view.PreferencesDialog` — `PreferencesDropTargetListener.drop(...)`
-   - **Effort:** Small (caret/selection-aware insertion)
-
-3. **Thread the preload folder scan**
-   - **Why:** Folder scanning can block responsiveness; background execution improves perceived performance.
-   - **Where:** `org.tvrenamer.model.EpisodeDb` — `preload()`
-   - **Effort:** Medium (executor + cancellation + UI update batching)
-
-4. **Harden XPath usage for potential concurrency**
+1. **Harden XPath usage for potential concurrency**
    - **Why:** Shared static `XPath` instance may not be thread-safe; safer patterns are straightforward.
    - **Where:** `org.tvrenamer.controller.util.XPathUtilities`
    - **Effort:** Small (per-call creation or `ThreadLocal`)
 
-5. **Improve show selection heuristics when ambiguous**
+2. **Improve show selection heuristics when ambiguous**
    - **Why:** Avoid “choose first match” surprises; reduce incorrect auto-matches.
    - **Where:** `org.tvrenamer.model.ShowName` / `ShowStore`
    - **Effort:** Medium (tie-breakers and/or user prompt; can start with better tie-breakers only)
 
-6. **Stabilize Windows permission-related tests**
+3. **Stabilize Windows permission-related tests**
    - **Why:** Flaky/ineffective Windows “read-only” simulation leads to unreliable tests.
    - **Where:** `org.tvrenamer.controller.TestUtils` — `setReadOnly(Path)`
    - **Effort:** Medium (capability checks/skip strategy, or a dedicated ACL helper)
+
+4. **Generalize “map to list” helper in MoveRunner**
+   - **Why:** Reduce custom boilerplate; modernize with standard library constructs.
+   - **Where:** `org.tvrenamer.controller.MoveRunner` — helper noted by TODO
+   - **Effort:** Small (likely `Map.computeIfAbsent(...)`)
+
+5. **Expand conflict detection beyond exact filename matches**
+   - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
+   - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
+   - **Effort:** Medium (policy definition + detection improvements)
+
+6. **Make XML / special-character encoding more robust**
+   - **Why:** Reduce edge cases where episode titles / metadata contain characters that break XML or display oddly.
+   - **Where:** `org.tvrenamer.controller.util.StringUtils.encodeSpecialCharacters(...)`
+   - **Effort:** Small-to-medium (define scope + tests)
 
 ---
 
 ## 1) File moving / filesystem behavior
 
-### Make modification-time behavior configurable
-**Context:** After a successful move/rename, the app sets the file’s modification time to “now”.  
-**Why it matters:** Some users want to preserve original mtimes; others might want “now”. This is a policy decision best surfaced as a preference.
+### Make modification-time behavior configurable (DONE)
+**Context:** After a successful move/rename, the app used to set the file’s modification time to “now”.  
+**Status:** Implemented as a user preference. Default behavior is now to **preserve** original modification time, with an option to set it to “now” instead.
 
-- Source:
+- Source (original note):
   - `org.tvrenamer.controller.FileMover` — `finishMove(...)`
-  - Note: “why do we set the file modification time to ‘now’? Would like to at least make this behavior configurable.”
 
-**Potential follow-ups:**
-- Add a preference like “Preserve original modification time” / “Set to now”.
-- If preserving, capture original mtime pre-move and apply after move/copy.
-- Ensure behavior is consistent for both rename and copy+delete flows.
 
 ---
 
@@ -174,18 +169,16 @@ These are suggested “first picks” from the backlog below—items that are li
 - Be careful with UNC/SMB edge cases where “real path” may fail or be slow
 - Add tests for path normalization behavior on Windows
 
-### Preload folder in a separate thread
-**Context:** Preload is currently not threaded.  
-**Why it matters:** Directory scanning can block UI responsiveness if performed on the UI thread.
+### Preload folder in a separate thread (DONE)
+**Context:** Preload folder scanning can be slow and used to run synchronously.  
+**Status:** Preload now runs on a background thread to avoid blocking the UI thread.
 
-- Source:
+- Source (original note):
   - `org.tvrenamer.model.EpisodeDb` — `preload()`
-  - Note: “TODO: do in separate thread”
 
-**Potential follow-ups:**
-- Move preload scanning to a background executor
-- Stream results into the UI (batch updates) rather than one huge update
-- Ensure cancellation is possible when closing the app / changing preferences
+**Follow-ups / caution:**
+- `publish(...)` notifies listeners from the background thread. Current UI listener paths are safe because they marshal UI updates onto the SWT thread, but any future listeners must not assume they are invoked on the UI thread.
+- Future enhancements could include cancellation and incremental/batched publishing for very large folders.
 
 ---
 
