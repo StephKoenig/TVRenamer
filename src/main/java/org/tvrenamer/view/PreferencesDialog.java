@@ -222,18 +222,19 @@ class PreferencesDialog extends Dialog {
     private Table disambiguationsTable;
 
     // Matching validation / dirty tracking
-    private static final String MATCHING_STATUS_VALID = "OK";
-    private static final String MATCHING_STATUS_INVALID = "ERROR";
+    // Use Unicode escape sequences to avoid source-encoding issues on Windows (e.g., cp1252).
+    private static final String MATCHING_STATUS_VALID = "\u2713"; // ✓
+    private static final String MATCHING_STATUS_INVALID = "\u2717"; // ✗
     private static final String MATCHING_STATUS_INCOMPLETE = "Incomplete";
     private static final String MATCHING_DIRTY_KEY = "tvrenamer.matching.dirty";
 
     // Spinner frames (quarter-circle) for "Validating"
-    // Keep this ASCII-only to avoid font/charset issues on some Windows setups.
+    // Frames are quadrant circle characters (escaped).
     private static final char[] VALIDATING_FRAMES = new char[] {
-        '|',
-        '/',
-        '-',
-        '\\',
+        '\u25D0',
+        '\u25D3',
+        '\u25D1',
+        '\u25D2',
     };
     private int validatingFrameIdx = 0;
 
@@ -831,7 +832,7 @@ class PreferencesDialog extends Dialog {
         // --- Overrides section (Extracted show -> Replacement text) ---
         Label overridesHeader = new Label(overridesGroup, SWT.NONE);
         overridesHeader.setText(
-            "Overrides (Extracted show -> Replacement text)"
+            "Overrides (Extracted show \u2192 Replacement text)"
         );
         overridesHeader.setLayoutData(
             new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
@@ -999,7 +1000,9 @@ class PreferencesDialog extends Dialog {
             .getShowNameOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(overridesTable, SWT.NONE);
-            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
+            ti.setText(
+                new String[] { e.getKey(), e.getValue(), MATCHING_STATUS_VALID }
+            );
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : overridesTable.getColumns()) {
@@ -1024,7 +1027,7 @@ class PreferencesDialog extends Dialog {
 
         Label disambiguationsHeader = new Label(overridesGroup, SWT.NONE);
         disambiguationsHeader.setText(
-            "Disambiguations (Query string -> Series ID)"
+            "Disambiguations (Query string \u2192 Series ID)"
         );
         disambiguationsHeader.setLayoutData(
             new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
@@ -1194,7 +1197,9 @@ class PreferencesDialog extends Dialog {
             .getShowDisambiguationOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
-            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
+            ti.setText(
+                new String[] { e.getKey(), e.getValue(), MATCHING_STATUS_VALID }
+            );
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : disambiguationsTable.getColumns()) {
