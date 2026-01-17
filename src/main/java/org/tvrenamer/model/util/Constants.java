@@ -61,6 +61,12 @@ public class Constants {
     public static final String TVRENAMER_LICENSE_URL =
         "http://www.gnu.org/licenses/gpl-2.0.html";
 
+    // Original project links (attribution)
+    public static final String ORIGINAL_PROJECT_REPOSITORY_URL =
+        "https://github.com/tvrenamer/tvrenamer";
+    public static final String ORIGINAL_PROJECT_WEBSITE_URL =
+        "https://www.tvrenamer.org/";
+
     // Fork: no support email link (project uses GitHub Issues).
     // Keep EMAIL_LINK defined for now to avoid widespread churn; AboutDialog no longer uses it.
     public static final String EMAIL_LINK = "";
