@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,9 +43,12 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
+import org.tvrenamer.controller.TheTVDBProvider;
 import org.tvrenamer.controller.util.FileUtilities;
 import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.ReplacementToken;
+import org.tvrenamer.model.ShowName;
+import org.tvrenamer.model.ShowOption;
 import org.tvrenamer.model.ThemeMode;
 import org.tvrenamer.model.UserPreferences;
 
@@ -217,15 +221,28 @@ class PreferencesDialog extends Dialog {
     private Text disambiguationsIdText;
     private Table disambiguationsTable;
 
-    // Matching validation / dirty tracking (Commit 4: scaffolding only; no online validation yet)
+    // Matching validation / dirty tracking
     private static final String MATCHING_STATUS_VALID = "✓";
     private static final String MATCHING_STATUS_INVALID = "✗";
     private static final String MATCHING_STATUS_INCOMPLETE = "Incomplete";
-    private static final String MATCHING_STATUS_VALIDATING = "Validating...";
     private static final String MATCHING_DIRTY_KEY = "tvrenamer.matching.dirty";
 
-    // Save gating: disable Save when any dirty row is invalid/incomplete
+    // Spinner frames (quarter-circle) for "Validating"
+    private static final char[] VALIDATING_FRAMES = new char[] {
+        '\u25D0',
+        '\u25D3',
+        '\u25D1',
+        '\u25D2',
+    };
+    private int validatingFrameIdx = 0;
+
+    // Save gating: disable Save when any dirty row is invalid/incomplete/validating
     private Button saveButton;
+
+    // Matching async validation
+    private static final String MATCHING_VALIDATE_TOKEN_KEY =
+        "tvrenamer.matching.validateToken";
+    private volatile long matchingValidationSeq = 0L;
 
     private TabFolder tabFolder;
     private Shell preferencesShell;
@@ -883,11 +900,13 @@ class PreferencesDialog extends Dialog {
                     upsertOverride(from, to);
                     overridesFromText.setText("");
                     overridesToText.setText("");
-                    validateMatchingRowBestEffort(
+
+                    // Validate the selected row (or the upserted row) asynchronously.
+                    validateMatchingRowOnline(
                         overridesTable,
-                        overridesTable.getSelectionIndex()
+                        overridesTable.getSelectionIndex(),
+                        MatchingRowType.OVERRIDE
                     );
-                    updateSaveEnabledFromMatchingValidation();
                 }
             }
         );
@@ -1052,11 +1071,13 @@ class PreferencesDialog extends Dialog {
                     upsertDisambiguation(q, id);
                     disambiguationsQueryText.setText("");
                     disambiguationsIdText.setText("");
-                    validateMatchingRowBestEffort(
+
+                    // Validate the selected row (or the upserted row) asynchronously.
+                    validateMatchingRowOnline(
                         disambiguationsTable,
-                        disambiguationsTable.getSelectionIndex()
+                        disambiguationsTable.getSelectionIndex(),
+                        MatchingRowType.DISAMBIGUATION
                     );
-                    updateSaveEnabledFromMatchingValidation();
                 }
             }
         );
@@ -1472,23 +1493,34 @@ class PreferencesDialog extends Dialog {
             if (!dirty) {
                 continue;
             }
-            String status = safeCell(ti, 2);
-            if (
-                status.isBlank() ||
-                MATCHING_STATUS_INCOMPLETE.equals(status) ||
-                MATCHING_STATUS_INVALID.equals(status)
-            ) {
+            String status = safeCell(ti, 2).trim();
+
+            // Dirty rows must be validated; block save for blank/incomplete/invalid/validating.
+            if (status.isEmpty()) {
+                return true;
+            }
+            if (MATCHING_STATUS_INCOMPLETE.equals(status)) {
+                return true;
+            }
+            if (MATCHING_STATUS_INVALID.equals(status)) {
+                return true;
+            }
+            if (status.startsWith("Validating")) {
                 return true;
             }
         }
         return false;
     }
 
-    // Commit 4: best-effort local validation (online provider validation comes in later commit).
-    // For now we mark dirty rows as either "Incomplete" or "✓" (syntactically complete).
-    private void validateMatchingRowBestEffort(
+    private enum MatchingRowType {
+        OVERRIDE,
+        DISAMBIGUATION,
+    }
+
+    private void validateMatchingRowOnline(
         final Table table,
-        final int idx
+        final int idx,
+        final MatchingRowType type
     ) {
         if (table == null || table.isDisposed()) {
             return;
@@ -1496,21 +1528,229 @@ class PreferencesDialog extends Dialog {
         if (idx < 0 || idx >= table.getItemCount()) {
             return;
         }
-        TableItem ti = table.getItem(idx);
+        final TableItem ti = table.getItem(idx);
 
-        // Mark dirty
+        // Mark dirty + assign token to ignore stale validation results.
         ti.setData(MATCHING_DIRTY_KEY, Boolean.TRUE);
+        final long token = ++matchingValidationSeq;
+        ti.setData(MATCHING_VALIDATE_TOKEN_KEY, Long.valueOf(token));
 
-        String key = safeCell(ti, 0).trim();
-        String val = safeCell(ti, 1).trim();
+        final String key = safeCell(ti, 0).trim();
+        final String val = safeCell(ti, 1).trim();
 
         if (key.isEmpty() || val.isEmpty()) {
             ti.setText(2, MATCHING_STATUS_INCOMPLETE);
+            updateSaveEnabledFromMatchingValidation();
             return;
         }
 
-        // Placeholder: complete == OK for now (real validation in later commit).
-        ti.setText(2, MATCHING_STATUS_VALID);
+        // Show validating state immediately and start animation.
+        setRowValidating(table, ti, token);
+        updateSaveEnabledFromMatchingValidation();
+
+        // Run provider checks off the UI thread.
+        new Thread(
+            () -> {
+                ValidationResult result;
+                try {
+                    result = validateViaProvider(type, key, val);
+                } catch (Exception ex) {
+                    logger.log(
+                        Level.INFO,
+                        "Matching validation failed (exception): type=" +
+                            type +
+                            ", key=" +
+                            key,
+                        ex
+                    );
+                    result = ValidationResult.invalid(
+                        "Cannot validate (provider error)"
+                    );
+                }
+
+                final ValidationResult finalResult = result;
+
+                Display display = (preferencesShell != null)
+                    ? preferencesShell.getDisplay()
+                    : Display.getDefault();
+
+                if (display == null) {
+                    return;
+                }
+
+                display.asyncExec(() -> {
+                    if (table.isDisposed() || ti.isDisposed()) {
+                        return;
+                    }
+                    Object tokObj = ti.getData(MATCHING_VALIDATE_TOKEN_KEY);
+                    if (!(tokObj instanceof Long)) {
+                        return;
+                    }
+                    long currentToken = ((Long) tokObj).longValue();
+                    if (currentToken != token) {
+                        // stale result; ignore
+                        return;
+                    }
+
+                    if (finalResult.valid) {
+                        ti.setText(2, MATCHING_STATUS_VALID);
+                    } else {
+                        ti.setText(2, MATCHING_STATUS_INVALID);
+                    }
+                    // Put the message as tooltip on the row for now (no dedicated message column yet).
+                    ti.setText(
+                        new String[] {
+                            safeCell(ti, 0),
+                            safeCell(ti, 1),
+                            ti.getText(2),
+                        }
+                    );
+                    ti.setData(
+                        "tvrenamer.matching.validationMessage",
+                        finalResult.message
+                    );
+
+                    updateSaveEnabledFromMatchingValidation();
+                });
+            },
+            "tvrenamer-matching-validate"
+        )
+            .start();
+    }
+
+    private static final class ValidationResult {
+
+        final boolean valid;
+        final String message;
+
+        private ValidationResult(boolean valid, String message) {
+            this.valid = valid;
+            this.message = (message == null) ? "" : message;
+        }
+
+        static ValidationResult ok(String msg) {
+            return new ValidationResult(true, msg);
+        }
+
+        static ValidationResult invalid(String msg) {
+            return new ValidationResult(false, msg);
+        }
+    }
+
+    private ValidationResult validateViaProvider(
+        final MatchingRowType type,
+        final String key,
+        final String val
+    ) {
+        if (type == MatchingRowType.DISAMBIGUATION) {
+            // key=query string, val=series id
+            String queryString = key;
+            String seriesId = val;
+
+            ShowName sn = ShowName.mapShowName(queryString);
+            try {
+                TheTVDBProvider.getShowOptions(sn);
+            } catch (Exception e) {
+                return ValidationResult.invalid(
+                    "Cannot validate (provider unavailable)"
+                );
+            }
+
+            java.util.List<ShowOption> options = sn.getShowOptions();
+            if (options == null || options.isEmpty()) {
+                return ValidationResult.invalid("No matches");
+            }
+
+            for (ShowOption opt : options) {
+                if (opt != null && seriesId.equals(opt.getIdString())) {
+                    return ValidationResult.ok("Pinned match is valid");
+                }
+            }
+            return ValidationResult.invalid("ID not found in results");
+        }
+
+        // OVERRIDE: key=extracted show, val=replacement text
+        String replacementText = val;
+
+        // Simulate pipeline: override -> query string -> provider options -> disambiguation check
+        String queryString = StringUtils.makeQueryString(replacementText);
+
+        ShowName sn = ShowName.mapShowName(replacementText);
+        try {
+            TheTVDBProvider.getShowOptions(sn);
+        } catch (Exception e) {
+            return ValidationResult.invalid(
+                "Cannot validate (provider unavailable)"
+            );
+        }
+
+        java.util.List<ShowOption> options = sn.getShowOptions();
+        if (options == null || options.isEmpty()) {
+            return ValidationResult.invalid("No matches");
+        }
+        if (options.size() == 1) {
+            return ValidationResult.ok("Resolves uniquely");
+        }
+
+        // Ambiguous: if a disambiguation exists and it matches a candidate, treat as valid.
+        String pinnedId = prefs.resolveDisambiguatedSeriesId(queryString);
+        if (pinnedId != null) {
+            for (ShowOption opt : options) {
+                if (opt != null && pinnedId.equals(opt.getIdString())) {
+                    return ValidationResult.ok("Resolved via pinned ID");
+                }
+            }
+        }
+        return ValidationResult.invalid("Still ambiguous (would prompt)");
+    }
+
+    private void setRowValidating(
+        final Table table,
+        final TableItem ti,
+        final long token
+    ) {
+        if (table.isDisposed() || ti.isDisposed()) {
+            return;
+        }
+        // initial label
+        ti.setText(2, "Validating " + VALIDATING_FRAMES[validatingFrameIdx]);
+        validatingFrameIdx =
+            (validatingFrameIdx + 1) % VALIDATING_FRAMES.length;
+
+        Display display = table.getDisplay();
+        display.timerExec(
+            200,
+            new Runnable() {
+                @Override
+                public void run() {
+                    if (table.isDisposed() || ti.isDisposed()) {
+                        return;
+                    }
+                    Object tokObj = ti.getData(MATCHING_VALIDATE_TOKEN_KEY);
+                    if (!(tokObj instanceof Long)) {
+                        return;
+                    }
+                    long currentToken = ((Long) tokObj).longValue();
+                    if (currentToken != token) {
+                        return; // replaced/stale
+                    }
+
+                    String status = safeCell(ti, 2);
+                    if (!status.startsWith("Validating")) {
+                        return; // finished
+                    }
+
+                    ti.setText(
+                        2,
+                        "Validating " + VALIDATING_FRAMES[validatingFrameIdx]
+                    );
+                    validatingFrameIdx =
+                        (validatingFrameIdx + 1) % VALIDATING_FRAMES.length;
+
+                    display.timerExec(200, this);
+                }
+            }
+        );
     }
 
     private static String safeCell(final TableItem ti, final int col) {
