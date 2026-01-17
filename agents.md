@@ -69,6 +69,11 @@ If Windows file locks prevent `clean`, fall back temporarily:
 ./gradlew build shadowJar createExe
 ```
 
+When to run packaging tasks (`shadowJar` / `createExe`):
+- Run packaging when you change **UI behavior**, **SWT/layout**, **startup/Launcher**, **resources/icons**, **gradle packaging config**, or anything that might behave differently when launched as an EXE vs from your IDE.
+- Prefer running packaging before pushing changes that affect end-user flows, so CI artifacts are likely to work first try.
+- For small internal refactors, `./gradlew build` is usually sufficient; defer packaging until requested or before release.
+
 Artifacts:
 - JARs: `build/libs/`
 - EXE: `build/launch4j/TVRenamer.exe`
