@@ -247,6 +247,39 @@ public class ShowStore {
     }
 
     /**
+     * Remove only the specified pending disambiguations (e.g., those the user has resolved),
+     * leaving any unresolved pending items queued.
+     *
+     * @param queryStrings the provider query strings to remove from the pending queue
+     */
+    public static synchronized void removePendingDisambiguations(
+        final java.util.Set<String> queryStrings
+    ) {
+        if (queryStrings == null || queryStrings.isEmpty()) {
+            return;
+        }
+
+        int removed = 0;
+        for (String q : queryStrings) {
+            if (q == null || q.isBlank()) {
+                continue;
+            }
+            if (pendingDisambiguations.remove(q) != null) {
+                removed++;
+            }
+        }
+
+        if (removed > 0) {
+            logger.info(
+                "ShowStore.removePendingDisambiguations: removed " +
+                    removed +
+                    " pending item(s)"
+            );
+            notifyPendingDisambiguationsChanged();
+        }
+    }
+
+    /**
      * Persist and apply a user-selected disambiguation for a query string.
      *
      * @param queryString normalized provider query string

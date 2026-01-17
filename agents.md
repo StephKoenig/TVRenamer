@@ -46,6 +46,13 @@ Build + run tests:
 ./gradlew clean build
 ```
 
+Enable debug file logging (writes `tvrenamer.log` next to the exe/jar when possible; otherwise `%TEMP%`):
+- JVM property: `-Dtvrenamer.debug=true`
+- PowerShell can mis-parse `-Dname=value`; use the quoted form:
+```/dev/null/commands.txt#L1-1
+java "-Dtvrenamer.debug=true" -jar .\tvrenamer-*-all.jar
+```
+
 Create runnable fat jar (ShadowJar):
 ```/dev/null/commands.txt#L1-1
 ./gradlew shadowJar
@@ -114,9 +121,18 @@ Artifacts uploaded by CI:
 
 ### Practical workflow for agents
 1. Make changes locally.
-2. Run `./gradlew test` (or at least `./gradlew build`) before pushing.
+2. Compile locally after each change (preferred) to catch compile errors early:
+   - Full packaging pipeline (closest to CI): `./gradlew clean build shadowJar createExe`
+   - If you only need a quick compile/test cycle: `./gradlew build` (or `./gradlew test`)
 3. Push to `origin/master` (or open a PR) and let Actions build Windows artifacts.
 4. Download the artifact to validate the packaged output.
+
+Notes:
+- On Windows, `clean` can fail if the last built EXE/JAR is still running or otherwise open/locked
+  (e.g., you launched `TVRenamer.exe` and it’s still running). Close the running app and retry.
+- If you hit a transient lock and you’re confident the build outputs are safe to overwrite, you can
+  temporarily run without `clean`: `./gradlew build shadowJar createExe` and then come back and
+  do a clean build once locks are cleared.
 
 ---
 

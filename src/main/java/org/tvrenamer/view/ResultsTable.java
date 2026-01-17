@@ -655,6 +655,15 @@ public final class ResultsTable
      *
      * @return true if a dialog was shown (or attempted), false if there was nothing to show
      */
+    // Keep a reference so we can stream new pending items into an already-open dialog.
+    private BatchShowDisambiguationDialog batchDisambiguationDialog = null;
+
+    // Only auto-open the batch dialog once per "add files" operation: when pending transitions
+    // from empty -> non-empty. Further pending items should stream into the open dialog.
+    // After the user closes the dialog, we do not auto-open again; remaining pending items can
+    // be opened explicitly via the "Select Shows..." button.
+    private volatile int lastKnownPendingDisambiguationCount = 0;
+
     private boolean showBatchDisambiguationDialogIfNeeded() {
         logger.info(
             "Batch show disambiguation: checking for pending ambiguities..."
@@ -756,8 +765,16 @@ public final class ResultsTable
         BatchShowDisambiguationDialog dialog =
             new BatchShowDisambiguationDialog(shell, enriched);
 
+        // IMPORTANT: set the live dialog reference and open-flag before entering dialog.open().
+        // Otherwise, pending-disambiguation notifications that arrive during dialog startup can
+        // observe "dialogOpen==true but dialog==null" and won't stream into the already-open dialog.
+        batchDisambiguationDialog = dialog;
+        batchDisambiguationDialogOpen = true;
+
+        // Track resolved queryStrings so we can remove only those from the pending queue.
+        final HashSet<String> resolvedQueryStrings = new HashSet<>();
+
         try {
-            batchDisambiguationDialogOpen = true;
             logger.info("Batch show disambiguation: opening dialog...");
             Map<String, String> selections = dialog.open();
             if (selections == null) {
@@ -782,7 +799,7 @@ public final class ResultsTable
                     " selection(s)"
             );
 
-            // Apply selections (persist + update prefs)
+            // Apply selections (persist + update prefs). We intentionally allow partial resolution.
             for (Map.Entry<String, String> sel : selections.entrySet()) {
                 String queryString = sel.getKey();
                 String chosenId = sel.getValue();
@@ -796,25 +813,21 @@ public final class ResultsTable
                     queryString,
                     chosenId
                 );
+                resolvedQueryStrings.add(queryString);
             }
 
-            // Clear pending queue now that user has handled it.
-            ShowStore.clearPendingDisambiguations();
+            // Remove only resolved items; keep unresolved pending so the user can reopen via the button later.
+            if (!resolvedQueryStrings.isEmpty()) {
+                ShowStore.removePendingDisambiguations(resolvedQueryStrings);
+            }
 
             // Re-trigger lookup for each affected item based on provider query string rather than
             // the extracted show name. This avoids mismatches where the extracted name varies
             // (punctuation/case/overrides) but the underlying query string is what we actually
             // disambiguate and persist.
-            HashSet<String> affectedQueryStrings = new HashSet<>();
-            for (ShowStore.PendingDisambiguation pd : enriched.values()) {
-                if (pd == null) {
-                    continue;
-                }
-                String q = pd.queryString;
-                if (q != null && !q.isBlank()) {
-                    affectedQueryStrings.add(q);
-                }
-            }
+            HashSet<String> affectedQueryStrings = new HashSet<>(
+                resolvedQueryStrings
+            );
             if (affectedQueryStrings.isEmpty()) {
                 return true;
             }
@@ -910,7 +923,16 @@ public final class ResultsTable
 
             return true;
         } finally {
+            // Ensure any "Downloading" title animation is stopped when the dialog closes.
+            if (batchDisambiguationDialog != null) {
+                try {
+                    batchDisambiguationDialog.setDownloading(false);
+                } catch (RuntimeException ignored) {
+                    // best-effort; dialog may already be disposed
+                }
+            }
             batchDisambiguationDialogOpen = false;
+            batchDisambiguationDialog = null;
         }
 
         // (Selection apply + queue clear + re-trigger lookups are handled above within the try block.)
@@ -1575,6 +1597,10 @@ public final class ResultsTable
                     // If the user clicks the button, treat it as an explicit request and
                     // bypass the cancel/close cooldown (which exists to prevent auto-reopen loops).
                     batchDisambiguationReopenNotBeforeMs = 0L;
+
+                    // Explicit open: allow open even if pending count didn't transition from 0.
+                    lastKnownPendingDisambiguationCount = 0;
+
                     showBatchDisambiguationDialogIfNeeded();
                 }
             }
@@ -1832,18 +1858,55 @@ public final class ResultsTable
         setupSelectionListener();
 
         // When provider lookups enqueue ambiguous shows, ShowStore notifies listeners.
-        // Open the batch resolve dialog on the UI thread (debounced by our open-guard).
+        // Behavior:
+        // - If the batch dialog is already open, stream new items into it.
+        // - Otherwise, auto-open ONLY when pending transitions from 0 -> >0.
+        // - After the user closes the dialog, do not auto-open again; remaining pending can be opened
+        //   explicitly via the "Select Shows..." button.
         ShowStore.addPendingDisambiguationsListener(() -> {
             if (shell == null || shell.isDisposed()) {
                 return;
             }
+
             display.asyncExec(() -> {
                 if (shell == null || shell.isDisposed()) {
                     return;
                 }
+
+                Map<String, ShowStore.PendingDisambiguation> snapshot =
+                    ShowStore.getPendingDisambiguations();
+                int pendingCount = (snapshot == null) ? 0 : snapshot.size();
+
                 if (batchDisambiguationDialogOpen) {
+                    // Dialog is open: stream in new items.
+                    if (batchDisambiguationDialog != null) {
+                        try {
+                            batchDisambiguationDialog.mergePending(snapshot);
+                        } catch (RuntimeException ex) {
+                            logger.warning(
+                                "Batch show disambiguation: mergePending failed: " +
+                                    ex
+                            );
+                        }
+                    }
+
+                    // While open, keep lastKnown in sync so we don't re-open on close.
+                    lastKnownPendingDisambiguationCount = pendingCount;
                     return;
                 }
+
+                // Dialog is not open: auto-open only on 0 -> >0 transition.
+                boolean shouldAutoOpen =
+                    (lastKnownPendingDisambiguationCount == 0) &&
+                    (pendingCount > 0);
+
+                // Always update lastKnown to current snapshot count.
+                lastKnownPendingDisambiguationCount = pendingCount;
+
+                if (!shouldAutoOpen) {
+                    return;
+                }
+
                 showBatchDisambiguationDialogIfNeeded();
             });
         });

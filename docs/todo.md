@@ -45,10 +45,15 @@ This section summarizes TODOs that have been addressed, including what changed a
    - **Where:** `org.tvrenamer.controller.util.StringUtils` and `org.tvrenamer.controller.TheTVDBProvider`
    - **What we did:** Use robust URL encode/decode, stop mutating downloaded XML payloads, and treat “special character encoding” as conservative display normalization only.
 
-8. **Improve move/copy throughput and overall progress reporting**
+9. **Improve move/copy throughput and overall progress reporting**
    - **Why:** Copy+delete can be slow on fast networks; overall progress should be smooth and accurate for multi-file batches.
    - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`, `org.tvrenamer.view.FileMonitor`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.view.ProgressBarUpdater`
    - **What we did:** Increased copy buffer to 4 MiB and throttled UI progress callbacks to ~4 MiB; implemented byte-accurate aggregate progress for copy+delete moves only so the bottom bar advances smoothly across the entire batch and resets after completion.
+
+10. **Batch “Select Shows” dialog: checkbox selection, partial OK, and streaming pending ambiguities**
+   - **Why:** Avoid repeated modal popups during background lookup; allow users to resolve what they can without blocking progress on unresolved shows; make selection UX reliable.
+   - **Where:** `org.tvrenamer.view.BatchShowDisambiguationDialog`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.model.ShowStore`, `tvrenamer/agents.md`
+   - **What we did:** Reworked candidate selection to use checkboxes (single-choice or none) with row-click toggling and double-click “select + advance”; enabled OK when at least one show is selected; streamed newly discovered ambiguous shows into an already-open dialog with a “Select Shows (Downloading …)” animated title; kept unresolved pending items queued (remove only resolved entries) so they can be reopened via the button; adjusted auto-open behavior to trigger only on an empty→non-empty pending transition (and otherwise rely on streaming / explicit button).
 
 
 ---
