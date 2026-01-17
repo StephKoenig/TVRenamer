@@ -45,8 +45,8 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
         final FileEpisode episode = new FileEpisode(path);
         episode.setIgnoreReason(ignorableReason(pathname));
         if (!episode.wasParsed()) {
-            // We're putting the episode in the table anyway, but it's
-            // not much use. TODO: make better use of it.
+            // Note: unparsed files are still inserted so users can see what failed.
+            // Follow-up UX improvements are tracked in docs/todo.md ("Improve handling of \"unparsed\" files").
             logger.warning("Couldn't parse file: " + pathname);
         }
         episodes.put(pathname, episode);
@@ -140,7 +140,8 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
             }
             // Even if the strings don't match directly, we're not going
             // to change anything if they both refer to the same file.
-            // Though, maybe we should? TODO
+            // Note: path canonicalization policy (including UNC/SMB edge cases) is tracked in docs/todo.md
+            // under "Consider canonicalization of file paths in EpisodeDb".
             Path keyPath = Paths.get(key);
             if (FileUtilities.isSameFile(currentLocation, keyPath)) {
                 return key;

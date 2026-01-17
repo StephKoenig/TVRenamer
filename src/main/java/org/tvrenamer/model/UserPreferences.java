@@ -510,10 +510,8 @@ public class UserPreferences {
      * @param dir the path to the directory
      */
     public void setDestinationDirectory(String dir) {
-        // TODO: Our javadoc says it must be an absolute path, but how can we enforce
-        // that?
-        // Should we create the path, convert it to absolute, then back to a String, and
-        // then compare? Also, what happens if ensureDestDir fails?
+        // Note: The javadoc says this must be an absolute path, but enforcement/normalization
+        // (including UNC/SMB edge cases) is tracked for future cleanup in docs/todo.md.
         if (valuesAreDifferent(destDir, dir)) {
             destDir = dir;
             destDirPath = Paths.get(destDir);
@@ -762,7 +760,8 @@ public class UserPreferences {
             for (String ignorable : ignoreWords) {
                 // Be careful not to allow empty string as a "keyword."
                 if (ignorable.length() > 1) {
-                    // TODO: Convert commas into pipes for proper regex, remove periods
+                    // Note: further normalization (e.g., commas-to-pipes for regex, punctuation handling)
+                    // is tracked for future work in docs/todo.md.
                     ignoreKeywords.add(ignorable);
                 } else {
                     logger.warning(
