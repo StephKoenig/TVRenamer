@@ -111,6 +111,10 @@ public final class ResultsTable
     private ProgressBar totalProgressBar;
     private TaskItem taskItem = null;
 
+    // Aggregate overall copy progress for copy+delete operations only.
+    // This drives the bottom progress bar smoothly (byte-based) instead of file-count chunks.
+    private FileMonitor.AggregateCopyProgress aggregateCopyProgress = null;
+
     private final Queue<FileEpisode> currentFailures =
         new ConcurrentLinkedQueue<>();
 
@@ -166,6 +170,62 @@ public final class ResultsTable
 
     ProgressBar getProgressBar() {
         return totalProgressBar;
+    }
+
+    /**
+     * Whether aggregate (byte-based) copy progress tracking is active for the current batch.
+     *
+     * When active, the bottom progress bar is updated directly from per-file MoveObserver callbacks
+     * (copy+delete operations only), and coarse file-count updates should not overwrite it.
+     *
+     * @return true if aggregate copy progress is active, false otherwise
+     */
+    public boolean isAggregateCopyProgressActive() {
+        return aggregateCopyProgress != null;
+    }
+
+    /**
+     * Update overall copy progress for the bottom progress bar.
+     *
+     * This is intended for copy+delete operations only (cross-filesystem moves).
+     * Renames are excluded by design because they are effectively instant.
+     *
+     * @param totalBytes total bytes to be copied in the current batch (<= 0 disables the bar)
+     * @param copiedBytes bytes copied so far (clamped to [0,totalBytes])
+     */
+    public void updateOverallCopyProgress(
+        final long totalBytes,
+        final long copiedBytes
+    ) {
+        if (display == null || display.isDisposed()) {
+            return;
+        }
+
+        display.asyncExec(() -> {
+            if (shell == null || shell.isDisposed()) {
+                return;
+            }
+            if (totalProgressBar == null || totalProgressBar.isDisposed()) {
+                return;
+            }
+
+            if (totalBytes <= 0) {
+                totalProgressBar.setSelection(0);
+                return;
+            }
+
+            int max = totalProgressBar.getMaximum();
+            if (max <= 0) {
+                max = 1000;
+                totalProgressBar.setMaximum(max);
+            }
+
+            long safeCopied = Math.max(0L, Math.min(copiedBytes, totalBytes));
+            double ratio = (double) safeCopied / (double) totalBytes;
+            int sel = (int) Math.round(ratio * max);
+
+            totalProgressBar.setSelection(Math.max(0, Math.min(sel, max)));
+        });
     }
 
     TaskItem getTaskItem() {
@@ -841,7 +901,18 @@ public final class ResultsTable
                     continue;
                 }
                 FileMover pendingMove = new FileMover(episode);
-                pendingMove.addObserver(new FileMonitor(this, item));
+
+                // Lazily create an aggregate tracker for overall copy progress.
+                // This will only be meaningfully driven for copy+delete operations
+                // (cross-filesystem moves) where FileMover invokes initializeProgress/setProgressValue.
+                if (aggregateCopyProgress == null) {
+                    aggregateCopyProgress =
+                        new FileMonitor.AggregateCopyProgress(this);
+                }
+
+                pendingMove.addObserver(
+                    new FileMonitor(this, item, aggregateCopyProgress)
+                );
                 pendingMoves.add(pendingMove);
             }
         }
@@ -1202,6 +1273,12 @@ public final class ResultsTable
     void finishAllMoves() {
         // The current move batch (if any) is done.
         activeMover = null;
+
+        // Reset overall copy progress bar state after each batch.
+        if (aggregateCopyProgress != null) {
+            aggregateCopyProgress.reset();
+        }
+        aggregateCopyProgress = null;
 
         ui.setAppIcon();
         if (currentFailures.size() > 0) {

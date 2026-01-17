@@ -13,8 +13,11 @@ public class ProgressBarUpdater implements ProgressUpdater {
     private final TaskItem taskItem;
     private final ProgressBar progressBar;
 
-    // We use the progress bar as a file-count based progress indicator for move/copy operations.
-    // Renames are effectively instant and are not intended to contribute to overall progress.
+    // We use the progress bar as a file-count based progress indicator for move/copy operations
+    // only when aggregate byte-based progress is not active.
+    //
+    // Note: aggregate byte-based progress is driven directly via ResultsTable.updateOverallCopyProgress(...)
+    // from MoveObserver callbacks (copy+delete operations only).
     private final int barMax;
 
     /**
@@ -80,6 +83,12 @@ public class ProgressBarUpdater implements ProgressUpdater {
      */
     @Override
     public void setProgress(final int totalNumFiles, final int nRemaining) {
+        // If aggregate byte-based progress is active, do not overwrite the progress bar
+        // with coarse file-count updates. Aggregate progress will update the bar directly.
+        if (ui != null && ui.isAggregateCopyProgressActive()) {
+            return;
+        }
+
         if (display == null || display.isDisposed()) {
             return;
         }

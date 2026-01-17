@@ -16,6 +16,10 @@ import org.tvrenamer.model.UserPreferences;
 
 public class FileMover implements Callable<Boolean> {
 
+    // True if this mover is expected to use copy+delete (cross-filesystem move) rather than rename.
+    // Used by UI to include only copy operations in overall progress.
+    private volatile boolean willUseCopyAndDelete = false;
+
     static final Logger logger = Logger.getLogger(FileMover.class.getName());
     static final UserPreferences userPrefs = UserPreferences.getInstance();
 
@@ -279,6 +283,9 @@ public class FileMover implements Callable<Boolean> {
             // best-effort
         }
 
+        // Record whether this move will require copy+delete (used for overall progress reporting).
+        willUseCopyAndDelete = !tryRename;
+
         if (tryRename) {
             Path actualDest = FileUtilities.renameFile(srcPath, destPath);
             if (actualDest == null) {
@@ -354,6 +361,15 @@ public class FileMover implements Callable<Boolean> {
             return "";
         }
         return " (" + destIndex + ")";
+    }
+
+    /**
+     * Whether this mover is expected to use copy+delete (cross-filesystem move) rather than rename.
+     *
+     * @return true if copy+delete is expected; false if a rename/move is expected
+     */
+    public boolean willUseCopyAndDelete() {
+        return willUseCopyAndDelete;
     }
 
     /**
