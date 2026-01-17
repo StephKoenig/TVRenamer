@@ -782,16 +782,23 @@ class PreferencesDialog extends Dialog {
 
     private void createOverridesTab() {
         TabItem item = new TabItem(tabFolder, SWT.NULL);
-        item.setText("Overrides");
+        item.setText("Matching");
 
         Composite overridesGroup = new Composite(tabFolder, SWT.NONE);
-
         overridesGroup.setLayout(new GridLayout(3, false));
-
         overridesGroup.setLayoutData(
             new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
         );
         ThemeManager.applyPalette(overridesGroup, themePalette);
+
+        // --- Overrides section (existing UI for now; will be replaced by table editor) ---
+        Label overridesHeader = new Label(overridesGroup, SWT.NONE);
+        overridesHeader.setText(
+            "Overrides (Extracted show → Replacement text)"
+        );
+        overridesHeader.setLayoutData(
+            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
+        );
 
         Label fromLabel = new Label(overridesGroup, SWT.NONE);
         fromLabel.setText("From (extracted show name)");
@@ -928,6 +935,28 @@ class PreferencesDialog extends Dialog {
             .entrySet()) {
             overridesList.add(e.getKey() + " => " + e.getValue());
         }
+
+        // --- Disambiguations section placeholder (next commits will implement table editor) ---
+        Label spacer = new Label(overridesGroup, SWT.NONE);
+        spacer.setLayoutData(
+            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
+        );
+
+        Label disambiguationsHeader = new Label(overridesGroup, SWT.NONE);
+        disambiguationsHeader.setText(
+            "Disambiguations (Query string → Series ID) [coming next]"
+        );
+        disambiguationsHeader.setLayoutData(
+            new GridData(SWT.BEGINNING, SWT.CENTER, true, false, 3, 1)
+        );
+
+        Label disambiguationsNote = new Label(overridesGroup, SWT.WRAP);
+        disambiguationsNote.setText(
+            "This section will allow editing pinned show selections (query string → series ID)."
+        );
+        disambiguationsNote.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1)
+        );
 
         item.setControl(overridesGroup);
     }
