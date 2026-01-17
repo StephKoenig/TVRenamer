@@ -151,6 +151,10 @@ class PreferencesDialog extends Dialog {
     private Button recurseFoldersCheckbox;
     private Button rmdirEmptyCheckbox;
     private Button deleteRowsCheckbox;
+
+    // If checked, set moved/renamed files' modification time to "now".
+    // If unchecked (default), preserve original modification time.
+    private Button setMtimeToNowCheckbox;
     private Combo themeModeCombo;
     private Button preferDvdOrderCheckbox;
     private ThemePalette themePalette;
@@ -567,6 +571,15 @@ class PreferencesDialog extends Dialog {
             CHECK_UPDATES_TEXT,
             CHECK_UPDATES_TOOLTIP,
             prefs.checkForUpdates(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
+
+        setMtimeToNowCheckbox = createCheckbox(
+            "Set file modification time to now after move/rename",
+            "If checked, TVRenamer will set the destination file's modification time to the current time after moving/renaming.\nIf unchecked (default), TVRenamer will preserve the original modification time.",
+            !prefs.isPreserveFileModificationTime(),
             generalGroup,
             GridData.BEGINNING,
             3
@@ -1052,6 +1065,13 @@ class PreferencesDialog extends Dialog {
         prefs.setRecursivelyAddFolders(recurseFoldersCheckbox.getSelection());
         prefs.setRemoveEmptiedDirectories(rmdirEmptyCheckbox.getSelection());
         prefs.setDeleteRowAfterMove(deleteRowsCheckbox.getSelection());
+
+        // Default is preserve; checkbox is the inverse ("set to now").
+        if (setMtimeToNowCheckbox != null) {
+            prefs.setPreserveFileModificationTime(
+                !setMtimeToNowCheckbox.getSelection()
+            );
+        }
 
         // Commit move settings only after validation succeeded
         prefs.setDestinationDirectory(destDirTextValue);

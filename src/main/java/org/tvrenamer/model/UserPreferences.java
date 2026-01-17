@@ -52,6 +52,10 @@ public class UserPreferences {
     private ThemeMode themeMode;
     private boolean recursivelyAddFolders;
 
+    // If true (default), preserve the original file modification time when moving/renaming.
+    // If false, the mover may set the destination file's modification time to "now".
+    private boolean preserveFileModificationTime = true;
+
     // Prefer DVD ordering/titles if present; fall back to aired ordering otherwise.
     private boolean preferDvdOrderIfPresent = false;
 
@@ -96,6 +100,11 @@ public class UserPreferences {
         checkForUpdates = true;
         themeMode = ThemeMode.LIGHT;
         recursivelyAddFolders = true;
+
+        // Default: preserving timestamps is less surprising since the file contents
+        // are unchanged by a rename/move.
+        preserveFileModificationTime = true;
+
         preferDvdOrderIfPresent = false;
         processedFileCount = 0L;
         ignoreKeywords = new ArrayList<>();
@@ -218,6 +227,27 @@ public class UserPreferences {
             }
         }
         return null;
+    }
+
+    /**
+     * Whether to preserve the original file modification time when moving/renaming.
+     *
+     * Default: true (preserve), since the file contents are not changed by a rename/move.
+     */
+    public boolean isPreserveFileModificationTime() {
+        return preserveFileModificationTime;
+    }
+
+    /**
+     * Set whether to preserve the original file modification time when moving/renaming.
+     *
+     * @param preserve true to preserve original mtime; false to set mtime to "now"
+     */
+    public void setPreserveFileModificationTime(boolean preserve) {
+        if (valuesAreDifferent(this.preserveFileModificationTime, preserve)) {
+            this.preserveFileModificationTime = preserve;
+            preferenceChanged(UserPreference.FILE_MTIME_POLICY);
+        }
     }
 
     /**
@@ -448,6 +478,14 @@ public class UserPreferences {
             prefs.buildIgnoredKeywordsString();
             if (prefs.themeMode == null) {
                 prefs.themeMode = ThemeMode.LIGHT;
+            }
+
+            // Backward compatibility: older prefs files won't have this field.
+            // Default to preserving timestamps.
+            // (XStream will leave it as the Java default false if absent.)
+            // We only correct it here when it looks like it's missing/uninitialized.
+            if (!prefs.preserveFileModificationTime) {
+                prefs.preserveFileModificationTime = true;
             }
             logger.finer(
                 "Successfully read preferences from: " +
