@@ -256,18 +256,18 @@ final class AboutDialog extends Dialog {
 
         createPipeSeparatedLinkGroup(
             PROJECT_PAGE,
-            "https://github.com/StephKoenig/tvrenamer",
+            TVRENAMER_PROJECT_URL,
             ISSUE_TRACKER,
-            "https://github.com/StephKoenig/tvrenamer/issues",
+            TVRENAMER_ISSUES_URL,
             SOURCE_CODE_LINK,
-            "https://github.com/StephKoenig/tvrenamer"
+            TVRENAMER_REPOSITORY_URL
         );
 
         createPipeSeparatedLinkGroup(
             "Original Project Page",
-            "https://github.com/tvrenamer/tvrenamer",
+            ORIGINAL_PROJECT_REPOSITORY_URL,
             "Original Web Site",
-            "https://www.tvrenamer.org/"
+            ORIGINAL_PROJECT_WEBSITE_URL
         );
     }
 
