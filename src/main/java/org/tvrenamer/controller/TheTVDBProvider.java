@@ -83,7 +83,7 @@ public class TheTVDBProvider {
         }
 
         String searchURL =
-            BASE_SEARCH_URL + StringUtils.encodeUrlCharacters(queryString);
+            BASE_SEARCH_URL + StringUtils.encodeUrlQueryParam(queryString);
 
         logger.fine("About to download search results from " + searchURL);
 

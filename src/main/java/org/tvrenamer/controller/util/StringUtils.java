@@ -2,6 +2,7 @@ package org.tvrenamer.controller.util;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.HashMap;
@@ -453,25 +454,21 @@ public class StringUtils {
     }
 
     /**
-     * Reverse the effect of encodeUrlCharacters
+     * Decode a URL-encoded query parameter value.
      *
-     * @param input
-     *            string to decode
-     * @return human-friendly representation of input
+     * This is the preferred API for new code. It handles percent-escapes and '+' (space)
+     * correctly for application/x-www-form-urlencoded.
+     *
+     * @param input string to decode
+     * @return decoded string (or empty string if input is null/empty)
      */
-    @SuppressWarnings("unused")
-    public static String decodeUrlCharacters(String input) {
+    public static String decodeUrlQueryParam(final String input) {
         if (input == null || input.length() == 0) {
             return "";
         }
 
-        // Robust URL decoding (reverse of encodeUrlCharacters).
-        // Use Java's decoder for percent-escapes and '+' handling.
         try {
-            return java.net.URLDecoder.decode(
-                input,
-                java.nio.charset.StandardCharsets.UTF_8
-            );
+            return java.net.URLDecoder.decode(input, StandardCharsets.UTF_8);
         } catch (Exception ignored) {
             // Best-effort fallback to legacy behavior.
             String rval = input.replaceAll("%20", " ");
@@ -481,30 +478,49 @@ public class StringUtils {
     }
 
     /**
-     * Replaces URL metacharacters with ASCII hex codes
+     * Reverse the effect of encodeUrlCharacters (legacy name).
      *
-     * @param input
-     *            string to encode
-     * @return URL-safe representation of input
+     * @deprecated Prefer {@link #decodeUrlQueryParam(String)}.
      */
-    public static String encodeUrlCharacters(String input) {
+    @Deprecated
+    @SuppressWarnings("unused")
+    public static String decodeUrlCharacters(String input) {
+        return decodeUrlQueryParam(input);
+    }
+
+    /**
+     * Encode a URL query parameter value.
+     *
+     * This is the preferred API for new code. It produces application/x-www-form-urlencoded
+     * output suitable for query strings.
+     *
+     * @param input string to encode
+     * @return encoded string (or empty string if input is null/empty)
+     */
+    public static String encodeUrlQueryParam(final String input) {
         if (input == null || input.length() == 0) {
             return "";
         }
 
-        // Robust URL encoding for query parameters.
-        // Note: URLEncoder encodes spaces as '+' which is valid for query strings.
+        // URLEncoder encodes spaces as '+' which is appropriate for query strings.
         try {
-            return java.net.URLEncoder.encode(
-                input,
-                java.nio.charset.StandardCharsets.UTF_8
-            );
+            return java.net.URLEncoder.encode(input, StandardCharsets.UTF_8);
         } catch (Exception ignored) {
             // Best-effort fallback to legacy behavior.
             String rval = input.replaceAll(" ", "%20");
             rval = rval.replaceAll("&", "%25");
             return rval;
         }
+    }
+
+    /**
+     * Replaces URL metacharacters with ASCII hex codes (legacy name).
+     *
+     * @deprecated Prefer {@link #encodeUrlQueryParam(String)}.
+     */
+    @Deprecated
+    public static String encodeUrlCharacters(String input) {
+        return encodeUrlQueryParam(input);
     }
 
     /**
