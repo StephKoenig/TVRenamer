@@ -89,7 +89,9 @@ public class TheTVDBProvider {
 
         String content = new HttpConnectionHandler().downloadUrl(searchURL);
 
-        return StringUtils.encodeSpecialCharacters(content);
+        // Do not post-process the XML payload. Any string "encoding" here risks corrupting
+        // the provider response (e.g., changing entity handling or whitespace).
+        return content;
     }
 
     private static String getSeriesListingXml(final Series series)
@@ -105,7 +107,9 @@ public class TheTVDBProvider {
 
         String content = new HttpConnectionHandler().downloadUrl(seriesURL);
 
-        return StringUtils.encodeSpecialCharacters(content);
+        // Do not post-process the XML payload. Any string "encoding" here risks corrupting
+        // the provider response (e.g., changing entity handling or whitespace).
+        return content;
     }
 
     private static void collectShowOptions(
