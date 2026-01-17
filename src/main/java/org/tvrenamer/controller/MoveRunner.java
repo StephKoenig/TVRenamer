@@ -144,18 +144,11 @@ public class MoveRunner implements Runnable {
      *    in the table.  If no such list existed at the time this method was invoked,
      *    it will be created and the association be made before the value is returned.
      */
-    // TODO: make this a generic facility?
     private static List<FileMover> getListValue(
         Map<String, List<FileMover>> table,
         String key
     ) {
-        if (table.containsKey(key)) {
-            return table.get(key);
-        }
-
-        List<FileMover> newList = new LinkedList<>();
-        table.put(key, newList);
-        return newList;
+        return table.computeIfAbsent(key, ignored -> new LinkedList<>());
     }
 
     /**
