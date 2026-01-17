@@ -108,8 +108,52 @@ class PreferencesDialog extends Dialog {
         @Override
         public void drop(DropTargetEvent event) {
             String data = (String) event.data;
-            // TODO: This currently adds the dropped text onto the end, not where we dropped it
-            targetText.append(data);
+            if (data == null) {
+                return;
+            }
+
+            // Insert at caret/selection position (not just append).
+            // This makes drag/drop behave like a normal text editor insertion.
+            int selectionStart;
+            int selectionEnd;
+            try {
+                org.eclipse.swt.graphics.Point sel = targetText.getSelection();
+                selectionStart = sel.x;
+                selectionEnd = sel.y;
+            } catch (Exception ignored) {
+                // Best-effort fallback: append if we can't read selection.
+                targetText.append(data);
+                return;
+            }
+
+            String current = targetText.getText();
+            if (current == null) {
+                current = "";
+            }
+
+            // Clamp defensively
+            if (selectionStart < 0) {
+                selectionStart = 0;
+            }
+            if (selectionEnd < selectionStart) {
+                selectionEnd = selectionStart;
+            }
+            if (selectionStart > current.length()) {
+                selectionStart = current.length();
+            }
+            if (selectionEnd > current.length()) {
+                selectionEnd = current.length();
+            }
+
+            String before = current.substring(0, selectionStart);
+            String after = current.substring(selectionEnd);
+
+            String newValue = before + data + after;
+            targetText.setText(newValue);
+
+            // Move caret to just after inserted text
+            int newCaret = selectionStart + data.length();
+            targetText.setSelection(newCaret);
         }
 
         @Override
