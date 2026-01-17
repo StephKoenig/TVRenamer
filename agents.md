@@ -2,6 +2,8 @@
 
 This file is agent-facing documentation for working on **TVRenamer**. It focuses on: available tooling, how to build locally on Windows, how the project compiles remotely via GitHub Actions, and how to perform **manual GitHub Releases** using tested CI artifacts.
 
+It also documents the project’s workflow for tracking and completing TODOs (see “TODO workflow” below).
+
 ---
 
 ## Project basics
@@ -66,6 +68,26 @@ Notes:
   - EXE: `build/launch4j/TVRenamer.exe`
 
 ---
+
+## TODO workflow (docs-driven)
+
+This repo tracks forward-looking work in `docs/todo.md` rather than leaving long-lived TODOs scattered throughout the codebase.
+
+When implementing an item from `docs/todo.md`:
+1. **Do the implementation first**, including tests and any required UI/prefs wiring.
+2. **Update `docs/todo.md`**:
+   - Move completed items out of “Top candidates”.
+   - Add/adjust any new top candidates discovered during the work.
+   - Add an entry under **“TODOs Done”** (Title, Why, Where, What we did).
+   - If the work changes assumptions (e.g., threading, ownership of UI thread, encoding responsibilities), add a short note in the relevant section.
+3. **Clean up in-code TODO comments**:
+   - Remove TODOs that are now addressed.
+   - Replace them with a short “Note: addressed; see docs/todo.md …” where future context is still valuable.
+   - Avoid leaving TODOs that immediately become stale.
+4. **Keep changes minimal and targeted**:
+   - Prefer small commits per TODO item, then a follow-up commit for documentation and comment cleanup if needed.
+
+Goal: the code stays clean and actionable, and `docs/todo.md` remains the single source of truth for future work.
 
 ## Remote compile (GitHub Actions CI)
 
