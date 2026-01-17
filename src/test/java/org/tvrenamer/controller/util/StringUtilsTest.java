@@ -9,6 +9,60 @@ import org.junit.Test;
 public class StringUtilsTest {
 
     @Test
+    public void testEncodeUrlCharactersRoundTripUtf8() {
+        // Includes: spaces, ampersand, question mark, equals, slash, plus, and non-ASCII characters.
+        // We want robust URL encoding/decoding round-tripping for query parameters.
+        final String original = "Doctor Who (2023) & S01E01?x=1+2/3 — café";
+        final String encoded = encodeUrlQueryParam(original);
+        final String decoded = decodeUrlQueryParam(encoded);
+
+        assertEquals(original, decoded);
+    }
+
+    @Test
+    public void testEncodeSpecialCharactersXmlNoop() {
+        // encodeSpecialCharacters historically attempted to "encode" payloads.
+        // For XML documents, it must not mutate the content.
+        final String xml =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Data><SeriesName>Fish & Chips</SeriesName></Data>";
+        assertEquals(xml, encodeSpecialCharacters(xml));
+    }
+
+    @Test
+    public void testEncodeSpecialCharactersDisplayNormalization() {
+        // For non-XML strings, encodeSpecialCharacters is now a conservative display normalizer.
+        // It should remove nulls and normalize whitespace rather than URL-encode.
+        final String input = "Hello\u0000\tWorld\r\n  Again";
+
+        // Behavior: nulls -> space, then [\r\n\t]+ -> single space, then trim.
+        // Note: this does NOT collapse runs of ordinary spaces.
+        final String expected = "Hello  World   Again";
+        final String actual = encodeSpecialCharacters(input);
+
+        assertEquals(
+            "Expected: [" +
+                debugWhitespace(expected) +
+                "] but got [" +
+                debugWhitespace(actual) +
+                "]",
+            expected,
+            actual
+        );
+    }
+
+    private static String debugWhitespace(String s) {
+        if (s == null) {
+            return "<null>";
+        }
+        String out = s;
+        out = out.replace("\r", "\\r");
+        out = out.replace("\n", "\\n");
+        out = out.replace("\t", "\\t");
+        out = out.replace("\u0000", "\\0");
+        return out;
+    }
+
+    @Test
     public void testSanitiseTitleBackslash() {
         assertEquals("Test-", sanitiseTitle("Test\\"));
         assertEquals("Test-", replaceIllegalCharacters("Test\\"));
@@ -78,7 +132,10 @@ public class StringUtilsTest {
     public void testSanitiseTitleOnlyTrim() {
         // The whitespace in between the words should NOT be removed.
         assertEquals("Test Two", sanitiseTitle(" \t<Test Two> "));
-        assertEquals(" \tTest Two ", replaceIllegalCharacters(" \t<Test Two> "));
+        assertEquals(
+            " \tTest Two ",
+            replaceIllegalCharacters(" \t<Test Two> ")
+        );
     }
 
     @Test
@@ -175,7 +232,8 @@ public class StringUtilsTest {
     @Test
     public void testGetExtension() {
         assertEquals(".mkv", getExtension("dexter.407.720p.hdtv.x264-sys.mkv"));
-        String shield = "Marvels.Agents.of.S.H.I.E.L.D.S04E03.1080p.HDTV.x264-KILLERS[ettv].avi";
+        String shield =
+            "Marvels.Agents.of.S.H.I.E.L.D.S04E03.1080p.HDTV.x264-KILLERS[ettv].avi";
         assertEquals(".avi", getExtension(shield));
         assertEquals(".mp4", getExtension("/TV/Dexter/S05E05 First Blood.mp4"));
         assertEquals("", getExtension("Supernatural"));
@@ -187,76 +245,143 @@ public class StringUtilsTest {
         assertEquals("If.I.Do", makeDotTitle("If I Do "));
         assertEquals("If.I.Do...I.Do", makeDotTitle("If I Do... I Do"));
         assertEquals("#HappyHolograms", makeDotTitle("#HappyHolograms"));
-        assertEquals("'Twas.the.Nightmare.Before.Christmas",
-                     makeDotTitle("'Twas the Nightmare Before Christmas"));
+        assertEquals(
+            "'Twas.the.Nightmare.Before.Christmas",
+            makeDotTitle("'Twas the Nightmare Before Christmas")
+        );
         assertEquals("1%", makeDotTitle("1%"));
         assertEquals("200(1)", makeDotTitle("200 (1)"));
-        assertEquals("Helen.Keller!The.Musical",
-                     makeDotTitle("Helen Keller! The Musical"));
-        assertEquals("And.in.Case.I.Don't.See.Ya",
-                     makeDotTitle("And in Case I Don't See Ya"));
-        assertEquals("Are.You.There.God.It's.Me,Jesus",
-                     makeDotTitle("Are You There God It's Me, Jesus"));
-        assertEquals("The.Return.of.Dorothy's.Ex(a.k.a.Stan's.Return)",
-                     makeDotTitle("The Return of Dorothy's Ex (a.k.a. Stan's Return)"));
-        assertEquals("Girls.Just.Wanna.Have.Fun...Before.They.Die",
-                     makeDotTitle("Girls Just Wanna Have Fun... Before They Die"));
-        assertEquals("Terrance&Phillip.in'Not.Without.My.Anus'",
-                     makeDotTitle("Terrance & Phillip in 'Not Without My Anus'"));
+        assertEquals(
+            "Helen.Keller!The.Musical",
+            makeDotTitle("Helen Keller! The Musical")
+        );
+        assertEquals(
+            "And.in.Case.I.Don't.See.Ya",
+            makeDotTitle("And in Case I Don't See Ya")
+        );
+        assertEquals(
+            "Are.You.There.God.It's.Me,Jesus",
+            makeDotTitle("Are You There God It's Me, Jesus")
+        );
+        assertEquals(
+            "The.Return.of.Dorothy's.Ex(a.k.a.Stan's.Return)",
+            makeDotTitle("The Return of Dorothy's Ex (a.k.a. Stan's Return)")
+        );
+        assertEquals(
+            "Girls.Just.Wanna.Have.Fun...Before.They.Die",
+            makeDotTitle("Girls Just Wanna Have Fun... Before They Die")
+        );
+        assertEquals(
+            "Terrance&Phillip.in'Not.Without.My.Anus'",
+            makeDotTitle("Terrance & Phillip in 'Not Without My Anus'")
+        );
         assertEquals("B&B's.B'n.B", makeDotTitle("B & B's B'n B"));
         assertEquals("AWESOM-O", makeDotTitle("AWESOM-O"));
-        assertEquals("Coon.2-Hindsight(1)", makeDotTitle("Coon 2 - Hindsight (1)"));
+        assertEquals(
+            "Coon.2-Hindsight(1)",
+            makeDotTitle("Coon 2 - Hindsight (1)")
+        );
         assertEquals("Class.Pre-Union", makeDotTitle("Class Pre-Union"));
         assertEquals("D-Yikes!", makeDotTitle("D-Yikes!"));
-        assertEquals("Ebbtide.VI-The.Wrath.of.Stan",
-                     makeDotTitle("Ebbtide VI - The Wrath of Stan"));
-        assertEquals("Goth.Kids.3-Dawn.of.the.Posers",
-                     makeDotTitle("Goth Kids 3 - Dawn of the Posers"));
-        assertEquals("Jerry-Portrait.of.a.Video.Junkie",
-                     makeDotTitle("Jerry - Portrait of a Video Junkie"));
+        assertEquals(
+            "Ebbtide.VI-The.Wrath.of.Stan",
+            makeDotTitle("Ebbtide VI - The Wrath of Stan")
+        );
+        assertEquals(
+            "Goth.Kids.3-Dawn.of.the.Posers",
+            makeDotTitle("Goth Kids 3 - Dawn of the Posers")
+        );
+        assertEquals(
+            "Jerry-Portrait.of.a.Video.Junkie",
+            makeDotTitle("Jerry - Portrait of a Video Junkie")
+        );
         assertEquals("Musso-a.Wedding", makeDotTitle("Musso - a Wedding"));
-        assertEquals("Poetic.License-An.Ode.to.Holden.Caulfield",
-                     makeDotTitle("Poetic License - An Ode to Holden Caulfield"));
-        assertEquals("Sixteen.Candles.and.400-lb.Men",
-                     makeDotTitle("Sixteen Candles and 400-lb. Men"));
-        assertEquals("Slapsgiving.2-Revenge.of.the.Slap",
-                     makeDotTitle("Slapsgiving 2 - Revenge of the Slap"));
-        assertEquals("Valentine's.Day.4-Twisted.Sister",
-                     makeDotTitle("Valentine's Day 4 - Twisted Sister"));
-        assertEquals("Ro\\$e.Love\\$Mile\\$",
-                     makeDotTitle("Ro\\$e Love\\$ Mile\\$"));
-        assertEquals("Believe.it.or.Not,Joe's.Walking.on.Air",
-                     makeDotTitle("Believe it or Not, Joe's Walking on Air"));
+        assertEquals(
+            "Poetic.License-An.Ode.to.Holden.Caulfield",
+            makeDotTitle("Poetic License - An Ode to Holden Caulfield")
+        );
+        assertEquals(
+            "Sixteen.Candles.and.400-lb.Men",
+            makeDotTitle("Sixteen Candles and 400-lb. Men")
+        );
+        assertEquals(
+            "Slapsgiving.2-Revenge.of.the.Slap",
+            makeDotTitle("Slapsgiving 2 - Revenge of the Slap")
+        );
+        assertEquals(
+            "Valentine's.Day.4-Twisted.Sister",
+            makeDotTitle("Valentine's Day 4 - Twisted Sister")
+        );
+        assertEquals(
+            "Ro\\$e.Love\\$Mile\\$",
+            makeDotTitle("Ro\\$e Love\\$ Mile\\$")
+        );
+        assertEquals(
+            "Believe.it.or.Not,Joe's.Walking.on.Air",
+            makeDotTitle("Believe it or Not, Joe's Walking on Air")
+        );
         assertEquals("Eek,A.Penis!", makeDotTitle("Eek, A Penis!"));
-        assertEquals("I.Love.You,Donna.Karan(1)",
-                     makeDotTitle("I Love You, Donna Karan (1)"));
+        assertEquals(
+            "I.Love.You,Donna.Karan(1)",
+            makeDotTitle("I Love You, Donna Karan (1)")
+        );
     }
 
     @Test
     public void testReplacePunctuation() {
-        assertEquals("Marvels Agents of SHIELD",
-                     replacePunctuation("Marvel's.Agents.of.S.H.I.E.L.D."));
-        assertEquals("Marvels Agents of SHIELD",
-                     replacePunctuation("Marvel's Agents of S.H.I.E.L.D."));
-        assertEquals("Marvels Agents of SHIELD",
-                     replacePunctuation("Marvel's Agents of SHIELD"));
-        assertEquals("Star Trek The Next Generation",
-                     replacePunctuation("Star Trek: The Next Generation"));
-        assertEquals("Monty Pythons Flying Circus",
-                     replacePunctuation("Monty Python's Flying Circus"));
-        assertEquals("Married with Children",
-                     replacePunctuation("Married... with Children"));
-        assertEquals("God The Devil and Bob",
-                     replacePunctuation("God, The Devil and Bob"));
-        assertEquals("Whats Happening",
-                     replacePunctuation("What's Happening!!"));
-        assertEquals("Brooklyn Nine Nine",
-                     replacePunctuation("Brooklyn Nine-Nine"));
-        assertEquals("Murder She Wrote", replacePunctuation("Murder, She Wrote"));
-        assertEquals("Murder She Wrote", replacePunctuation("Murder-She-Wrote"));
+        assertEquals(
+            "Marvels Agents of SHIELD",
+            replacePunctuation("Marvel's.Agents.of.S.H.I.E.L.D.")
+        );
+        assertEquals(
+            "Marvels Agents of SHIELD",
+            replacePunctuation("Marvel's Agents of S.H.I.E.L.D.")
+        );
+        assertEquals(
+            "Marvels Agents of SHIELD",
+            replacePunctuation("Marvel's Agents of SHIELD")
+        );
+        assertEquals(
+            "Star Trek The Next Generation",
+            replacePunctuation("Star Trek: The Next Generation")
+        );
+        assertEquals(
+            "Monty Pythons Flying Circus",
+            replacePunctuation("Monty Python's Flying Circus")
+        );
+        assertEquals(
+            "Married with Children",
+            replacePunctuation("Married... with Children")
+        );
+        assertEquals(
+            "God The Devil and Bob",
+            replacePunctuation("God, The Devil and Bob")
+        );
+        assertEquals(
+            "Whats Happening",
+            replacePunctuation("What's Happening!!")
+        );
+        assertEquals(
+            "Brooklyn Nine Nine",
+            replacePunctuation("Brooklyn Nine-Nine")
+        );
+        assertEquals(
+            "Murder She Wrote",
+            replacePunctuation("Murder, She Wrote")
+        );
+        assertEquals(
+            "Murder She Wrote",
+            replacePunctuation("Murder-She-Wrote")
+        );
         assertEquals("Andy Barker PI", replacePunctuation("Andy Barker, P.I."));
-        assertEquals("Laverne & Shirley", replacePunctuation("Laverne & Shirley"));
-        assertEquals("Sit Down Shut Up", replacePunctuation("Sit Down, Shut Up"));
+        assertEquals(
+            "Laverne & Shirley",
+            replacePunctuation("Laverne & Shirley")
+        );
+        assertEquals(
+            "Sit Down Shut Up",
+            replacePunctuation("Sit Down, Shut Up")
+        );
         assertEquals("The Real ONeals", replacePunctuation("The Real O'Neals"));
         assertEquals("The Office (US)", replacePunctuation("The Office (US)"));
         assertEquals("That 70s Show", replacePunctuation("That '70s Show"));
@@ -272,10 +397,14 @@ public class StringUtilsTest {
         assertEquals("Starving", replacePunctuation("Star-ving"));
         assertEquals("big bang theory", replacePunctuation("big-bang-theory"));
         assertEquals("american dad", replacePunctuation("american-dad"));
-        assertEquals("Cosmos A Space Time Odyssey",
-                     replacePunctuation("Cosmos.A.Space.Time.Odyssey."));
-        assertEquals("How I Met Your Mother",
-                     replacePunctuation("How.I.Met.Your.Mother."));
+        assertEquals(
+            "Cosmos A Space Time Odyssey",
+            replacePunctuation("Cosmos.A.Space.Time.Odyssey.")
+        );
+        assertEquals(
+            "How I Met Your Mother",
+            replacePunctuation("How.I.Met.Your.Mother.")
+        );
     }
 
     @Test
@@ -327,7 +456,10 @@ public class StringUtilsTest {
         assertEquals("Dr. Foo's Man-Pig", trimFoundShow("Dr. Foo's Man-Pig"));
         assertEquals("Dr. Foo's Man-Pig", trimFoundShow("Dr. Foo's Man-Pig "));
         assertEquals("Dr. Foo's_Man-Pig", trimFoundShow("Dr. Foo's_Man-Pig_"));
-        assertEquals("Dr. Foo's_Man-Pig", trimFoundShow("  Dr. Foo's_Man-Pig_"));
+        assertEquals(
+            "Dr. Foo's_Man-Pig",
+            trimFoundShow("  Dr. Foo's_Man-Pig_")
+        );
     }
 
     /**
@@ -345,8 +477,10 @@ public class StringUtilsTest {
      *
      */
     private void assertTrimSafe(String input) {
-        assertEquals(makeQueryString(input),
-                     makeQueryString(trimFoundShow(input)));
+        assertEquals(
+            makeQueryString(input),
+            makeQueryString(trimFoundShow(input))
+        );
     }
 
     /**
