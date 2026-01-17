@@ -45,6 +45,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
     private final Map<String, ShowStore.PendingDisambiguation> pending;
 
     private Shell dialogShell;
+    private ThemePalette themePalette;
 
     private Table leftTable;
     private Table rightCandidatesTable;
@@ -88,7 +89,17 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         }
 
         dialogShell = new Shell(parent, getStyle());
-        dialogShell.setText("Resolve ambiguous shows");
+        dialogShell.setText("Select Shows");
+
+        // Match main window icon (best-effort).
+        // We intentionally load a fresh Image here; SWT Shell takes ownership for display purposes.
+        dialogShell.setImage(
+            UIStarter.readImageFromPath(APPLICATION_ICON_PATH)
+        );
+
+        // Apply theme palette so controls/tables inherit dark mode styling.
+        themePalette = ThemeManager.createPalette(dialogShell.getDisplay());
+        ThemeManager.applyPalette(dialogShell, themePalette);
 
         // Treat closing the window via the title-bar X as Cancel.
         dialogShell.addListener(SWT.Close, e -> {
@@ -157,6 +168,11 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
         createButtons(shell);
 
+        // Ensure children created inside panes inherit palette (tables, labels, buttons).
+        ThemeManager.applyPalette(shell, themePalette);
+        ThemeManager.applyPalette(left, themePalette);
+        ThemeManager.applyPalette(right, themePalette);
+
         populateLeftTable();
 
         // Select first unresolved row by default
@@ -170,7 +186,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
     private void createLeftPane(final Composite parent) {
         Label label = new Label(parent, SWT.NONE);
-        label.setText("Ambiguous shows");
+        label.setText("Ambiguous Shows");
 
         leftTable = new Table(
             parent,
@@ -178,6 +194,12 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         );
         leftTable.setHeaderVisible(true);
         leftTable.setLinesVisible(true);
+
+        // Theme table + header for dark mode (match main table behavior).
+        leftTable.setBackground(themePalette.getControlBackground());
+        leftTable.setForeground(themePalette.getControlForeground());
+        leftTable.setHeaderBackground(themePalette.getTableHeaderBackground());
+        leftTable.setHeaderForeground(themePalette.getTableHeaderForeground());
 
         GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
         gd.minimumHeight = 100;
@@ -232,6 +254,16 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         );
         rightCandidatesTable.setHeaderVisible(true);
         rightCandidatesTable.setLinesVisible(true);
+
+        // Theme table + header for dark mode (match main table behavior).
+        rightCandidatesTable.setBackground(themePalette.getControlBackground());
+        rightCandidatesTable.setForeground(themePalette.getControlForeground());
+        rightCandidatesTable.setHeaderBackground(
+            themePalette.getTableHeaderBackground()
+        );
+        rightCandidatesTable.setHeaderForeground(
+            themePalette.getTableHeaderForeground()
+        );
 
         GridData tableData = new GridData(SWT.FILL, SWT.FILL, true, true);
         tableData.minimumHeight = 100;

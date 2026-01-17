@@ -102,6 +102,11 @@ public final class ResultsTable
     private final Table swtTable;
     private final EpisodeDb episodeMap = new EpisodeDb();
 
+    // "Select Shows..." button: disabled until we first detect any ambiguity,
+    // then kept enabled for the remainder of the session for easy access.
+    private Button selectShowsButton;
+    private volatile boolean selectShowsButtonEverEnabled = false;
+
     private Button actionButton;
     private ProgressBar totalProgressBar;
     private TaskItem taskItem = null;
@@ -375,8 +380,9 @@ public final class ResultsTable
         // even if other code later recomputes the proposed destination text.
         item.setData(SELECT_SHOW_PENDING_KEY, Boolean.TRUE);
 
-        // Keep the status icon, but make the required action visible in the Proposed File Path column.
-        STATUS_FIELD.setCellImage(item, DOWNLOADING);
+        // Use a dedicated "action required" icon, but keep the required action visible in the
+        // Proposed File Path column.
+        STATUS_FIELD.setCellImage(item, ItemState.ACTION_REQUIRED.getIcon());
         NEW_FILENAME_FIELD.setCellText(item, STATUS_SELECT_SHOW);
     }
 
@@ -571,6 +577,15 @@ public final class ResultsTable
                 "Batch show disambiguation: no pending ambiguities found (nothing to show)."
             );
             return false;
+        }
+
+        // Enable the "Select Shows..." button once we know ambiguities exist.
+        // Keep it enabled for the session even after resolving, so the user can reopen if needed.
+        if (!selectShowsButtonEverEnabled) {
+            selectShowsButtonEverEnabled = true;
+            if (selectShowsButton != null && !selectShowsButton.isDisposed()) {
+                selectShowsButton.setEnabled(true);
+            }
         }
 
         logger.info(
@@ -1091,6 +1106,12 @@ public final class ResultsTable
         deleteItemCombo(item);
         episodeMap.remove(CURRENT_FILE_FIELD.getCellText(item));
         item.dispose();
+
+        // Guard rail: if the last row was removed via any code path, clear pending
+        // disambiguations so we never show a stale "Select Shows" dialog later.
+        if (swtTable.getItemCount() == 0) {
+            ShowStore.clearPendingDisambiguations();
+        }
     }
 
     private void deleteSelectedTableItems() {
@@ -1104,11 +1125,8 @@ public final class ResultsTable
         }
         swtTable.deselectAll();
 
-        // If the table is now empty, clear any pending show disambiguations so we don't
-        // later show a stale "Resolve ambiguous shows" dialog unrelated to current rows.
-        if (swtTable.getItemCount() == 0) {
-            ShowStore.clearPendingDisambiguations();
-        }
+        // Note: clearing pending disambiguations on last-row removal is handled in deleteTableItem(...)
+        // so it applies consistently across all delete paths.
     }
 
     private void updateUserPreferences(final UserPreference userPref) {
@@ -1370,6 +1388,25 @@ public final class ResultsTable
                         // load all of the files in the dir
                         episodeMap.addFolderToQueue(directory);
                     }
+                }
+            }
+        );
+
+        selectShowsButton = new Button(topButtonsComposite, SWT.PUSH);
+        selectShowsButton.setText("Select Shows...");
+        selectShowsButton.setToolTipText(
+            "Open the show selection dialog for any pending ambiguous show matches."
+        );
+        // Disabled until we first detect any ambiguity; once enabled it stays enabled for the session.
+        selectShowsButton.setEnabled(selectShowsButtonEverEnabled);
+        selectShowsButton.addSelectionListener(
+            new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    // If the user clicks the button, treat it as an explicit request and
+                    // bypass the cancel/close cooldown (which exists to prevent auto-reopen loops).
+                    batchDisambiguationReopenNotBeforeMs = 0L;
+                    showBatchDisambiguationDialogIfNeeded();
                 }
             }
         );
