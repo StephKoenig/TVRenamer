@@ -1017,12 +1017,13 @@ class PreferencesDialog extends Dialog {
         );
 
         // Clicking a row loads it into the edit fields for easy update
+        // Note: column 0 is the status icon column; values are in columns 1 and 2.
         overridesTable.addListener(SWT.Selection, e -> {
             int idx = overridesTable.getSelectionIndex();
             if (idx >= 0) {
                 TableItem ti = overridesTable.getItem(idx);
-                overridesFromText.setText(ti.getText(0));
-                overridesToText.setText(ti.getText(1));
+                overridesFromText.setText(ti.getText(1));
+                overridesToText.setText(ti.getText(2));
             }
         });
 
@@ -1251,8 +1252,9 @@ class PreferencesDialog extends Dialog {
             int idx = disambiguationsTable.getSelectionIndex();
             if (idx >= 0) {
                 TableItem ti = disambiguationsTable.getItem(idx);
-                disambiguationsQueryText.setText(ti.getText(0));
-                disambiguationsIdText.setText(ti.getText(1));
+                // Note: column 0 is the status icon column; values are in columns 1 and 2.
+                disambiguationsQueryText.setText(ti.getText(1));
+                disambiguationsIdText.setText(ti.getText(2));
             }
         });
 
