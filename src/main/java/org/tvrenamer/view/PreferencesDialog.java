@@ -1544,11 +1544,12 @@ class PreferencesDialog extends Dialog {
         prefs.setThemeMode(selectedTheme);
 
         // Show name overrides (exact match, case-insensitive)
+        // Note: column 0 is the status icon column; values are in columns 1 and 2.
         Map<String, String> overrides = new LinkedHashMap<>();
         if (overridesTable != null && !overridesTable.isDisposed()) {
             for (TableItem ti : overridesTable.getItems()) {
-                String from = ti.getText(0).trim();
-                String to = ti.getText(1).trim();
+                String from = ti.getText(1).trim();
+                String to = ti.getText(2).trim();
                 if (!from.isEmpty() && !to.isEmpty()) {
                     overrides.put(from, to);
                 }
@@ -1557,13 +1558,14 @@ class PreferencesDialog extends Dialog {
         prefs.setShowNameOverrides(overrides);
 
         // Show disambiguations (query string -> series id)
+        // Note: column 0 is the status icon column; values are in columns 1 and 2.
         Map<String, String> disambiguations = new LinkedHashMap<>();
         if (
             disambiguationsTable != null && !disambiguationsTable.isDisposed()
         ) {
             for (TableItem ti : disambiguationsTable.getItems()) {
-                String from = ti.getText(0).trim();
-                String to = ti.getText(1).trim();
+                String from = ti.getText(1).trim();
+                String to = ti.getText(2).trim();
                 if (!from.isEmpty() && !to.isEmpty()) {
                     disambiguations.put(from, to);
                 }
