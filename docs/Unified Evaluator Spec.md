@@ -5,6 +5,8 @@ This is a living spec for how TVRenamer turns an extracted show name (from a fil
 
 It documents **current behavior** and the **implemented decision ordering** for the unified evaluator so runtime behavior and Preferences validation remain in sync.
 
+Note: further tie-breaker expansion is intentionally deferred; see `docs/todo.md` for any remaining/next heuristic work items.
+
 Source of truth:
 - `org.tvrenamer.model.ShowSelectionEvaluator` (pure evaluator used by both runtime selection and Matching-tab validation)
 
@@ -261,11 +263,13 @@ These constraints are intentional:
 
 ## Known gaps / planned improvements
 
-This section lists improvements that can be layered in without destabilizing the pipeline:
+This section lists improvements that can be layered in without destabilizing the pipeline.
 
-1. **Additional tie-breakers when multiple candidates match equally**
-   - Potentially use year, language/region markers, aliases, etc.
-   - Must remain deterministic and preferably explainable.
+Status: further tie-breaker work is deferred; track any additional heuristics and test coverage work in `docs/todo.md` before implementing changes here.
+
+1. **Additional tie-breakers when multiple candidates match equally (DEFERRED)**
+   - Any new tie-breakers must be deterministic and explainable.
+   - Record proposed heuristics (with examples) in `docs/todo.md` before implementation, to avoid unexpected auto-selections.
 
 2. **Fuzzy matching (deferred / optional)**
    - If introduced, gate it carefully to avoid surprising auto-selections.
