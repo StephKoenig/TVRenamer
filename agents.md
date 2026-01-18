@@ -245,6 +245,23 @@ When creating/editing a GitHub Release, write release notes in **Markdown** and 
 
 This makes releases easy to scan and consistent across versions.
 
+#### Keep a committed release-notes record (recommended)
+To prevent “empty release body” mistakes and to keep a durable record in the repo, write the release notes into a versioned Markdown file under `docs/`, then publish that file as the GitHub Release body.
+
+Suggested filename:
+- `docs/release-notes-v1.0.<commitCount>.md`
+
+Workflow:
+1. Create/update the notes file and commit it (so it is part of the release changeset).
+2. Publish it to the GitHub Release body:
+```/dev/null/release-notes.txt#L1-1
+gh release edit v1.0.<commitCount> --notes-file docs/release-notes-v1.0.<commitCount>.md
+```
+
+Notes:
+- This repo prefers keeping these `docs/release-notes-*.md` files as a record.
+- If you create the release first with an empty body, you can still fix it later using the same `gh release edit ... --notes-file ...` command.
+
 This project intentionally does **not** auto-release on every successful build. Releases are created manually when you decide the current state is ready.
 
 ### Versioning
