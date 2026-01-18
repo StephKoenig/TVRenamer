@@ -936,6 +936,7 @@ class PreferencesDialog extends Dialog {
                     int idx = overridesTable.getSelectionIndex();
                     if (idx >= 0) {
                         overridesTable.remove(idx);
+                        updateSaveEnabledFromMatchingValidation();
                     }
                 }
             }
@@ -1009,6 +1010,10 @@ class PreferencesDialog extends Dialog {
         for (TableColumn c : overridesTable.getColumns()) {
             c.pack();
         }
+
+        // Ensure the Save button enabled state is correct after initial table population.
+        // (Matching validation can disable Save; we must recompute once the tables exist.)
+        updateSaveEnabledFromMatchingValidation();
 
         // Validation message display for Overrides table (shown near this table).
         overridesHoverTipLabel = new Label(overridesGroup, SWT.WRAP);
@@ -1166,6 +1171,7 @@ class PreferencesDialog extends Dialog {
                     int idx = disambiguationsTable.getSelectionIndex();
                     if (idx >= 0) {
                         disambiguationsTable.remove(idx);
+                        updateSaveEnabledFromMatchingValidation();
                     }
                 }
             }
@@ -1230,6 +1236,7 @@ class PreferencesDialog extends Dialog {
         TableColumn dColId = new TableColumn(disambiguationsTable, SWT.LEFT);
         dColId.setText("Series ID");
 
+        // Populate table from prefs (not dirty; treat as OK by default).
         for (Map.Entry<String, String> e : prefs
             .getShowDisambiguationOverrides()
             .entrySet()) {
@@ -1241,6 +1248,9 @@ class PreferencesDialog extends Dialog {
         for (TableColumn c : disambiguationsTable.getColumns()) {
             c.pack();
         }
+
+        // Ensure the Save button enabled state is correct after initial table population.
+        updateSaveEnabledFromMatchingValidation();
 
         // Validation message display for Disambiguations table (shown near this table).
         disambiguationsHoverTipLabel = new Label(overridesGroup, SWT.WRAP);
@@ -1566,14 +1576,36 @@ class PreferencesDialog extends Dialog {
     }
 
     private boolean matchingIsSaveable() {
-        return !hasInvalidDirtyMatchingRows();
+        // Save gating (Matching tab):
+        // - Block save if any dirty row is invalid/incomplete/validating
+        // - Otherwise allow save (even if there are zero dirty rows), so a user can still
+        //   save other preference changes without being blocked by Matching validation.
+        //
+        // Note: The Save button's enabled state must be recomputed after each validation
+        // transition and after add/remove operations.
+        boolean ok = !hasInvalidDirtyMatchingRows();
+        if (logger != null) {
+            logger.info("Matching: matchingIsSaveable=" + ok);
+        }
+        return ok;
     }
 
     private void updateSaveEnabledFromMatchingValidation() {
         if (saveButton == null || saveButton.isDisposed()) {
             return;
         }
-        saveButton.setEnabled(matchingIsSaveable());
+
+        boolean enable = matchingIsSaveable();
+        if (logger != null) {
+            logger.info(
+                "Matching: updateSaveEnabledFromMatchingValidation enable=" +
+                    enable +
+                    " (saveButton currently enabled=" +
+                    saveButton.getEnabled() +
+                    ")"
+            );
+        }
+        saveButton.setEnabled(enable);
     }
 
     private boolean hasInvalidDirtyMatchingRows() {
@@ -1593,20 +1625,57 @@ class PreferencesDialog extends Dialog {
                 continue;
             }
             String status = safeCell(ti, 0).trim();
+            org.eclipse.swt.graphics.Image img = ti.getImage(0);
 
             // Dirty rows must be validated; block save for blank/incomplete or if still validating/error.
-            if (status.isEmpty()) {
-                return true;
-            }
+            //
+            // Column 0 text is intentionally kept blank for OK/ERROR states (we show an icon instead).
+            // Therefore, empty status text is only a blocker if the row is not explicitly OK yet.
             if (MATCHING_STATUS_INCOMPLETE.equals(status)) {
+                if (logger != null) {
+                    logger.info(
+                        "Matching: blocking save (dirty row incomplete) table=" +
+                            table
+                    );
+                }
                 return true;
             }
 
-            org.eclipse.swt.graphics.Image img = ti.getImage(0);
             if (img == MATCHING_ICON_VALIDATING) {
+                if (logger != null) {
+                    logger.info(
+                        "Matching: blocking save (dirty row still validating) table=" +
+                            table
+                    );
+                }
                 return true;
             }
             if (img == MATCHING_ICON_ERROR) {
+                String msg = "";
+                Object msgObj = ti.getData(
+                    "tvrenamer.matching.validationMessage"
+                );
+                if (msgObj != null) {
+                    msg = msgObj.toString();
+                }
+                if (logger != null) {
+                    logger.info(
+                        "Matching: blocking save (dirty row error) table=" +
+                            table +
+                            " message=" +
+                            msg
+                    );
+                }
+                return true;
+            }
+
+            if (status.isEmpty() && img != MATCHING_ICON_OK) {
+                if (logger != null) {
+                    logger.info(
+                        "Matching: blocking save (dirty row has empty status and is not OK) table=" +
+                            table
+                    );
+                }
                 return true;
             }
         }
