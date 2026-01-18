@@ -1910,6 +1910,11 @@ class PreferencesDialog extends Dialog {
         createContents();
 
         preferencesShell.pack();
+
+        // Position relative to the parent (main window) so it doesn't appear in an OS-random place.
+        // This is best-effort and intentionally does not attempt to reposition OS-native dialogs.
+        DialogPositioning.positionDialog(preferencesShell, parent);
+
         preferencesShell.open();
         Display display = parent.getDisplay();
         while (!preferencesShell.isDisposed()) {
