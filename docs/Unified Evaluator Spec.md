@@ -1,9 +1,12 @@
-```tvrenamer/docs/Selection Logic Spec.md#L1-260
-# Selection Logic Spec
+```tvrenamer/docs/Unified Evaluator Spec.md#L1-260
+# Unified Evaluator Spec
 
 This is a living spec for how TVRenamer turns an extracted show name (from a filename) into a resolved show, and under what conditions the UI must prompt the user via **Select Shows**.
 
 It documents **current behavior** and the **intended direction** for incremental improvements. Keep it updated as selection heuristics evolve.
+
+Source of truth:
+- `org.tvrenamer.model.ShowSelectionEvaluator` (pure evaluator used by both runtime selection and Matching-tab validation)
 
 ---
 
@@ -143,9 +146,11 @@ Note: the prompting behavior for true ambiguity is governed by 5.3; we avoid “
 
 ---
 
-## Planned refactor: unified selection evaluator (source of truth)
+## Unified selection evaluator (implemented; source of truth)
 
-To avoid duplicated logic and “drift” between runtime behavior and Preferences validation, selection rules should live in a single, pure evaluator function.
+To avoid duplicated logic and “drift” between runtime behavior and Preferences validation, selection rules live in a single, pure evaluator function:
+
+- `org.tvrenamer.model.ShowSelectionEvaluator.evaluate(extractedName, options, pinnedId)`
 
 ### Goals
 
@@ -279,5 +284,6 @@ Expected:
 
 - Initial spec: documents pipeline and current selection decision tree.
 - Added: unified selection evaluator plan (shared by runtime + Matching validation) and override validation semantics.
+- Implemented: unified selection evaluator (`org.tvrenamer.model.ShowSelectionEvaluator`) is now the source of truth for runtime selection and Matching-tab override validation.
 
 ```
