@@ -1585,11 +1585,7 @@ class PreferencesDialog extends Dialog {
         //
         // Note: The Save button's enabled state must be recomputed after each validation
         // transition and after add/remove operations.
-        boolean ok = !hasInvalidDirtyMatchingRows();
-        if (logger != null) {
-            logger.info("Matching: matchingIsSaveable=" + ok);
-        }
-        return ok;
+        return !hasInvalidDirtyMatchingRows();
     }
 
     private void updateSaveEnabledFromMatchingValidation() {
@@ -1597,17 +1593,7 @@ class PreferencesDialog extends Dialog {
             return;
         }
 
-        boolean enable = matchingIsSaveable();
-        if (logger != null) {
-            logger.info(
-                "Matching: updateSaveEnabledFromMatchingValidation enable=" +
-                    enable +
-                    " (saveButton currently enabled=" +
-                    saveButton.getEnabled() +
-                    ")"
-            );
-        }
-        saveButton.setEnabled(enable);
+        saveButton.setEnabled(matchingIsSaveable());
     }
 
     private boolean hasInvalidDirtyMatchingRows() {
@@ -1634,50 +1620,17 @@ class PreferencesDialog extends Dialog {
             // Column 0 text is intentionally kept blank for OK/ERROR states (we show an icon instead).
             // Therefore, empty status text is only a blocker if the row is not explicitly OK yet.
             if (MATCHING_STATUS_INCOMPLETE.equals(status)) {
-                if (logger != null) {
-                    logger.info(
-                        "Matching: blocking save (dirty row incomplete) table=" +
-                            table
-                    );
-                }
                 return true;
             }
 
             if (img == MATCHING_ICON_VALIDATING) {
-                if (logger != null) {
-                    logger.info(
-                        "Matching: blocking save (dirty row still validating) table=" +
-                            table
-                    );
-                }
                 return true;
             }
             if (img == MATCHING_ICON_ERROR) {
-                String msg = "";
-                Object msgObj = ti.getData(
-                    "tvrenamer.matching.validationMessage"
-                );
-                if (msgObj != null) {
-                    msg = msgObj.toString();
-                }
-                if (logger != null) {
-                    logger.info(
-                        "Matching: blocking save (dirty row error) table=" +
-                            table +
-                            " message=" +
-                            msg
-                    );
-                }
                 return true;
             }
 
             if (status.isEmpty() && img != MATCHING_ICON_OK) {
-                if (logger != null) {
-                    logger.info(
-                        "Matching: blocking save (dirty row has empty status and is not OK) table=" +
-                            table
-                    );
-                }
                 return true;
             }
         }
