@@ -330,3 +330,11 @@ CI failures:
 
 Runtime issues:
 - enable file logging with `-Dtvrenamer.debug=true` and attach `tvrenamer.log` snippets to the investigation
+
+### Debugging workflow hygiene (temporary changes)
+When investigating a bug, it’s common to add temporary diagnostics (extra logging, environment dumps, assertions, etc.).
+
+Guideline:
+- Do **not** commit/push debug-only changes while the investigation is in progress unless the user explicitly requests it.
+- Keep temporary debug instrumentation local until you’ve identified the root cause and are ready to ship a real fix.
+- If a temporary diagnostic ends up being genuinely useful long-term, keep it — but make it intentional (clean message, appropriate log level, and documented where needed).
