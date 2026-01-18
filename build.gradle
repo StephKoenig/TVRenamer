@@ -222,9 +222,11 @@ tasks.named('processTestResources') {
 
 // Shadow plugin configuration for integrated JAR with all dependencies
 shadowJar {
-    // Keep the default classifier (typically "-all") stable so consumers
-    // and CI artifact paths don’t accidentally break.
-    archiveClassifier.set('all')
+    // Produce a stable artifact name for easier manual testing/scripts.
+    // We keep the integrated "fat jar" behavior, but avoid version/classifier in the filename.
+    archiveFileName.set("tvrenamer.jar")
+
+    // Keep merge behavior for service files.
     mergeServiceFiles()
 
     dependsOn(tasks.named('generateBuildMetadataFiles'))

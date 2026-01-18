@@ -254,6 +254,7 @@ class Launcher {
 
             logger.info("Creating UIStarter...");
             UIStarter ui = new UIStarter();
+
             logger.info("Running UI...");
             int status = ui.run();
 

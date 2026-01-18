@@ -291,15 +291,17 @@ public final class UIStarter {
 
         try {
             logger.fine("Creating SWT Display instance...");
+
+            // SWT can fail very early with an Error (not Exception) if the native layer cannot be loaded.
+            // We want to capture *all* of those failures in tvrenamer.log, not just stdout/stderr.
             display = new Display();
 
             themePalette = ThemeManager.createPalette(display);
 
             logger.fine("Display created successfully: " + display);
-        } catch (UnsatisfiedLinkError ule) {
+        } catch (Throwable t) {
             // High-signal diagnostics for SWT native load failures.
-            // This is intentionally logged at SEVERE so it appears under the default INFO root level
-            // when a crash occurs, and so it is captured in tvrenamer.log when debug logging is enabled.
+            // Log at SEVERE so it is captured under the default INFO root level when a crash occurs.
             StringBuilder diag = new StringBuilder(1024);
             diag.append("Failed to create SWT Display.\n");
 
@@ -333,16 +335,16 @@ public final class UIStarter {
                 .append(System.getProperty("sun.arch.data.model"))
                 .append('\n');
 
-            // SWT info (best-effort; accessing SWT constants should not throw, but keep it defensive)
+            // SWT info (best-effort)
             try {
                 diag
                     .append("SWT.getPlatform()=")
                     .append(org.eclipse.swt.SWT.getPlatform())
                     .append('\n');
-            } catch (Throwable t) {
+            } catch (Throwable swtInfoErr) {
                 diag
                     .append("SWT.getPlatform()=<error: ")
-                    .append(t)
+                    .append(swtInfoErr)
                     .append(">\n");
             }
             try {
@@ -350,10 +352,10 @@ public final class UIStarter {
                     .append("SWT.getVersion()=")
                     .append(org.eclipse.swt.SWT.getVersion())
                     .append('\n');
-            } catch (Throwable t) {
+            } catch (Throwable swtInfoErr) {
                 diag
                     .append("SWT.getVersion()=<error: ")
-                    .append(t)
+                    .append(swtInfoErr)
                     .append(">\n");
             }
 
@@ -368,8 +370,16 @@ public final class UIStarter {
                 .append('\n');
             diag.append("PATH=").append(System.getenv("PATH")).append('\n');
 
-            logger.log(Level.SEVERE, diag.toString(), ule);
-            throw ule;
+            logger.log(Level.SEVERE, diag.toString(), t);
+
+            // Re-throw preserving the original type.
+            if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            }
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new RuntimeException(t);
         }
 
         logger.fine("Creating SWT Shell...");
