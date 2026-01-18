@@ -67,6 +67,11 @@ This section summarizes TODOs that have been addressed, including what changed a
 
 These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
 
+7. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
+   - **Why:** We removed legacy `etc/` scripts/configs; periodically scanning helps prevent reintroducing obsolete build/run paths and keeps docs accurate.
+   - **Where:** Repo-wide (docs + scripts + configs). Look for: `ant`, `ivy`, `out/`, `lib/`, old run scripts, and other pre-Gradle conventions.
+   - **Effort:** Small (grep + delete/update references)
+
 1. **Improve show selection heuristics when ambiguous**
    - **Why:** Avoid “choose first match” surprises; reduce incorrect auto-matches.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` (shared by runtime selection + Matching-tab validation)
