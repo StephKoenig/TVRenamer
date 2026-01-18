@@ -4,7 +4,7 @@ This file is agent-facing documentation for working on **TVRenamer**. It focuses
 - project orientation (what it is and how it’s built)
 - local development on Windows (build/run/debug logging)
 - how CI builds Windows artifacts
-- how we collaborate (TODO workflow, commits, PRs, releases)
+- how we collaborate (TODO workflow, completed-work record, commits, PRs, releases)
 
 This doc is intentionally pragmatic: it should be enough for an agent joining cold to build, test, diagnose, and ship changes without guesswork.
 
@@ -120,24 +120,31 @@ Preferred loop:
 
 ---
 
-## TODO workflow (docs-driven)
+## TODO + Completed workflow (docs-driven)
 
-This repo tracks forward-looking work in `docs/todo.md` rather than leaving long-lived TODOs scattered throughout the codebase.
+This repo keeps:
+- **future work** in `docs/todo.md`, and
+- a durable **completed-work record** in `docs/Completed.md`.
+
+This avoids `docs/todo.md` turning into a changelog while still preserving engineering context (what shipped, why it mattered, and where it lives).
 
 When implementing an item from `docs/todo.md`:
 1. **Do the implementation first**, including tests and any required UI/prefs wiring.
-2. **Update `docs/todo.md`**:
+2. **Update `docs/todo.md` (future only)**:
    - Move completed items out of “Top candidates”.
    - Add/adjust any new top candidates discovered during the work.
-   - Add an entry under **“TODOs Done”** (Title, Why, Where, What we did).
-   - If the work changes assumptions (e.g., threading, UI thread ownership, encoding responsibilities), add a short note in the relevant section.
-3. **Clean up in-code TODO comments**:
+   - Keep the file focused on *forward-looking* items.
+3. **Add a record to `docs/Completed.md`**:
+   - Title, Why, Where (key files/classes), What we did.
+   - Capture important assumptions/gotchas (threading, UI thread ownership, persistence keys, encoding responsibilities, etc.).
+   - Optionally link to a spec (`docs/*.md`) and/or the versioned release notes file.
+4. **Clean up in-code TODO comments**:
    - Remove TODOs that are now addressed.
    - Replace them with a short “Note: addressed; see docs/todo.md …” where future context is still valuable.
-4. **Prefer small commits**:
+5. **Prefer small commits**:
    - Ideally: one commit per focused TODO item, plus a follow-up commit for documentation/comment cleanup if needed.
 
-Goal: keep code clean and keep `docs/todo.md` as the single source of truth for future work.
+Goal: keep code clean, keep `docs/todo.md` as the single source of truth for future work, and keep `docs/Completed.md` as the durable record of finished work.
 
 ---
 
