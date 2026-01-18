@@ -297,12 +297,78 @@ public final class UIStarter {
 
             logger.fine("Display created successfully: " + display);
         } catch (UnsatisfiedLinkError ule) {
-            logger.log(
-                Level.SEVERE,
-                "Failed to create SWT Display. java.library.path=" +
-                    System.getProperty("java.library.path"),
-                ule
-            );
+            // High-signal diagnostics for SWT native load failures.
+            // This is intentionally logged at SEVERE so it appears under the default INFO root level
+            // when a crash occurs, and so it is captured in tvrenamer.log when debug logging is enabled.
+            StringBuilder diag = new StringBuilder(1024);
+            diag.append("Failed to create SWT Display.\n");
+
+            // JVM / OS basics
+            diag
+                .append("java.version=")
+                .append(System.getProperty("java.version"))
+                .append('\n');
+            diag
+                .append("java.vendor=")
+                .append(System.getProperty("java.vendor"))
+                .append('\n');
+            diag
+                .append("java.home=")
+                .append(System.getProperty("java.home"))
+                .append('\n');
+            diag
+                .append("os.name=")
+                .append(System.getProperty("os.name"))
+                .append('\n');
+            diag
+                .append("os.version=")
+                .append(System.getProperty("os.version"))
+                .append('\n');
+            diag
+                .append("os.arch=")
+                .append(System.getProperty("os.arch"))
+                .append('\n');
+            diag
+                .append("sun.arch.data.model=")
+                .append(System.getProperty("sun.arch.data.model"))
+                .append('\n');
+
+            // SWT info (best-effort; accessing SWT constants should not throw, but keep it defensive)
+            try {
+                diag
+                    .append("SWT.getPlatform()=")
+                    .append(org.eclipse.swt.SWT.getPlatform())
+                    .append('\n');
+            } catch (Throwable t) {
+                diag
+                    .append("SWT.getPlatform()=<error: ")
+                    .append(t)
+                    .append(">\n");
+            }
+            try {
+                diag
+                    .append("SWT.getVersion()=")
+                    .append(org.eclipse.swt.SWT.getVersion())
+                    .append('\n');
+            } catch (Throwable t) {
+                diag
+                    .append("SWT.getVersion()=<error: ")
+                    .append(t)
+                    .append(">\n");
+            }
+
+            // Native library paths
+            diag
+                .append("java.library.path=")
+                .append(System.getProperty("java.library.path"))
+                .append('\n');
+            diag
+                .append("user.dir=")
+                .append(System.getProperty("user.dir"))
+                .append('\n');
+            diag.append("PATH=").append(System.getenv("PATH")).append('\n');
+
+            logger.log(Level.SEVERE, diag.toString(), ule);
             throw ule;
         }
 
