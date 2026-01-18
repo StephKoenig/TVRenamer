@@ -10,9 +10,6 @@ package org.tvrenamer.model;
 import static org.tvrenamer.model.ReplacementToken.*;
 import static org.tvrenamer.model.util.Constants.*;
 
-import org.tvrenamer.controller.FilenameParser;
-import org.tvrenamer.controller.util.StringUtils;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,9 +21,14 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
+import org.tvrenamer.controller.FilenameParser;
+import org.tvrenamer.controller.util.StringUtils;
 
 public class FileEpisode {
-    private static final Logger logger = Logger.getLogger(FileEpisode.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        FileEpisode.class.getName()
+    );
 
     /**
      * A status for how much we know about the filename.
@@ -45,7 +47,7 @@ public class FileEpisode {
     private enum ParseStatus {
         PARSED,
         BAD_PARSE,
-        UNPARSED
+        UNPARSED,
     }
 
     /**
@@ -83,7 +85,7 @@ public class FileEpisode {
         NO_LISTINGS,
         GOT_SHOW,
         UNFOUND,
-        NOT_STARTED
+        NOT_STARTED,
     }
 
     private static final long NO_FILE_SIZE = -1L;
@@ -96,7 +98,8 @@ public class FileEpisode {
     // This class actually figures out the proposed new name for the file, so we
     // need
     // a link to the user preferences to know how the user wants the file renamed.
-    private static final UserPreferences userPrefs = UserPreferences.getInstance();
+    private static final UserPreferences userPrefs =
+        UserPreferences.getInstance();
 
     // This is the one final field in this class; it's the one thing that should
     // never
@@ -106,13 +109,15 @@ public class FileEpisode {
     // dot.
     private final String filenameSuffix;
 
-    // These four fields reflect the information derived from the filename. In
-    // particular,
-    // filenameShow is based on the part of the filename we "guessed" represented
-    // the name
-    // of the show, and which we use to query the provider. Note that the actual
-    // show name
-    // that we get back from the provider will likely differ from what we have here.
+    // These fields reflect the information derived from the filename. Historically,
+    // filenameShow was both:
+    //   (1) the extracted show name (user-facing, "what we parsed"), and
+    //   (2) the effective lookup name ("what we query the provider with").
+    //
+    // With show name overrides, we want to preserve both concepts:
+    // - extractedFilenameShow: the exact (trimmed) substring parsed from the filename (user-facing)
+    // - filenameShow: the effective show name used for provider lookup (after applying overrides)
+    private String extractedFilenameShow = "";
     private String filenameShow = "";
     private String filenameResolution = "";
 
@@ -215,7 +220,10 @@ public class FileEpisode {
         }
         fileNameString = justNamePath.toString();
         filenameSuffix = StringUtils.getExtension(fileNameString);
-        originalBasename = StringUtils.removeLast(fileNameString, filenameSuffix);
+        originalBasename = StringUtils.removeLast(
+            fileNameString,
+            filenameSuffix
+        );
         checkFile(true);
         FilenameParser.parseFilename(this);
     }
@@ -243,16 +251,44 @@ public class FileEpisode {
         }
         fileNameString = justNamePath.toString();
         filenameSuffix = StringUtils.getExtension(fileNameString);
-        originalBasename = StringUtils.removeLast(fileNameString, filenameSuffix);
+        originalBasename = StringUtils.removeLast(
+            fileNameString,
+            filenameSuffix
+        );
         checkFile(false);
     }
 
+    /**
+     * @return the effective show name used for provider lookup (after applying overrides)
+     */
     public String getFilenameShow() {
         return filenameShow;
     }
 
+    /**
+     * @param filenameShow the effective show name used for provider lookup (after applying overrides)
+     */
     public void setFilenameShow(String filenameShow) {
         this.filenameShow = filenameShow;
+    }
+
+    /**
+     * @return the extracted show name as parsed from the filename (user-facing)
+     */
+    public String getExtractedFilenameShow() {
+        // Fallback for older flows that may not set the extracted name explicitly.
+        return (
+                extractedFilenameShow == null || extractedFilenameShow.isEmpty()
+            )
+            ? filenameShow
+            : extractedFilenameShow;
+    }
+
+    /**
+     * @param extractedFilenameShow the extracted show name as parsed from the filename (user-facing)
+     */
+    public void setExtractedFilenameShow(String extractedFilenameShow) {
+        this.extractedFilenameShow = extractedFilenameShow;
     }
 
     public EpisodePlacement getEpisodePlacement() {
@@ -280,7 +316,10 @@ public class FileEpisode {
      *                        episode's ordering within
      *                        the season
      */
-    public void setEpisodePlacement(String filenameSeason, String filenameEpisode) {
+    public void setEpisodePlacement(
+        String filenameSeason,
+        String filenameEpisode
+    ) {
         int seasonNum = Show.NO_SEASON;
         int episodeNum = Show.NO_EPISODE;
         try {
@@ -369,13 +408,19 @@ public class FileEpisode {
             try {
                 fileSize = Files.size(pathObj);
             } catch (IOException ioe) {
-                logger.log(Level.WARNING, "couldn't get size of " + pathObj, ioe);
+                logger.log(
+                    Level.WARNING,
+                    "couldn't get size of " + pathObj,
+                    ioe
+                );
                 setNoFile();
                 fileSize = NO_FILE_SIZE;
             }
         } else {
             if (mustExist) {
-                logger.warning("creating FileEpisode for nonexistent path, " + pathObj);
+                logger.warning(
+                    "creating FileEpisode for nonexistent path, " + pathObj
+                );
             }
             setNoFile();
             fileSize = NO_FILE_SIZE;
@@ -427,9 +472,14 @@ public class FileEpisode {
         fileNameString = justNamePath.toString();
         String newSuffix = StringUtils.getExtension(fileNameString);
         if (!filenameSuffix.equals(newSuffix)) {
-            throw new IllegalStateException("suffix of a FileEpisode may not change!");
+            throw new IllegalStateException(
+                "suffix of a FileEpisode may not change!"
+            );
         }
-        originalBasename = StringUtils.removeLast(fileNameString, filenameSuffix);
+        originalBasename = StringUtils.removeLast(
+            fileNameString,
+            filenameSuffix
+        );
         baseForRename = getRenamedBasename(chosenEpisode);
         checkFile(true);
     }
@@ -479,7 +529,9 @@ public class FileEpisode {
         if (replacementOptions == null) {
             // This should never happen; if we have GOT_LISTINGS,
             // replacementOptions should be initialized
-            logger.warning("error: replacementOptions is null despite GOT_LISTINGS");
+            logger.warning(
+                "error: replacementOptions is null despite GOT_LISTINGS"
+            );
             return 0;
         }
         return replacementOptions.size();
@@ -548,8 +600,7 @@ public class FileEpisode {
      * name/location where the user's template requests we move the source file.
      *
      */
-    public void setConflict() {
-    }
+    public void setConflict() {}
 
     /**
      * Updates the status to know that we have successfully "moved" the file to
@@ -614,28 +665,45 @@ public class FileEpisode {
     }
 
     private String getNoMatchPlaceholder() {
-        return EPISODE_NOT_FOUND + " <" + actualShow.getName() + " / "
-                + actualShow.getIdString() + ">: " + " season " + placement.season
-                + ", episode " + placement.episode + " not found";
+        return (
+            EPISODE_NOT_FOUND +
+            " <" +
+            actualShow.getName() +
+            " / " +
+            actualShow.getIdString() +
+            ">: " +
+            " season " +
+            placement.season +
+            ", episode " +
+            placement.episode +
+            " not found"
+        );
     }
 
     private String getNoListingsPlaceholder() {
-        return " <" + actualShow.getName() + " / "
-                + actualShow.getIdString() + ">: " + DOWNLOADING_FAILED;
+        return (
+            " <" +
+            actualShow.getName() +
+            " / " +
+            actualShow.getIdString() +
+            ">: " +
+            DOWNLOADING_FAILED
+        );
     }
 
     private String getNoShowPlaceholder() {
         ShowName showName = ShowName.lookupShowName(filenameShow);
-        return BROKEN_PLACEHOLDER_FILENAME + " for \""
-                + showName.getQueryString()
-                + "\"";
+        return (
+            BROKEN_PLACEHOLDER_FILENAME +
+            " for \"" +
+            showName.getQueryString() +
+            "\""
+        );
     }
 
     private String getTimeoutPlaceholder() {
         ShowName showName = ShowName.lookupShowName(filenameShow);
-        return TIMEOUT_DOWNLOADING + " \""
-                + showName.getQueryString()
-                + "\"";
+        return TIMEOUT_DOWNLOADING + " \"" + showName.getQueryString() + "\"";
     }
 
     /**
@@ -706,9 +774,15 @@ public class FileEpisode {
             actualEpisodes = null;
         }
         if (actualEpisodes == null) {
-            logger.info("Season #" + placement.season + ", Episode #"
-                    + placement.episode + " not found for show '"
-                    + filenameShow + "'");
+            logger.info(
+                "Season #" +
+                    placement.season +
+                    ", Episode #" +
+                    placement.episode +
+                    " not found for show '" +
+                    filenameShow +
+                    "'"
+            );
             seriesStatus = SeriesStatus.NO_MATCH;
             replacementText = getNoMatchPlaceholder();
             return 0;
@@ -737,10 +811,16 @@ public class FileEpisode {
         seriesStatus = SeriesStatus.NO_LISTINGS;
         replacementText = getNoListingsPlaceholder();
         if (err != null) {
-            logger.log(Level.WARNING, "failed to get listings for " + this, err);
+            logger.log(
+                Level.WARNING,
+                "failed to get listings for " + this,
+                err
+            );
         }
         if (actualShow == null) {
-            logger.warning("error: should not have tried to get listings, do not have show!");
+            logger.warning(
+                "error: should not have tried to get listings, do not have show!"
+            );
         }
     }
 
@@ -758,7 +838,9 @@ public class FileEpisode {
             return pathObj.toAbsolutePath().getParent();
         } else {
             if (actualShow == null) {
-                logger.warning("error: should not get move-to directory, do not have show!");
+                logger.warning(
+                    "error: should not get move-to directory, do not have show!"
+                );
             } else {
                 destPath = destPath.resolve(actualShow.getDirName());
 
@@ -769,13 +851,18 @@ public class FileEpisode {
                     // Defect #50: Only add the 'season #' folder if set,
                     // otherwise put files in showname root
                     if (StringUtils.isNotBlank(seasonPrefix)) {
-                        String seasonString = userPrefs.isSeasonPrefixLeadingZero()
+                        String seasonString =
+                            userPrefs.isSeasonPrefixLeadingZero()
                                 ? StringUtils.zeroPadTwoDigits(placement.season)
                                 : String.valueOf(placement.season);
-                        destPath = destPath.resolve(seasonPrefix + seasonString);
+                        destPath = destPath.resolve(
+                            seasonPrefix + seasonString
+                        );
                     }
                 } else {
-                    logger.fine("maybe should not get move-to directory, do not have season");
+                    logger.fine(
+                        "maybe should not get move-to directory, do not have season"
+                    );
                 }
             }
             return destPath;
@@ -803,7 +890,10 @@ public class FileEpisode {
         return dest.toString();
     }
 
-    private static String formatDate(final LocalDate date, final String format) {
+    private static String formatDate(
+        final LocalDate date,
+        final String format
+    ) {
         DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern(format);
         return dateFormat.format(date);
     }
@@ -837,9 +927,13 @@ public class FileEpisode {
      *         control strings
      */
     @SuppressWarnings("WeakerAccess")
-    static String plugInInformation(final String replacementTemplate,
-            final Show actualShow, final Episode actualEpisode,
-            final EpisodePlacement placement, final String resolution) {
+    static String plugInInformation(
+        final String replacementTemplate,
+        final Show actualShow,
+        final Episode actualEpisode,
+        final EpisodePlacement placement,
+        final String resolution
+    ) {
         final String showName = actualShow.getName();
         String episodeTitle = actualEpisode.getTitle();
         int len = episodeTitle.length();
@@ -848,28 +942,46 @@ public class FileEpisode {
             episodeTitle = episodeTitle.substring(0, MAX_TITLE_LENGTH);
         }
         String newFilename = replacementTemplate
-                .replaceAll(SEASON_NUM.getToken(),
-                        String.valueOf(placement.season))
-                .replaceAll(SEASON_NUM_LEADING_ZERO.getToken(),
-                        StringUtils.zeroPadTwoDigits(placement.season))
-                .replaceAll(EPISODE_NUM.getToken(),
-                        StringUtils.formatDigits(placement.episode))
-                .replaceAll(EPISODE_NUM_LEADING_ZERO.getToken(),
-                        StringUtils.zeroPadThreeDigits(placement.episode))
-                .replaceAll(SHOW_NAME.getToken(),
-                        Matcher.quoteReplacement(showName))
-                .replaceAll(EPISODE_TITLE.getToken(),
-                        Matcher.quoteReplacement(episodeTitle))
-                .replaceAll(EPISODE_TITLE_NO_SPACES.getToken(),
-                        Matcher.quoteReplacement(StringUtils.makeDotTitle(episodeTitle)))
-                .replaceAll(EPISODE_RESOLUTION.getToken(),
-                        resolution);
+            .replaceAll(SEASON_NUM.getToken(), String.valueOf(placement.season))
+            .replaceAll(
+                SEASON_NUM_LEADING_ZERO.getToken(),
+                StringUtils.zeroPadTwoDigits(placement.season)
+            )
+            .replaceAll(
+                EPISODE_NUM.getToken(),
+                StringUtils.formatDigits(placement.episode)
+            )
+            .replaceAll(
+                EPISODE_NUM_LEADING_ZERO.getToken(),
+                StringUtils.zeroPadThreeDigits(placement.episode)
+            )
+            .replaceAll(
+                SHOW_NAME.getToken(),
+                Matcher.quoteReplacement(showName)
+            )
+            .replaceAll(
+                EPISODE_TITLE.getToken(),
+                Matcher.quoteReplacement(episodeTitle)
+            )
+            .replaceAll(
+                EPISODE_TITLE_NO_SPACES.getToken(),
+                Matcher.quoteReplacement(StringUtils.makeDotTitle(episodeTitle))
+            )
+            .replaceAll(EPISODE_RESOLUTION.getToken(), resolution);
 
         // Date and times
         final LocalDate airDate = actualEpisode.getAirDate();
         if (airDate == null) {
-            logger.log(Level.WARNING, "Episode air date not found for " + showName
-                    + ", " + placement + ", \"" + episodeTitle + "\"");
+            logger.log(
+                Level.WARNING,
+                "Episode air date not found for " +
+                    showName +
+                    ", " +
+                    placement +
+                    ", \"" +
+                    episodeTitle +
+                    "\""
+            );
         }
         // If the airDate is null, we warn (above) but we go ahead and do the
         // substitution anyway;
@@ -880,7 +992,10 @@ public class FileEpisode {
         return StringUtils.sanitiseTitle(newFilename);
     }
 
-    private static String removeTokens(final String orig, final ReplacementToken... tokens) {
+    private static String removeTokens(
+        final String orig,
+        final ReplacementToken... tokens
+    ) {
         String removed = orig;
 
         for (ReplacementToken token : tokens) {
@@ -912,27 +1027,41 @@ public class FileEpisode {
      *         control strings
      */
     @SuppressWarnings("WeakerAccess")
-    static String plugInAirDate(final LocalDate airDate, final String template) {
+    static String plugInAirDate(
+        final LocalDate airDate,
+        final String template
+    ) {
         // Date and times
         if (airDate == null) {
-            return removeTokens(template,
-                    DATE_DAY_NUM, DATE_DAY_NUMLZ,
-                    DATE_MONTH_NUM, DATE_MONTH_NUMLZ,
-                    DATE_YEAR_FULL, DATE_YEAR_MIN);
+            return removeTokens(
+                template,
+                DATE_DAY_NUM,
+                DATE_DAY_NUMLZ,
+                DATE_MONTH_NUM,
+                DATE_MONTH_NUMLZ,
+                DATE_YEAR_FULL,
+                DATE_YEAR_MIN
+            );
         } else {
             return template
-                    .replaceAll(DATE_DAY_NUM.getToken(),
-                            formatDate(airDate, "d"))
-                    .replaceAll(DATE_DAY_NUMLZ.getToken(),
-                            formatDate(airDate, "dd"))
-                    .replaceAll(DATE_MONTH_NUM.getToken(),
-                            formatDate(airDate, "M"))
-                    .replaceAll(DATE_MONTH_NUMLZ.getToken(),
-                            formatDate(airDate, "MM"))
-                    .replaceAll(DATE_YEAR_FULL.getToken(),
-                            formatDate(airDate, "yyyy"))
-                    .replaceAll(DATE_YEAR_MIN.getToken(),
-                            formatDate(airDate, "yy"));
+                .replaceAll(DATE_DAY_NUM.getToken(), formatDate(airDate, "d"))
+                .replaceAll(
+                    DATE_DAY_NUMLZ.getToken(),
+                    formatDate(airDate, "dd")
+                )
+                .replaceAll(DATE_MONTH_NUM.getToken(), formatDate(airDate, "M"))
+                .replaceAll(
+                    DATE_MONTH_NUMLZ.getToken(),
+                    formatDate(airDate, "MM")
+                )
+                .replaceAll(
+                    DATE_YEAR_FULL.getToken(),
+                    formatDate(airDate, "yyyy")
+                )
+                .replaceAll(
+                    DATE_YEAR_MIN.getToken(),
+                    formatDate(airDate, "yy")
+                );
         }
     }
 
@@ -971,7 +1100,9 @@ public class FileEpisode {
             return originalBasename;
         }
         if (actualEpisodes == null) {
-            logger.severe("should not be renaming when have no actual episodes");
+            logger.severe(
+                "should not be renaming when have no actual episodes"
+            );
             return originalBasename;
         }
         if (actualEpisodes.size() <= n) {
@@ -979,9 +1110,13 @@ public class FileEpisode {
             return originalBasename;
         }
 
-        return plugInInformation(userPrefs.getRenameReplacementString(),
-                actualShow, actualEpisodes.get(n),
-                placement, filenameResolution);
+        return plugInInformation(
+            userPrefs.getRenameReplacementString(),
+            actualShow,
+            actualEpisodes.get(n),
+            placement,
+            filenameResolution
+        );
     }
 
     /**
@@ -996,8 +1131,12 @@ public class FileEpisode {
             int previous = chosenEpisode;
             chosenEpisode = n;
             if (chosenEpisode != previous) {
-                logger.info("changing episode from " + actualEpisodes.get(previous).getTitle()
-                        + " to " + actualEpisodes.get(chosenEpisode).getTitle());
+                logger.info(
+                    "changing episode from " +
+                        actualEpisodes.get(previous).getTitle() +
+                        " to " +
+                        actualEpisodes.get(chosenEpisode).getTitle()
+                );
                 baseForRename = getRenamedBasename(chosenEpisode);
             }
         }
@@ -1037,9 +1176,11 @@ public class FileEpisode {
     public String getDestinationBasename() {
         if (userPrefs.isRenameSelected()) {
             if (baseForRename == null) {
-                logger.warning("unable to get destination basename; "
-                        + "reverting to original basename "
-                        + originalBasename);
+                logger.warning(
+                    "unable to get destination basename; " +
+                        "reverting to original basename " +
+                        originalBasename
+                );
                 return originalBasename;
             }
             return baseForRename;
@@ -1065,7 +1206,9 @@ public class FileEpisode {
                 }
 
                 if (userPrefs.isMoveSelected()) {
-                    replacementOptions.add(getMoveToFile(newBasename + filenameSuffix));
+                    replacementOptions.add(
+                        getMoveToFile(newBasename + filenameSuffix)
+                    );
                 } else {
                     replacementOptions.add(newBasename + filenameSuffix);
                 }
@@ -1075,7 +1218,9 @@ public class FileEpisode {
         } else {
             // This setting doesn't make any sense, but we haven't bothered to
             // disallow it yet.
-            logger.severe("apparently both rename and move are disabled! This is not allowed!");
+            logger.severe(
+                "apparently both rename and move are disabled! This is not allowed!"
+            );
             replacementOptions.add(fileNameString);
         }
         replacementText = replacementOptions.get(chosenEpisode);
@@ -1124,9 +1269,15 @@ public class FileEpisode {
     @Override
     public String toString() {
         String val = "FileEpisode {file: " + fileNameString + ", show: ";
-        String name = (actualShow == null) ? filenameShow : actualShow.getName();
-        String plc = (placement == null) ? ", no placement"
-                : ", season: " + placement.season + ", episode: " + placement.episode;
+        String name = (actualShow == null)
+            ? filenameShow
+            : actualShow.getName();
+        String plc = (placement == null)
+            ? ", no placement"
+            : ", season: " +
+              placement.season +
+              ", episode: " +
+              placement.episode;
         return val + name + plc + " }";
     }
 }

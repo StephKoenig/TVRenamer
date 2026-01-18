@@ -517,6 +517,10 @@ public final class ResultsTable
                 logger.fine("no show name found for " + episode);
                 continue;
             }
+
+            // Keep the extracted name available for UI correlation / disambiguation flows.
+            // (filenameShow may be overridden for provider lookup.)
+            final String extractedShowName = episode.getExtractedFilenameShow();
             ShowStore.mapStringToShow(
                 showName,
                 new ShowInformationListener() {
@@ -629,7 +633,7 @@ public final class ResultsTable
                 continue;
             }
 
-            String extractedShow = episode.getFilenameShow();
+            String extractedShow = episode.getExtractedFilenameShow();
             if (StringUtils.isBlank(extractedShow)) {
                 item.setData(SELECT_SHOW_PENDING_KEY, null);
                 continue;
@@ -742,7 +746,7 @@ public final class ResultsTable
                         if (ep == null) {
                             continue;
                         }
-                        if (extracted.equals(ep.getFilenameShow())) {
+                        if (extracted.equals(ep.getExtractedFilenameShow())) {
                             exampleFileName = ep.getFileName();
                             break;
                         }
@@ -842,7 +846,7 @@ public final class ResultsTable
                     continue;
                 }
 
-                final String extractedShow = episode.getFilenameShow();
+                final String extractedShow = episode.getExtractedFilenameShow();
                 if (StringUtils.isBlank(extractedShow)) {
                     continue;
                 }
