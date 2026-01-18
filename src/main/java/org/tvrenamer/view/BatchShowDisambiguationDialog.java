@@ -138,6 +138,10 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
         dialogShell.setMinimumSize(900, 370);
         dialogShell.pack();
+
+        // Position relative to the parent (main window) so it doesn't appear in an OS-random place.
+        DialogPositioning.positionDialog(dialogShell, parent);
+
         dialogShell.open();
 
         // Start in downloading mode; caller will stop it when discovery completes.

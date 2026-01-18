@@ -85,6 +85,10 @@ final class AboutDialog extends Dialog {
         createContents();
 
         aboutShell.pack();
+
+        // Position relative to the parent (main window) so it doesn't appear in an OS-random place.
+        DialogPositioning.positionDialog(aboutShell, getParent());
+
         aboutShell.open();
         Display display = getParent().getDisplay();
         while (!aboutShell.isDisposed()) {
