@@ -72,7 +72,17 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Where:** `org.tvrenamer.model.ShowName` / `ShowStore`
    - **Effort:** Medium (tie-breakers and/or user prompt; can start with better tie-breakers only)
 
-2. **Expand conflict detection beyond exact filename matches**
+2. **Add tie-breaker: prefer base title over parenthetical region suffix when extracted name has no suffix**
+   - **Why:** When candidates include `Title`, `Title (IN)`, `Title (CN)` and the extracted show name is just `Title` (or normalizes to it), prefer the unsuffixed base title to avoid unnecessary prompts and incorrect picks.
+   - **Where:** `org.tvrenamer.model.ShowStore` auto-selection heuristics
+   - **Effort:** Small (additional deterministic check before prompting)
+
+3. **Add unit tests for show auto-selection with separator-heavy filenames (dot/underscore/hyphen)**
+   - **Why:** Ensure common download naming like `The.Night.Manager.s01e03.mkv` auto-selects the correct base series (e.g., `The Night Manager`) without prompting when provider candidates include region-suffixed variants.
+   - **Where:** `org.tvrenamer.model.ShowStore` selection heuristics; `StringUtils.replacePunctuation(...)` interaction
+   - **Effort:** Small/Medium (may require provider mocking or fixture-based candidate injection; avoid live TVDB calls in CI)
+
+4. **Expand conflict detection beyond exact filename matches**
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)

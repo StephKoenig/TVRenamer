@@ -1793,6 +1793,33 @@ class PreferencesDialog extends Dialog {
             return ValidationResult.ok("Resolves uniquely");
         }
 
+        // Treat as resolved if a candidate matches the replacement text exactly after punctuation normalization.
+        // This mirrors ShowStore's auto-selection heuristic (e.g., "The.Night.Manager" -> "The Night Manager")
+        // and avoids marking common cases as "would prompt" when they won't.
+        String normalizedReplacement = null;
+        try {
+            normalizedReplacement = StringUtils.replacePunctuation(
+                replacementText
+            );
+        } catch (Exception ignored) {
+            normalizedReplacement = null;
+        }
+        if (normalizedReplacement != null && !normalizedReplacement.isBlank()) {
+            for (ShowOption opt : options) {
+                if (opt == null) {
+                    continue;
+                }
+                String name = opt.getName();
+                if (
+                    name != null && name.equalsIgnoreCase(normalizedReplacement)
+                ) {
+                    return ValidationResult.ok(
+                        "Resolves via exact normalized name match"
+                    );
+                }
+            }
+        }
+
         // Ambiguous: if a disambiguation exists and it matches a candidate, treat as valid.
         String pinnedId = prefs.resolveDisambiguatedSeriesId(queryString);
         if (pinnedId != null) {

@@ -12,6 +12,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.logging.Logger;
 import org.tvrenamer.controller.ShowInformationListener;
 import org.tvrenamer.controller.TheTVDBProvider;
+import org.tvrenamer.controller.util.StringUtils;
 
 /**
  * ShowStore -- maps strings to Show objects.<p>
@@ -481,20 +482,47 @@ public class ShowStore {
                 } else {
                     // 2) Improve auto-selection before queuing:
                     // Prefer an exact SeriesName match (case-insensitive) against the extracted show name,
-                    // then an exact alias match. This avoids prompting for common cases like
-                    // "Doctor Who (2023)" where SeriesName matches exactly but FirstAired may be 2024.
+                    // then an exact alias match.
+                    //
+                    // IMPORTANT: The extracted show name often contains filename separators like '.' '_' '-'
+                    // (e.g., "The.Night.Manager"). The provider results typically contain human-readable
+                    // spacing ("The Night Manager"). To avoid unnecessary prompts, we also compare against
+                    // a punctuation-normalized form (StringUtils.replacePunctuation), without changing the
+                    // query string logic (which is handled elsewhere via makeQueryString).
+                    //
+                    // This avoids prompting for common cases like "Doctor Who (2023)" where SeriesName matches
+                    // exactly but FirstAired may be 2024, and dot-separated downloads like "The.Night.Manager".
                     List<ShowOption> options = showName.getShowOptions();
 
                     ShowOption exactMatch = null;
                     String extracted = showName.getExampleFilename();
+                    String extractedNormalized = null;
                     if (extracted != null && !extracted.isBlank()) {
+                        try {
+                            extractedNormalized =
+                                StringUtils.replacePunctuation(extracted);
+                        } catch (Exception ignored) {
+                            extractedNormalized = null;
+                        }
+
                         for (ShowOption opt : options) {
                             if (opt == null) {
                                 continue;
                             }
                             String name = opt.getName();
+                            if (name == null) {
+                                continue;
+                            }
+
+                            if (name.equalsIgnoreCase(extracted)) {
+                                exactMatch = opt;
+                                break;
+                            }
+
                             if (
-                                name != null && name.equalsIgnoreCase(extracted)
+                                extractedNormalized != null &&
+                                !extractedNormalized.isBlank() &&
+                                name.equalsIgnoreCase(extractedNormalized)
                             ) {
                                 exactMatch = opt;
                                 break;
@@ -516,9 +544,19 @@ public class ShowStore {
                                     continue;
                                 }
                                 for (String a : aliases) {
+                                    if (a == null) {
+                                        continue;
+                                    }
+
+                                    if (a.equalsIgnoreCase(extracted)) {
+                                        exactMatch = opt;
+                                        break outer;
+                                    }
+
                                     if (
-                                        a != null &&
-                                        a.equalsIgnoreCase(extracted)
+                                        extractedNormalized != null &&
+                                        !extractedNormalized.isBlank() &&
+                                        a.equalsIgnoreCase(extractedNormalized)
                                     ) {
                                         exactMatch = opt;
                                         break outer;

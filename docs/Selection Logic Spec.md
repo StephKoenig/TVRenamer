@@ -1,0 +1,283 @@
+```tvrenamer/docs/Selection Logic Spec.md#L1-260
+# Selection Logic Spec
+
+This is a living spec for how TVRenamer turns an extracted show name (from a filename) into a resolved show, and under what conditions the UI must prompt the user via **Select Shows**.
+
+It documents **current behavior** and the **intended direction** for incremental improvements. Keep it updated as selection heuristics evolve.
+
+---
+
+## Glossary
+
+- **Extracted show name** (`foundName`)
+  - The substring extracted from a filename that is believed to be the show name.
+  - Example: from `The.Night.Manager.s01e03.mkv`, this is typically `The.Night.Manager`.
+
+- **Override**
+  - A user preference mapping from extracted show name → replacement text.
+  - Used to improve provider queries and downstream naming behavior.
+
+- **Query string** (`queryString`)
+  - A normalized form of a show name used as the provider search key and as an internal cache key.
+  - Currently computed by `StringUtils.makeQueryString(...)` (lowercase + punctuation normalization).
+  - Example: `The.Night.Manager` → `the night manager`.
+
+- **Provider candidates / show options**
+  - A list of `ShowOption` values returned by the provider’s search API for a query string.
+  - Candidates include at least: provider id and series name; may include year and aliases.
+
+- **Disambiguation (pin)**
+  - A user preference mapping from query string → provider series id.
+  - Used to force selection when a query returns multiple plausible candidates.
+
+- **Select Shows dialog**
+  - UI used when a query returns multiple candidates and selection is still ambiguous after heuristics.
+
+---
+
+## End-to-end pipeline (current)
+
+### 1) Filename parsing extracts `foundName`
+
+`FilenameParser.parseFilename(...)` finds a regex match and extracts the show-name group.
+
+Normalization at this stage is minimal:
+- `StringUtils.trimFoundShow(...)` removes leading/trailing separators: spaces, `_`, `.`, `-`
+- It does **not** replace internal separators like dots.
+  - So `The.Night.Manager` remains `The.Night.Manager` at this stage.
+
+The `FileEpisode` stores:
+- `episode.setFilenameShow(foundName)` (original extracted name, mostly unchanged)
+
+### 2) Overrides are applied for lookup initiation
+
+Before a provider lookup is started:
+- `UserPreferences.resolveShowName(foundName)` may return a replacement string
+- `ShowName.mapShowName(overriddenName)` is used for lookup/caching
+
+Important nuance:
+- The file row still “displays” / tracks the extracted name (`foundName`)
+- But the lookup key for a ShowName instance is the overridden name (if an override exists)
+
+### 3) Query string normalization (provider key + cache key)
+
+`ShowName` internally maps its `foundName` to a `QueryString` object:
+
+- `QueryString.lookupQueryString(foundName)` computes:
+  - `StringUtils.makeQueryString(foundName)`
+  - which is effectively `toLower(replacePunctuation(foundName))`
+
+This is the key that:
+- is sent to the provider search endpoint
+- is used as the disambiguation key in preferences
+- is used as the in-memory cache key for `QueryString`
+
+Example:
+- `The.Night.Manager` → `the night manager`
+- `The Night Manager` → `the night manager`
+
+So dot-separated filenames already query correctly, even when the extracted show name contains dots.
+
+### 4) Provider candidates are fetched
+
+`ShowStore.downloadShow(showName)` calls the provider to populate candidates:
+- `TheTVDBProvider.getShowOptions(showName)`
+- Candidates are stored in `showName.getShowOptions()`
+
+### 5) Selection decision tree (current)
+
+After candidates are available, selection proceeds in this order:
+
+#### 5.1) Use stored disambiguation by query string (highest priority)
+
+If user preferences contain a pinned mapping:
+- key: `queryString` (normalized)
+- value: preferred provider id
+
+Then:
+- If that provider id exists in the current candidate list, select it.
+- If it does not exist in current results, log a warning and fall back to auto-selection.
+
+This avoids prompting when the user has already disambiguated that query.
+
+#### 5.2) Auto-select by exact extracted-name match or alias match (case-insensitive)
+
+If there is no stored disambiguation, attempt a best-effort match that still avoids prompting:
+
+- Compare each candidate’s `SeriesName` to:
+  - the extracted name as-is (case-insensitive)
+  - a punctuation-normalized form of the extracted name via `StringUtils.replacePunctuation(...)`
+
+- If no SeriesName match, compare aliases similarly:
+  - alias equals extracted name (case-insensitive)
+  - alias equals punctuation-normalized extracted name (case-insensitive)
+
+This step is intentionally conservative: it only selects when a candidate matches the extracted name (in humanized form), not by fuzzy scoring.
+
+Rationale:
+- Avoid unnecessary prompts for dot/underscore-separated filenames, e.g.
+  - `The.Night.Manager.s01e03.mkv`
+  - candidates: `The Night Manager`, `The Night Manager (IN)`, `The Night Manager (CN)`
+  - The first should be selected without prompting because it matches the humanized extracted name.
+
+#### 5.3) If still ambiguous and there are multiple candidates: prompt
+
+If:
+- no pinned disambiguation
+- no exact/alias match from 5.2
+- and `options.size() > 1`
+
+Then:
+- Add a pending disambiguation entry keyed by query string
+- Mark the lookup as blocked on user selection
+- UI will surface this as “Select Show…” (batch dialog)
+
+#### 5.4) Otherwise use legacy selection behavior (`ShowName.selectShowOption()`)
+
+If:
+- there is exactly one candidate, select it
+- if there are zero candidates, treat as “not found”
+- in fallback cases, `selectShowOption()` may select the first option if there was no exact `foundName` match
+
+Note: the prompting behavior for true ambiguity is governed by 5.3; we avoid “silently pick first result” when multiple candidates exist and no strong heuristic match exists.
+
+---
+
+## Planned refactor: unified selection evaluator (source of truth)
+
+To avoid duplicated logic and “drift” between runtime behavior and Preferences validation, selection rules should live in a single, pure evaluator function.
+
+### Goals
+
+- Runtime show resolution and Matching-tab validation must use the same decision logic.
+- No UI side effects in the evaluator (no dialog, no queuing).
+- Deterministic and explainable: return a decision + a human-readable reason string.
+
+### Proposed shape
+
+Introduce a model-level helper (name TBD, e.g., `ShowSelection` / `ShowSelectionEvaluator`) that accepts:
+- `extractedName` (String): the name to match against candidate SeriesName/Aliases
+- `options` (`List<ShowOption>`): provider candidates
+- `pinnedId` (String|null): the user’s pinned provider id for this query string, if any
+
+It returns a decision:
+- `RESOLVED` (chosen candidate + reason)
+- `AMBIGUOUS` (reason; runtime would prompt)
+- `NOT_FOUND` (reason)
+
+### How it is used
+
+- **Runtime (ShowStore):**
+  - Fetch provider candidates.
+  - Compute `pinnedId` using the query string (`prefs.resolveDisambiguatedSeriesId(queryString)`).
+  - Call the evaluator.
+  - If `AMBIGUOUS`, then queue a pending disambiguation entry and require Select Shows.
+  - If `RESOLVED`, proceed without prompting.
+
+- **Preferences Matching tab validation:**
+  - Fetch provider candidates (best-effort; provider may be unavailable).
+  - Compute `pinnedId` using the same query-string key that runtime would use.
+  - Call the evaluator and treat:
+    - `RESOLVED` as “valid / would not prompt”
+    - `AMBIGUOUS` as “invalid / would prompt”
+    - `NOT_FOUND` as “invalid / no matches”
+
+#### Override validation semantics (pragmatic)
+
+For an Override row (`extracted show` → `replacementText`), validation treats:
+- `replacementText` as the evaluator’s `extractedName` input (because that is the string we intend to resolve/search as).
+- The pinned-id lookup key as `StringUtils.makeQueryString(replacementText)`.
+
+This answers: “Given current disambiguations, is this override likely to resolve without prompting?”
+
+---
+
+## Behavioral invariants / design constraints
+
+These constraints are intentional:
+
+1. **Do not mutate the stored/displayed extracted show name globally.**
+   - The extracted string is user-facing and should reflect the filename.
+   - Heuristics can use derived normalized forms without altering `foundName`.
+
+2. **Query string normalization should remain centralized.**
+   - Provider querying and disambiguation keys rely on `StringUtils.makeQueryString(...)`.
+   - Avoid introducing alternative query normalization paths in multiple locations.
+
+3. **Disambiguation keys should be stable.**
+   - Disambiguations are stored by query string.
+   - Any changes to `makeQueryString` semantics are migration-sensitive and should be treated carefully.
+
+4. **Auto-selection should be conservative.**
+   - Prefer “exact after normalization” matches (SeriesName/alias) over fuzzy scoring.
+   - If multiple candidates remain plausible, prompt.
+
+---
+
+## Known gaps / planned improvements
+
+This section lists improvements that can be layered in without destabilizing the pipeline:
+
+1. **Additional tie-breakers when multiple candidates match equally**
+   - Potentially use year, language/region markers, aliases, etc.
+   - Must remain deterministic and preferably explainable.
+
+2. **Fuzzy matching (deferred / optional)**
+   - If introduced, gate it carefully to avoid surprising auto-selections.
+   - Consider only as a tie-breaker after exact/alias matches fail.
+
+3. **Better handling of parenthetical suffixes**
+   - e.g., `(US)`, `(UK)`, `(IN)`, `(CN)` patterns
+   - Planned tie-breaker: if the extracted show name (as-is or punctuation-normalized) does not include a parenthetical suffix,
+     prefer the candidate whose series name exactly equals the normalized extracted show name (i.e., the “base title”),
+     ahead of candidates that only match via a suffixed form like `Title (IN)`.
+
+4. **Spec-driven tests (no live network calls)**
+   - Add unit tests that lock in the intended “dot-separated filename avoids prompt” behavior.
+   - Tests must not depend on live TVDB/provider availability (CI environments may block outbound calls).
+   - Prefer fixture-based candidate injection or provider mocking so we can test selection deterministically.
+
+---
+
+## Example scenarios (current intent)
+
+### Scenario A: Dot-separated filename with clear base match
+Input file: `The.Night.Manager.s01e03.mkv`  
+Extracted: `The.Night.Manager`  
+Normalized compare: `The Night Manager`  
+
+Candidates:
+- `The Night Manager`
+- `The Night Manager (IN)`
+- `The Night Manager (CN)`
+
+Expected:
+- auto-select `The Night Manager`
+- no Select Shows prompt
+
+### Scenario B: Genuine ambiguity without a strong match
+Extracted: `The Office`  
+Candidates:
+- `The Office`
+- `The Office (US)` (or similar)
+- `The Office (UK)` (or similar)
+
+Expected:
+- prompt unless user pinned a disambiguation for that query string
+
+### Scenario C: User pinned disambiguation
+Query string: `the office`  
+Pinned id: `<provider-id-for-us>`  
+
+Expected:
+- select pinned id immediately if present in provider results
+- no prompt
+
+---
+
+## Change log
+
+- Initial spec: documents pipeline and current selection decision tree.
+- Added: unified selection evaluator plan (shared by runtime + Matching validation) and override validation semantics.
+
+```
