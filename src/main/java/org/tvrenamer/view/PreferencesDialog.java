@@ -1295,7 +1295,8 @@ class PreferencesDialog extends Dialog {
             : overridesTable.getSelectionIndex();
         if (selected >= 0) {
             TableItem ti = overridesTable.getItem(selected);
-            ti.setText(new String[] { from, to });
+            // Column 0 is the status icon column; values are columns 1 and 2.
+            ti.setText(new String[] { "", from, to });
             return;
         }
 
@@ -1316,7 +1317,8 @@ class PreferencesDialog extends Dialog {
             }
 
             TableItem ti = new TableItem(overridesTable, SWT.NONE);
-            ti.setText(new String[] { from, to });
+            // Column 0 is the status icon column; values are columns 1 and 2.
+            ti.setText(new String[] { "", from, to });
         }
     }
 
@@ -1339,7 +1341,8 @@ class PreferencesDialog extends Dialog {
             : disambiguationsTable.getSelectionIndex();
         if (selected >= 0) {
             TableItem ti = disambiguationsTable.getItem(selected);
-            ti.setText(new String[] { queryString, seriesId });
+            // Column 0 is the status icon column; values are columns 1 and 2.
+            ti.setText(new String[] { "", queryString, seriesId });
             return;
         }
 
@@ -1360,7 +1363,8 @@ class PreferencesDialog extends Dialog {
             }
 
             TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
-            ti.setText(new String[] { queryString, seriesId });
+            // Column 0 is the status icon column; values are columns 1 and 2.
+            ti.setText(new String[] { "", queryString, seriesId });
         }
     }
 
