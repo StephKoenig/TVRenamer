@@ -33,8 +33,10 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Dialog;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TabFolder;
@@ -237,6 +239,9 @@ class PreferencesDialog extends Dialog {
         ItemState.FAIL.getIcon();
     private static final org.eclipse.swt.graphics.Image MATCHING_ICON_VALIDATING =
         ItemState.DOWNLOADING.getIcon();
+
+    // Column index within each Matching table where we display the status icon.
+    private static final int MATCHING_STATUS_COL = 2;
 
     // Save gating: disable Save when any dirty row is invalid/incomplete/validating
     private Button saveButton;
@@ -995,13 +1000,61 @@ class PreferencesDialog extends Dialog {
         TableColumn oColStatus = new TableColumn(overridesTable, SWT.CENTER);
         oColStatus.setText("Status");
 
+        // Custom draw the status icon cell so it is truly centered.
+        // SWT column alignment does not reliably center images across platforms/themes.
+        overridesTable.addListener(
+            SWT.EraseItem,
+            new Listener() {
+                @Override
+                public void handleEvent(Event event) {
+                    if (event.index != MATCHING_STATUS_COL) {
+                        return;
+                    }
+                    // Prevent default selection/foreground drawing for this cell; we'll draw the image ourselves.
+                    event.detail &= ~SWT.FOREGROUND;
+                }
+            }
+        );
+        overridesTable.addListener(
+            SWT.PaintItem,
+            new Listener() {
+                @Override
+                public void handleEvent(Event event) {
+                    if (event.index != MATCHING_STATUS_COL) {
+                        return;
+                    }
+                    if (!(event.item instanceof TableItem)) {
+                        return;
+                    }
+                    TableItem item = (TableItem) event.item;
+                    org.eclipse.swt.graphics.Image img = item.getImage(
+                        MATCHING_STATUS_COL
+                    );
+                    if (img == null) {
+                        return;
+                    }
+                    org.eclipse.swt.graphics.Rectangle bounds =
+                        event.getBounds();
+                    org.eclipse.swt.graphics.Rectangle imgBounds =
+                        img.getBounds();
+                    int x =
+                        bounds.x +
+                        Math.max(0, (bounds.width - imgBounds.width) / 2);
+                    int y =
+                        bounds.y +
+                        Math.max(0, (bounds.height - imgBounds.height) / 2);
+                    event.gc.drawImage(img, x, y);
+                }
+            }
+        );
+
         // Populate table from prefs (not dirty; treat as OK by default).
         for (Map.Entry<String, String> e : prefs
             .getShowNameOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(overridesTable, SWT.NONE);
             ti.setText(new String[] { e.getKey(), e.getValue(), "" });
-            ti.setImage(2, MATCHING_ICON_OK);
+            ti.setImage(MATCHING_STATUS_COL, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : overridesTable.getColumns()) {
@@ -1226,12 +1279,58 @@ class PreferencesDialog extends Dialog {
         );
         dColStatus.setText("Status");
 
+        // Custom draw the status icon cell so it is truly centered.
+        disambiguationsTable.addListener(
+            SWT.EraseItem,
+            new Listener() {
+                @Override
+                public void handleEvent(Event event) {
+                    if (event.index != MATCHING_STATUS_COL) {
+                        return;
+                    }
+                    event.detail &= ~SWT.FOREGROUND;
+                }
+            }
+        );
+        disambiguationsTable.addListener(
+            SWT.PaintItem,
+            new Listener() {
+                @Override
+                public void handleEvent(Event event) {
+                    if (event.index != MATCHING_STATUS_COL) {
+                        return;
+                    }
+                    if (!(event.item instanceof TableItem)) {
+                        return;
+                    }
+                    TableItem item = (TableItem) event.item;
+                    org.eclipse.swt.graphics.Image img = item.getImage(
+                        MATCHING_STATUS_COL
+                    );
+                    if (img == null) {
+                        return;
+                    }
+                    org.eclipse.swt.graphics.Rectangle bounds =
+                        event.getBounds();
+                    org.eclipse.swt.graphics.Rectangle imgBounds =
+                        img.getBounds();
+                    int x =
+                        bounds.x +
+                        Math.max(0, (bounds.width - imgBounds.width) / 2);
+                    int y =
+                        bounds.y +
+                        Math.max(0, (bounds.height - imgBounds.height) / 2);
+                    event.gc.drawImage(img, x, y);
+                }
+            }
+        );
+
         for (Map.Entry<String, String> e : prefs
             .getShowDisambiguationOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
             ti.setText(new String[] { e.getKey(), e.getValue(), "" });
-            ti.setImage(2, MATCHING_ICON_OK);
+            ti.setImage(MATCHING_STATUS_COL, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : disambiguationsTable.getColumns()) {
