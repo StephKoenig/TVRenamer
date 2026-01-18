@@ -114,7 +114,12 @@ public class FilenameParser {
                     // an error if it does, but not important.
                     continue;
                 }
-                episode.setFilenameShow(foundName);
+
+                // Preserve the extracted show name for UI/display/debugging, but apply overrides
+                // to the effective lookup name used to query the provider.
+                episode.setExtractedFilenameShow(foundName);
+                episode.setFilenameShow(overriddenName);
+
                 episode.setEpisodePlacement(matcher.group(2), matcher.group(3));
                 episode.setFilenameResolution(resolution);
                 episode.setParsed();
