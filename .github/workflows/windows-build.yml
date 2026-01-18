@@ -38,8 +38,10 @@ jobs:
           name: TVRenamer-Windows-Exe
           path: build/launch4j/TVRenamer.exe
 
-      - name: Upload Integrated JAR
+      - name: Upload Integrated JARs
         uses: actions/upload-artifact@v4
         with:
           name: TVRenamer-JAR
-          path: build/libs/*.jar
+          path: |
+            build/libs/tvrenamer.jar
+            build/libs/tvrenamer-*.jar

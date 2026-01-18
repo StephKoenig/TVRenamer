@@ -137,6 +137,18 @@ When you complete an item that was tracked in `docs/TODO.md`:
 - **Notes:**
   - A periodic “legacy reference scan” is tracked in `docs/TODO.md` as a hygiene step.
 
+
+
+### 15) CI artifact naming: publish stable + versioned fat JARs
+- **Why:** Users and scripts benefit from a stable filename (`tvrenamer.jar`), while Releases and side-by-side installs benefit from a versioned filename. CI artifacts should include both to reduce confusion and simplify testing.
+- **Where:** `build.gradle` (Shadow outputs), `.github/workflows/windows-build.yml` (artifact upload paths)
+- **What we did:**
+  - Produce a stable fat jar named `tvrenamer.jar`.
+  - Produce an additional versioned fat jar alongside it (e.g., `tvrenamer-<commitCount>.jar`).
+  - Upload both jars in CI artifacts so users can choose either.
+- **Notes:**
+  - Releases should prefer attaching the versioned jar to make the downloaded filename self-describing.
+
 ---
 
 ## Related records

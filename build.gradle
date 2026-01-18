@@ -243,6 +243,41 @@ shadowJar {
     }
 }
 
+// Also produce a versioned copy of the fat jar for releases/users who want side-by-side versions.
+tasks.register('shadowJarVersioned', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    group = 'build'
+    description = 'Build a versioned fat jar alongside tvrenamer.jar.'
+
+    // Match shadowJar behavior.
+    from(sourceSets.main.output)
+    configurations = [project.configurations.runtimeClasspath]
+    mergeServiceFiles()
+
+    dependsOn(tasks.named('generateBuildMetadataFiles'))
+
+    from(layout.buildDirectory.file("generated/version/tvrenamer.version")) {
+        into ""
+        rename { "tvrenamer.version" }
+    }
+    from(layout.buildDirectory.file("generated/version/tvrenamer.builddate")) {
+        into ""
+        rename { "tvrenamer.builddate" }
+    }
+    from(layout.buildDirectory.file("generated/version/tvrenamer.commit")) {
+        into ""
+        rename { "tvrenamer.commit" }
+    }
+
+    // Versioned filename uses the embedded version scheme (1.0.<commitCount>).
+    archiveFileName.set("tvrenamer-${computeBuildNumber()}.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("libs"))
+}
+
+// Ensure `build` produces both jars.
+tasks.named('build') {
+    dependsOn(tasks.named('shadowJarVersioned'))
+}
+
 sourceSets {
     main {
         java {
