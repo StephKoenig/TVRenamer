@@ -52,17 +52,6 @@ application {
     // applicationDefaultJvmArgs = []
 }
 
-launch4j {
-    mainClassName = 'org.tvrenamer.controller.Launcher'
-    icon = "${projectDir}/src/main/resources/icons/oldschool-tv-icon.ico"
-    jarTask = tasks.shadowJar
-    outfile = "TVRenamer.exe"
-    downloadUrl = "http://java.com/download"
-    headerType = "gui"
-    requires64Bit = true
-    jreMinVersion = "17"
-}
-
 // Build metadata generated at build time.
 // - tvrenamer.version: 1.0.<buildNumber>, where buildNumber is:
 //     - GitHub Actions run number when available (monotonically increasing per workflow), else
@@ -88,6 +77,28 @@ def computeBuildNumber = {
         // Fall through to default below
     }
     return "0"
+}
+
+// Ensure Launch4j's EXE metadata version matches the app version scheme.
+// - App/JAR version is generated into /tvrenamer.version as: 1.0.<buildNumber>
+// - Launch4j expects a numeric dotted version; use: 1.0.<buildNumber>.0
+def computedBuildNumber = computeBuildNumber()
+def computedExeVersion = "1.0.${computedBuildNumber}.0"
+
+launch4j {
+    mainClassName = 'org.tvrenamer.controller.Launcher'
+    icon = "${projectDir}/src/main/resources/icons/oldschool-tv-icon.ico"
+    jarTask = tasks.shadowJar
+    outfile = "TVRenamer.exe"
+    downloadUrl = "http://java.com/download"
+    headerType = "gui"
+    requires64Bit = true
+    jreMinVersion = "17"
+
+    // Launch4j plugin supports these version metadata fields via `version` and `textVersion`.
+    // Keep them aligned with the build number used for /tvrenamer.version.
+    version = computedExeVersion
+    textVersion = computedExeVersion
 }
 
 def computeCommitSha = {
