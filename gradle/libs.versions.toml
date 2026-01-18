@@ -1,7 +1,7 @@
 [versions]
 # Tooling / plugins
 shadow = "8.1.1"
-launch4j = "3.0.5"
+launch4j = "4.0.0"
 
 # Runtime dependencies
 swt = "3.124.0"
