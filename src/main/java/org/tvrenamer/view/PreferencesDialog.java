@@ -988,20 +988,21 @@ class PreferencesDialog extends Dialog {
         overridesTableData.minimumHeight = 110;
         overridesTable.setLayoutData(overridesTableData);
 
+        TableColumn oColStatus = new TableColumn(overridesTable, SWT.CENTER);
+        oColStatus.setText("");
+
         TableColumn oColFrom = new TableColumn(overridesTable, SWT.LEFT);
         oColFrom.setText("Extracted show");
         TableColumn oColTo = new TableColumn(overridesTable, SWT.LEFT);
         oColTo.setText("Replace with");
-        TableColumn oColStatus = new TableColumn(overridesTable, SWT.CENTER);
-        oColStatus.setText("Status");
 
         // Populate table from prefs (not dirty; treat as OK by default).
         for (Map.Entry<String, String> e : prefs
             .getShowNameOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(overridesTable, SWT.NONE);
-            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
-            ti.setImage(2, MATCHING_ICON_OK);
+            ti.setText(new String[] { "", e.getKey(), e.getValue() });
+            ti.setImage(0, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : overridesTable.getColumns()) {
@@ -1216,22 +1217,23 @@ class PreferencesDialog extends Dialog {
         disambiguationsTableData.minimumHeight = 110;
         disambiguationsTable.setLayoutData(disambiguationsTableData);
 
-        TableColumn dColQuery = new TableColumn(disambiguationsTable, SWT.LEFT);
-        dColQuery.setText("Query string");
-        TableColumn dColId = new TableColumn(disambiguationsTable, SWT.LEFT);
-        dColId.setText("Series ID");
         TableColumn dColStatus = new TableColumn(
             disambiguationsTable,
             SWT.CENTER
         );
-        dColStatus.setText("Status");
+        dColStatus.setText("");
+
+        TableColumn dColQuery = new TableColumn(disambiguationsTable, SWT.LEFT);
+        dColQuery.setText("Query string");
+        TableColumn dColId = new TableColumn(disambiguationsTable, SWT.LEFT);
+        dColId.setText("Series ID");
 
         for (Map.Entry<String, String> e : prefs
             .getShowDisambiguationOverrides()
             .entrySet()) {
             TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
-            ti.setText(new String[] { e.getKey(), e.getValue(), "" });
-            ti.setImage(2, MATCHING_ICON_OK);
+            ti.setText(new String[] { "", e.getKey(), e.getValue() });
+            ti.setImage(0, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
         for (TableColumn c : disambiguationsTable.getColumns()) {
@@ -1609,7 +1611,7 @@ class PreferencesDialog extends Dialog {
             if (!dirty) {
                 continue;
             }
-            String status = safeCell(ti, 2).trim();
+            String status = safeCell(ti, 0).trim();
 
             // Dirty rows must be validated; block save for blank/incomplete or if still validating/error.
             if (status.isEmpty()) {
@@ -1619,7 +1621,7 @@ class PreferencesDialog extends Dialog {
                 return true;
             }
 
-            org.eclipse.swt.graphics.Image img = ti.getImage(2);
+            org.eclipse.swt.graphics.Image img = ti.getImage(0);
             if (img == MATCHING_ICON_VALIDATING) {
                 return true;
             }
@@ -1653,11 +1655,13 @@ class PreferencesDialog extends Dialog {
         final long token = ++matchingValidationSeq;
         ti.setData(MATCHING_VALIDATE_TOKEN_KEY, Long.valueOf(token));
 
-        final String key = safeCell(ti, 0).trim();
-        final String val = safeCell(ti, 1).trim();
+        // Column 0 is the status icon column; real key/value are columns 1 and 2.
+        final String key = safeCell(ti, 1).trim();
+        final String val = safeCell(ti, 2).trim();
 
         if (key.isEmpty() || val.isEmpty()) {
-            ti.setText(2, MATCHING_STATUS_INCOMPLETE);
+            ti.setText(0, MATCHING_STATUS_INCOMPLETE);
+            ti.setImage(0, MATCHING_ICON_ERROR);
             updateSaveEnabledFromMatchingValidation();
             return;
         }
@@ -1711,11 +1715,11 @@ class PreferencesDialog extends Dialog {
                     }
 
                     if (finalResult.valid) {
-                        ti.setText(2, "");
-                        ti.setImage(2, MATCHING_ICON_OK);
+                        ti.setText(0, "");
+                        ti.setImage(0, MATCHING_ICON_OK);
                     } else {
-                        ti.setText(2, "");
-                        ti.setImage(2, MATCHING_ICON_ERROR);
+                        ti.setText(0, "");
+                        ti.setImage(0, MATCHING_ICON_ERROR);
                     }
 
                     // Store the validation message for tooltip rendering.
@@ -1830,8 +1834,8 @@ class PreferencesDialog extends Dialog {
             return;
         }
         // initial label
-        ti.setText(2, "");
-        ti.setImage(2, MATCHING_ICON_VALIDATING);
+        ti.setText(0, "");
+        ti.setImage(0, MATCHING_ICON_VALIDATING);
 
         Display display = table.getDisplay();
         display.timerExec(
@@ -1852,7 +1856,7 @@ class PreferencesDialog extends Dialog {
                     }
 
                     // Stop animating once validation completes (icon no longer "clock").
-                    org.eclipse.swt.graphics.Image img = ti.getImage(2);
+                    org.eclipse.swt.graphics.Image img = ti.getImage(0);
                     if (img != MATCHING_ICON_VALIDATING) {
                         return;
                     }
