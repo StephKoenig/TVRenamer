@@ -22,66 +22,58 @@ Completed work is tracked in `docs/Completed.md`. Keep this file focused on futu
 
 These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
 
-6. **Help: create simple static help pages and wire Help menu to open them**
+1. **Help: create simple static help pages and wire Help menu to open them**
    - **Why:** The current Help menu has a “Help” item that isn’t wired; users need discoverable guidance without hunting through issues/releases.
    - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions), plus new `docs/help/` content published via GitHub Pages (or similar).
    - **What:** Create a small set of static pages (e.g., Getting Started, Matching/Overrides, Select Shows & disambiguation, Troubleshooting/logging) and update the Help menu to open the help index URL. Keep “Visit Web Page” pointing to the project page.
    - **Effort:** Small/Medium (docs + one menu action)
 
+2. **Add unit tests for unified show selection (no network calls)**
+   - **Why:** The unified selection evaluator is now critical behavior; tests prevent regressions and reduce risk when adjusting heuristics.
+   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` and its interaction with `StringUtils.replacePunctuation(...)`
+   - **What:** Add fixture-based candidate lists (no live provider calls) that verify:
+     - dot/underscore/hyphen-separated names resolve without prompting when an exact normalized match exists
+     - base-title vs parenthetical variants behavior
+     - year token ±1 behavior
+   - **Effort:** Small/Medium (introduce fixtures/mocks; keep deterministic)
 
-1. **Improve show selection heuristics when ambiguous**
-   - **Why:** Avoid “choose first match” surprises; reduce incorrect auto-matches.
-   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` (shared by runtime selection + Matching-tab validation)
-   - **Effort:** Medium (remaining tie-breakers, plus spec/tests; evaluator should remain deterministic and explainable)
+3. **Improve handling of “unparsed” files**
+   - **Why:** Provide actionable feedback and better UX for files that fail parsing (common frustration point).
+   - **Where:** `org.tvrenamer.model.EpisodeDb` / Results UI where unparsed items are inserted
+   - **Effort:** Medium (mostly UX and messaging; low behavioral risk)
 
-2. **Show selection tie-breakers: verify coverage and expand carefully (PARTIALLY DONE)**
+4. **Show selection heuristics: verify coverage and expand carefully**
    - **Why:** Reduce unnecessary prompts while avoiding incorrect auto-matches.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
    - **Status:** Implemented deterministic tie-breakers:
      - Prefer base title over parenthetical variants when base exists (e.g., `Title` beats `Title (IN)`/`(CN)`).
      - Prefer exact canonical token match over extra tokens (strict).
      - Prefer `FirstAiredYear` match with ±1 tolerance when extracted contains a year token.
-   - **Remaining:** Add any additional tie-breakers only if they are deterministic and do not auto-decide cases like `The Office (US)` vs `The Office (UK)` without a pin.
+   - **Guideline:** Only add new tie-breakers if deterministic + explainable; never auto-decide cases like `The Office (US)` vs `The Office (UK)` without a pin.
+   - **Effort:** Medium (but keep changes incremental and spec-driven)
 
-3. **Add unit tests for show auto-selection with separator-heavy filenames (dot/underscore/hyphen)**
-   - **Why:** Ensure common download naming like `The.Night.Manager.s01e03.mkv` auto-selects the correct base series (e.g., `The Night Manager`) without prompting when provider candidates include region-suffixed variants.
-   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` and its interaction with `StringUtils.replacePunctuation(...)`
-   - **Effort:** Small/Medium (must not use live network/provider calls in CI; prefer provider mocking or fixture-based candidate injection)
-
-4. **Expand conflict detection beyond exact filename matches**
+5. **Expand conflict detection beyond exact filename matches**
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)
 
-5. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
-   - **Why:** We removed legacy `etc/` scripts/configs; periodically scanning helps prevent reintroducing obsolete build/run paths and keeps docs accurate.
+6. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
+   - **Why:** We removed legacy scripts/configs; periodic scanning helps prevent reintroducing obsolete build/run paths and keeps docs accurate.
    - **Where:** Repo-wide (docs + scripts + configs). Look for: `ant`, `ivy`, `out/`, `lib/`, old run scripts, and other pre-Gradle conventions.
    - **Effort:** Small (grep + delete/update references)
 
-3. **Consider canonicalization of file paths in EpisodeDb**
-   - **Why:** Reduce duplication/confusion when multiple path strings refer to the same file.
-   - **Where:** `org.tvrenamer.model.EpisodeDb.currentLocationOf(...)`
-   - **Effort:** Medium (Windows/UNC-safe normalization strategy)
+7. **Build/CI artifact naming: align CI outputs with stable `tvrenamer.jar`**
+   - **Why:** The fat jar is now intentionally named `tvrenamer.jar` for testing/scripts; CI artifacts should match to reduce confusion.
+   - **Where:** CI workflow + build packaging expectations (`build/libs/tvrenamer.jar`)
+   - **What:** Ensure CI uploads `tvrenamer.jar` (and optionally also uploads a versioned copy if desired).
+   - **Effort:** Small (workflow/artifact name tweaks)
 
-4. **Improve handling of “unparsed” files**
-   - **Why:** Provide actionable feedback and better UX for files that fail parsing.
-   - **Where:** `org.tvrenamer.model.EpisodeDb` — add logic where it currently inserts unparsed episodes
-   - **Effort:** Medium
+8. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
+   - **Why:** SWT ≥ 3.130 crashed at startup on a Windows 11 x64 environment even with WebView2 + VC runtimes installed; pinning to 3.129 is a pragmatic compromise.
+   - **Where:** Dependency management (`gradle/libs.versions.toml`) + docs (`docs/TODO.md` / release notes)
+   - **What:** Identify the breaking dependency/OS requirement introduced in SWT 3.130+, document prerequisites (or decide to stay pinned).
+   - **Effort:** Small/Medium (investigation + documentation)
 
-5. **QOL: “Clear Completed” behavior + button**
-   - **Why:** When auto-clear is off, users need a one-click way to remove completed rows; preference wording should match behavior.
-   - **Where:** `org.tvrenamer.view.PreferencesDialog` (label text), `org.tvrenamer.view.ResultsTable` (Clear Completed button)
-   - **Effort:** Small (UI text + button enabled state + clear action)
-
-6. **Preserve file attributes / metadata on copy (where feasible)**
-   - **Why:** Cross-filesystem moves may copy+delete; users may care about attributes beyond mtime (ACLs, ownership, timestamps).
-   - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`
-   - **Effort:** Medium (define policy + platform constraints + tests)
-
-7. **Make string handling more explicit (URL vs XML vs display vs filename)**
-   - **Why:** Avoid conflating encoding responsibilities; reduces corruption risks and improves correctness.
-   - **Where:** `org.tvrenamer.controller.util.StringUtils` and provider fetch paths
-   - **Effort:** Medium (API cleanup + call-site audit + tests)
 
 
 

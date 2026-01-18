@@ -59,14 +59,11 @@ application {
 // - tvrenamer.builddate: YYMMDD (UTC)
 // - tvrenamer.commit: full git SHA (or "unknown")
 def computeBuildNumber = {
-    // Prefer GitHub Actions run number when available.
-    // This avoids shallow-clone / history differences and is naturally monotonic in CI.
-    def ghaRunNumber = System.getenv("GITHUB_RUN_NUMBER")
-    if (ghaRunNumber != null && ghaRunNumber.trim()) {
-        return ghaRunNumber.trim()
-    }
-
-    // Fallback: git commit count
+    // Use git commit count everywhere (including CI) for consistent versioning:
+    // - App/JAR embeds 1.0.<commitCount> in /tvrenamer.version
+    // - EXE embeds 1.0.<commitCount>.0 in Windows metadata
+    //
+    // IMPORTANT: CI must use a full git history (fetch-depth: 0) or commit counts may be incorrect.
     try {
         def proc = ["git", "rev-list", "--count", "HEAD"].execute(null, project.rootDir)
         proc.waitFor()
