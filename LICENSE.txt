@@ -10,6 +10,9 @@ Description: SWT is an open source widget toolkit for Java designed to provide e
 Website: https://www.eclipse.org/swt/
 License: Eclipse Public License (EPL)
 License website: https://www.eclipse.org/legal/epl-2.0/
+Notes:
+- Windows builds use the platform-specific SWT artifact `org.eclipse.swt.win32.win32.x86_64`.
+- This fork currently targets SWT 3.129.x on Windows for runtime compatibility.
 
 Thoughtworks XStream (formerly Codehaus)
 =========================================
@@ -65,6 +68,8 @@ Website: https://github.com/TheBoegl/gradle-launch4j
 License: Apache License 2.0
 License website: https://www.apache.org/licenses/LICENSE-2.0
 Source license file: https://raw.githubusercontent.com/TheBoegl/gradle-launch4j/master/LICENSE.md
+Notes:
+- This fork currently uses `edu.sc.seis.launch4j` Gradle plugin v4.x.
 
 Launch4j (upstream Windows EXE wrapper)
 -----------------------------------------

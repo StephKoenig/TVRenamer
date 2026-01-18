@@ -96,7 +96,7 @@ Enable debug file logging:
 - PowerShell can mis-parse `-Dname=value`; use the quoted form:
 
 ```/dev/null/commands.txt#L1-1
-java "-Dtvrenamer.debug=true" -jar .\tvrenamer-*-all.jar
+java "-Dtvrenamer.debug=true" -jar .\tvrenamer.jar
 ```
 
 ---

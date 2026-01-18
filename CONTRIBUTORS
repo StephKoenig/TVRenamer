@@ -1,11 +1,12 @@
 Below is a list of projects/people that TVRenamer relies on (with thanks):
  - The original TVRenamer project and community (https://github.com/tvrenamer/tvrenamer)
- - Eclipse SWT
+ - Eclipse SWT (Windows builds use platform-specific SWT: org.eclipse.swt.win32.win32.x86_64)
  - Thoughtworks XStream
  - TransparenTech CocoaUIEnhancer
  - Apache Commons Codec
  - OkHttp
  - JUnit (testing)
+ - Build tooling: Gradle wrapper, Shadow plugin (fat JAR), and Launch4j Gradle plugin (Windows EXE wrapper)
 
 We also acknowledge and thank all prior contributors to TVRenamer who helped build and maintain the project over the years.
 

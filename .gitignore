@@ -16,6 +16,10 @@ launch4j.properties
 /tvrenamer.iml
 /.idea/
 
+# Debug file log output (can be written next to the jar/exe or into build outputs during local runs)
+/tvrenamer.log
+/build/libs/tvrenamer.log
+
 /src/test/java/org/tvrenamer/controller/TestMain.java
 /commit.log
 /diff.diff
