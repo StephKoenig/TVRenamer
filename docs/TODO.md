@@ -1,6 +1,8 @@
 # TVRenamer — Consolidated TODO Notes
 
+
 Note: Completed work is tracked in `docs/Completed.md`. Keep this file focused on future work only.
+
 
 This document consolidates “future work” notes that are currently embedded throughout the codebase (e.g., `TODO:` comments and other forward-looking commentary such as “in the future…”, “maybe we should…”, “might be better…”, etc.). The intent is to make these ideas easier to discover, discuss, and prioritize—without removing or rewriting the original in-code notes.
 
@@ -19,6 +21,13 @@ Completed work is tracked in `docs/Completed.md`. Keep this file focused on futu
 ## Top candidates (high impact / low risk)
 
 These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
+
+6. **Help: create simple static help pages and wire Help menu to open them**
+   - **Why:** The current Help menu has a “Help” item that isn’t wired; users need discoverable guidance without hunting through issues/releases.
+   - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions), plus new `docs/help/` content published via GitHub Pages (or similar).
+   - **What:** Create a small set of static pages (e.g., Getting Started, Matching/Overrides, Select Shows & disambiguation, Troubleshooting/logging) and update the Help menu to open the help index URL. Keep “Visit Web Page” pointing to the project page.
+   - **Effort:** Small/Medium (docs + one menu action)
+
 
 1. **Improve show selection heuristics when ambiguous**
    - **Why:** Avoid “choose first match” surprises; reduce incorrect auto-matches.
