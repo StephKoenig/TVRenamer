@@ -22,13 +22,25 @@ Completed work is tracked in `docs/Completed.md`. Keep this file focused on futu
 
 These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
 
-1. **Help: create simple static help pages and wire Help menu to open them**
+1. **Headless CLI mode (automation/pipelines)**
+   - **Why:** Enable TVRenamer to be used in scripted workflows (NAS, scheduled jobs, CI-like pipelines) without requiring SWT/GUI interaction.
+   - **Where:** New entry point (e.g., `org.tvrenamer.controller.CliMain`), argument parsing, and a minimal headless execution path that reuses existing parsing/lookup/move logic.
+   - **What:** Add a CLI that can:
+     - accept input paths (files/folders),
+     - run parsing + show resolution (respecting Matching rules),
+     - output proposed renames/moves (dry-run),
+     - optionally perform moves/renames,
+     - emit machine-readable output (JSON) for pipeline integration.
+   - **Notes:** Needs a policy for ambiguous shows (fail with exit code + report pending disambiguations; optionally accept pinned IDs via args). Must not require SWT natives.
+   - **Effort:** Medium/Large (new mode, careful separation of UI vs core logic, robust error/exit codes)
+
+2. **Help: create simple static help pages and wire Help menu to open them**
    - **Why:** The current Help menu has a “Help” item that isn’t wired; users need discoverable guidance without hunting through issues/releases.
    - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions), plus new `docs/help/` content published via GitHub Pages (or similar).
    - **What:** Create a small set of static pages (e.g., Getting Started, Matching/Overrides, Select Shows & disambiguation, Troubleshooting/logging) and update the Help menu to open the help index URL. Keep “Visit Web Page” pointing to the project page.
    - **Effort:** Small/Medium (docs + one menu action)
 
-2. **Add unit tests for unified show selection (no network calls)**
+3. **Add unit tests for unified show selection (no network calls)**
    - **Why:** The unified selection evaluator is now critical behavior; tests prevent regressions and reduce risk when adjusting heuristics.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` and its interaction with `StringUtils.replacePunctuation(...)`
    - **What:** Add fixture-based candidate lists (no live provider calls) that verify:
@@ -37,12 +49,12 @@ These are suggested “first picks” from the backlog below—items that are li
      - year token ±1 behavior
    - **Effort:** Small/Medium (introduce fixtures/mocks; keep deterministic)
 
-3. **Improve handling of “unparsed” files**
+4. **Improve handling of “unparsed” files**
    - **Why:** Provide actionable feedback and better UX for files that fail parsing (common frustration point).
    - **Where:** `org.tvrenamer.model.EpisodeDb` / Results UI where unparsed items are inserted
    - **Effort:** Medium (mostly UX and messaging; low behavioral risk)
 
-4. **Show selection heuristics: verify coverage and expand carefully**
+5. **Show selection heuristics: verify coverage and expand carefully**
    - **Why:** Reduce unnecessary prompts while avoiding incorrect auto-matches.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
    - **Status:** Implemented deterministic tie-breakers:
@@ -52,28 +64,22 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Guideline:** Only add new tie-breakers if deterministic + explainable; never auto-decide cases like `The Office (US)` vs `The Office (UK)` without a pin.
    - **Effort:** Medium (but keep changes incremental and spec-driven)
 
-5. **Expand conflict detection beyond exact filename matches**
+6. **Expand conflict detection beyond exact filename matches**
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)
 
-6. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
+7. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
    - **Why:** We removed legacy scripts/configs; periodic scanning helps prevent reintroducing obsolete build/run paths and keeps docs accurate.
    - **Where:** Repo-wide (docs + scripts + configs). Look for: `ant`, `ivy`, `out/`, `lib/`, old run scripts, and other pre-Gradle conventions.
    - **Effort:** Small (grep + delete/update references)
 
-7. **Build/CI artifact naming: align CI outputs with stable `tvrenamer.jar`**
-   - **Why:** The fat jar is now intentionally named `tvrenamer.jar` for testing/scripts; CI artifacts should match to reduce confusion.
-   - **Where:** CI workflow + build packaging expectations (`build/libs/tvrenamer.jar`)
-   - **What:** Ensure CI uploads `tvrenamer.jar` (and optionally also uploads a versioned copy if desired).
-   - **Effort:** Small (workflow/artifact name tweaks)
 
 8. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
    - **Why:** SWT ≥ 3.130 crashed at startup on a Windows 11 x64 environment even with WebView2 + VC runtimes installed; pinning to 3.129 is a pragmatic compromise.
    - **Where:** Dependency management (`gradle/libs.versions.toml`) + docs (`docs/TODO.md` / release notes)
    - **What:** Identify the breaking dependency/OS requirement introduced in SWT 3.130+, document prerequisites (or decide to stay pinned).
    - **Effort:** Small/Medium (investigation + documentation)
-
 
 
 
