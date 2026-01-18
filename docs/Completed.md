@@ -2,13 +2,13 @@
 
 This document is a durable record of completed work: what shipped, why it mattered, and where it lives in the codebase.
 
-It exists to keep `docs/todo.md` focused on *future work* while preserving the engineering context and implementation details of finished items.
+It exists to keep `docs/TODO.md` focused on *future work* while preserving the engineering context and implementation details of finished items.
 
 ## How to use this file
 
-When you complete an item that was tracked in `docs/todo.md`:
+When you complete an item that was tracked in `docs/TODO.md`:
 
-1. Remove or mark it as completed in `docs/todo.md` (keep the TODO list clean).
+1. Remove or mark it as completed in `docs/TODO.md` (keep the TODO list clean).
 2. Add a new entry here under **Completed Items**, using the template below.
 3. If the work changes assumptions (threading, UI thread ownership, encoding rules, persistence keys, etc.), capture that in the entry.
 
@@ -110,7 +110,7 @@ When you complete an item that was tracked in `docs/todo.md`:
     - Prefer strict canonical token match over candidates with extra tokens.
     - Prefer `FirstAiredYear ± 1` when extracted includes a year token.
 - **Notes:**
-  - Further tie-breaker expansion is intentionally deferred; track in `docs/todo.md`.
+  - Further tie-breaker expansion is intentionally deferred; track in `docs/TODO.md`.
 
 ### 12) Matching tab: fixed Save gating + persistence
 - **Why:** Users must be able to save validated rows; Save should not be blocked incorrectly; edits must persist.
@@ -135,7 +135,7 @@ When you complete an item that was tracked in `docs/todo.md`:
   - Removed legacy Ant/Ivy-era run scripts and unused config/profile XMLs under `etc/`.
   - Removed unused constant referencing deleted default overrides file.
 - **Notes:**
-  - A periodic “legacy reference scan” is tracked in `docs/todo.md` as a hygiene step.
+  - A periodic “legacy reference scan” is tracked in `docs/TODO.md` as a hygiene step.
 
 ---
 

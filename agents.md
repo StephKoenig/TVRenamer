@@ -123,14 +123,14 @@ Preferred loop:
 ## TODO + Completed workflow (docs-driven)
 
 This repo keeps:
-- **future work** in `docs/todo.md`, and
+- **future work** in `docs/TODO.md`, and
 - a durable **completed-work record** in `docs/Completed.md`.
 
-This avoids `docs/todo.md` turning into a changelog while still preserving engineering context (what shipped, why it mattered, and where it lives).
+This avoids `docs/TODO.md` turning into a changelog while still preserving engineering context (what shipped, why it mattered, and where it lives).
 
-When implementing an item from `docs/todo.md`:
+When implementing an item from `docs/TODO.md`:
 1. **Do the implementation first**, including tests and any required UI/prefs wiring.
-2. **Update `docs/todo.md` (future only)**:
+2. **Update `docs/TODO.md` (future only)**:
    - Move completed items out of “Top candidates”.
    - Add/adjust any new top candidates discovered during the work.
    - Keep the file focused on *forward-looking* items.
@@ -140,11 +140,11 @@ When implementing an item from `docs/todo.md`:
    - Optionally link to a spec (`docs/*.md`) and/or the versioned release notes file.
 4. **Clean up in-code TODO comments**:
    - Remove TODOs that are now addressed.
-   - Replace them with a short “Note: addressed; see docs/todo.md …” where future context is still valuable.
+   - Replace them with a short “Note: addressed; see docs/TODO.md …” where future context is still valuable.
 5. **Prefer small commits**:
    - Ideally: one commit per focused TODO item, plus a follow-up commit for documentation/comment cleanup if needed.
 
-Goal: keep code clean, keep `docs/todo.md` as the single source of truth for future work, and keep `docs/Completed.md` as the durable record of finished work.
+Goal: keep code clean, keep `docs/TODO.md` as the single source of truth for future work, and keep `docs/Completed.md` as the durable record of finished work.
 
 ---
 
