@@ -2,6 +2,8 @@ package org.tvrenamer.model;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.tvrenamer.controller.util.StringUtils;
 
 /**
@@ -101,6 +103,10 @@ public final class ShowSelectionEvaluator {
         }
     }
 
+    private static final Pattern YEAR_TOKEN = Pattern.compile(
+        "(^|\\s|\\()(?<year>19\\d{2}|20\\d{2})(\\s|\\)|$)"
+    );
+
     /**
      * Evaluate whether a set of provider candidates can be auto-resolved without prompting,
      * given the extracted show name and optional pinned id.
@@ -112,6 +118,7 @@ public final class ShowSelectionEvaluator {
      *   <li>If candidate SeriesName matches extracted name (case-insensitive) → RESOLVED</li>
      *   <li>If candidate SeriesName matches punctuation-normalized extracted name → RESOLVED</li>
      *   <li>If candidate Alias matches extracted name or normalized extracted name → RESOLVED</li>
+     *   <li>Tie-breakers (deterministic; spec-driven)</li>
      *   <li>If exactly one candidate → RESOLVED</li>
      *   <li>Otherwise → AMBIGUOUS</li>
      * </ol>
@@ -179,19 +186,43 @@ public final class ShowSelectionEvaluator {
                 return false;
             };
 
-        // 2) Exact SeriesName match (raw/normalized).
+        // Helper: tokenize for strict token-set comparisons.
+        final java.util.function.Function<String, String> canonicalTokens =
+            (String s) -> {
+                if (s == null) {
+                    return "";
+                }
+                String norm;
+                try {
+                    norm = StringUtils.replacePunctuation(s);
+                } catch (Exception ignored) {
+                    norm = s;
+                }
+                norm = safeTrim(norm);
+                if (norm == null || norm.isBlank()) {
+                    return "";
+                }
+                // Lowercase and collapse spaces; keep token order.
+                return norm.toLowerCase().replaceAll("\\s+", " ");
+            };
+
+        final String extractedTokens = canonicalTokens.apply(extracted);
+        final String extractedNormalizedTokens = canonicalTokens.apply(
+            extractedNormalizedFinal
+        );
+
+        // 2) Exact SeriesName match (raw/normalized) wins, even if other candidates exist.
         for (ShowOption opt : options) {
             if (opt == null) {
                 continue;
             }
             String name = opt.getName();
             if (matchesExtracted.test(name)) {
-                // Prefer the base title match immediately.
                 return Decision.resolved(opt, "Resolves via exact name match");
             }
         }
 
-        // 3) Exact alias match (raw/normalized).
+        // 3) Exact alias match (raw/normalized) wins.
         for (ShowOption opt : options) {
             if (opt == null) {
                 continue;
@@ -215,6 +246,134 @@ public final class ShowSelectionEvaluator {
             }
         }
 
+        // --- Tie-breakers (only after exact name/alias and pinned-id checks) ---
+
+        // TB1: Prefer base title when it exists and other candidates are only parenthetical variants.
+        // Example: "The Night Manager" beats "The Night Manager (IN)" and "(CN)".
+        ShowOption baseTitle = null;
+        int baseTitleCount = 0;
+        for (ShowOption opt : options) {
+            if (opt == null) {
+                continue;
+            }
+            String name = safeTrim(opt.getName());
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            if (
+                extractedNormalizedFinal != null &&
+                !extractedNormalizedFinal.isBlank()
+            ) {
+                if (name.equalsIgnoreCase(extractedNormalizedFinal)) {
+                    baseTitle = opt;
+                    baseTitleCount++;
+                }
+            } else if (extracted != null && !extracted.isBlank()) {
+                if (name.equalsIgnoreCase(extracted)) {
+                    baseTitle = opt;
+                    baseTitleCount++;
+                }
+            }
+        }
+        if (baseTitleCount == 1 && baseTitle != null) {
+            boolean hasParentheticalVariants = false;
+            String baseName = safeTrim(baseTitle.getName());
+            for (ShowOption opt : options) {
+                if (opt == null) {
+                    continue;
+                }
+                String name = safeTrim(opt.getName());
+                if (name == null || name.isBlank() || baseName == null) {
+                    continue;
+                }
+                if (name.equalsIgnoreCase(baseName)) {
+                    continue;
+                }
+                // Variant if it starts with base + " (" and ends with ")"
+                if (
+                    name.regionMatches(
+                        true,
+                        0,
+                        baseName,
+                        0,
+                        baseName.length()
+                    ) &&
+                    name.length() > baseName.length() + 3 &&
+                    name.charAt(baseName.length()) == ' ' &&
+                    name.charAt(baseName.length() + 1) == '(' &&
+                    name.endsWith(")")
+                ) {
+                    hasParentheticalVariants = true;
+                }
+            }
+            if (hasParentheticalVariants) {
+                return Decision.resolved(
+                    baseTitle,
+                    "Preferred base title over parenthetical variants"
+                );
+            }
+        }
+
+        // TB2/TB6: Strict token-set match: prefer candidate whose canonical tokens equal extracted tokens.
+        // This favors less-decorated names when one matches exactly and others have extra tokens.
+        ShowOption tokenExact = null;
+        int tokenExactCount = 0;
+        String tokenBasis = !extractedNormalizedTokens.isBlank()
+            ? extractedNormalizedTokens
+            : extractedTokens;
+        if (!tokenBasis.isBlank()) {
+            for (ShowOption opt : options) {
+                if (opt == null) {
+                    continue;
+                }
+                String candTokens = canonicalTokens.apply(opt.getName());
+                if (!candTokens.isBlank() && candTokens.equals(tokenBasis)) {
+                    tokenExact = opt;
+                    tokenExactCount++;
+                }
+            }
+            if (tokenExactCount == 1 && tokenExact != null) {
+                return Decision.resolved(
+                    tokenExact,
+                    "Preferred exact token match over extra tokens"
+                );
+            }
+        }
+
+        // TB3: Year tolerance (±1) if extracted contains a year token and SeriesName wasn't an exact match.
+        Integer extractedYear = parseYearFromText(extracted);
+        if (extractedYear == null) {
+            extractedYear = parseYearFromText(extractedNormalizedFinal);
+        }
+        if (extractedYear != null) {
+            ShowOption yearHit = null;
+            int yearHitCount = 0;
+            for (ShowOption opt : options) {
+                if (opt == null) {
+                    continue;
+                }
+                Integer y = null;
+                try {
+                    y = opt.getFirstAiredYear();
+                } catch (Exception ignored) {
+                    y = null;
+                }
+                if (y == null) {
+                    continue;
+                }
+                if (Math.abs(y - extractedYear) <= 1) {
+                    yearHit = opt;
+                    yearHitCount++;
+                }
+            }
+            if (yearHitCount == 1 && yearHit != null) {
+                return Decision.resolved(
+                    yearHit,
+                    "Resolved via FirstAiredYear (±1) match"
+                );
+            }
+        }
+
         // 4) Single option resolves uniquely.
         if (options.size() == 1) {
             ShowOption only = options.get(0);
@@ -225,6 +384,21 @@ public final class ShowSelectionEvaluator {
 
         // 5) Still ambiguous.
         return Decision.ambiguous("Still ambiguous (would prompt)");
+    }
+
+    private static Integer parseYearFromText(final String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        Matcher m = YEAR_TOKEN.matcher(s);
+        if (!m.find()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(m.group("year"));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static String safeTrim(final String s) {

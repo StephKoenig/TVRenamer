@@ -3,7 +3,7 @@
 
 This is a living spec for how TVRenamer turns an extracted show name (from a filename) into a resolved show, and under what conditions the UI must prompt the user via **Select Shows**.
 
-It documents **current behavior** and the **intended direction** for incremental improvements. Keep it updated as selection heuristics evolve.
+It documents **current behavior** and the **implemented decision ordering** for the unified evaluator so runtime behavior and Preferences validation remain in sync.
 
 Source of truth:
 - `org.tvrenamer.model.ShowSelectionEvaluator` (pure evaluator used by both runtime selection and Matching-tab validation)
@@ -158,11 +158,13 @@ To avoid duplicated logic and “drift” between runtime behavior and Preferenc
 - No UI side effects in the evaluator (no dialog, no queuing).
 - Deterministic and explainable: return a decision + a human-readable reason string.
 
-### Proposed shape
+### Input semantics
 
-Introduce a model-level helper (name TBD, e.g., `ShowSelection` / `ShowSelectionEvaluator`) that accepts:
-- `extractedName` (String): the name to match against candidate SeriesName/Aliases
-- `options` (`List<ShowOption>`): provider candidates
+The evaluator accepts:
+- `extractedName` (String): the name to match against candidate SeriesName/Aliases.
+  - Runtime: this is the extracted show name (user-facing), e.g. `The.Night.Manager`
+  - Override validation: this is the override **replacement text**
+- `options` (`List<ShowOption>`): provider candidates (may be empty)
 - `pinnedId` (String|null): the user’s pinned provider id for this query string, if any
 
 It returns a decision:
@@ -194,6 +196,44 @@ For an Override row (`extracted show` → `replacementText`), validation treats:
 - The pinned-id lookup key as `StringUtils.makeQueryString(replacementText)`.
 
 This answers: “Given current disambiguations, is this override likely to resolve without prompting?”
+
+### Decision ordering (implemented)
+
+The evaluator is intentionally conservative and explainable. It uses the following ordering:
+
+1. **No matches**
+   - If `options` is empty → `NOT_FOUND` (“No matches”).
+
+2. **Pinned ID wins (if present and in results)**
+   - If `pinnedId` matches a candidate id in `options` → `RESOLVED` (“Resolved via pinned ID”).
+
+3. **Exact SeriesName match wins (even if other candidates exist)**
+   - If any candidate SeriesName equals `extractedName` (case-insensitive) → `RESOLVED` (“Resolves via exact name match”).
+   - Additionally, compare against a punctuation-normalized form of `extractedName` (via `StringUtils.replacePunctuation`) to handle common download separators like `.`, `_`, `-`.
+
+4. **Exact Alias match wins**
+   - If any candidate alias equals `extractedName` (raw or punctuation-normalized; case-insensitive) → `RESOLVED` (“Resolves via exact alias match”).
+
+5. **Tie-breakers (deterministic; applied only after exact checks)**
+   - **TB1: Prefer base title over parenthetical variants (only when base exists)**
+     - If a base-title candidate exists (exactly equal to normalized extracted name) and other candidates are `Base Title (something)` → choose base title (“Preferred base title over parenthetical variants”).
+     - If candidates are only parenthetical variants (e.g., `The Office (US)` vs `The Office (UK)` with no base title) → remain ambiguous (prompt).
+   - **TB2/TB6: Prefer exact token match over extra tokens**
+     - Canonicalize extracted and candidate names using punctuation replacement + lowercase + collapsed spaces.
+     - If exactly one candidate’s canonical tokens equal the extracted canonical tokens → choose it (“Preferred exact token match over extra tokens”).
+   - **TB3: FirstAiredYear match with ±1 tolerance when extracted contains a year token**
+     - If extracted contains a year token (e.g., `(... 2023 ...)`) and no exact SeriesName match existed,
+       then if exactly one candidate has `firstAiredYear` within ±1 of that year → choose it (“Resolved via FirstAiredYear (±1) match”).
+
+6. **Single candidate**
+   - If `options.size() == 1` → `RESOLVED` (“Resolves uniquely”).
+
+7. **Otherwise**
+   - `AMBIGUOUS` (“Still ambiguous (would prompt)”).
+
+Non-goals:
+- No fuzzy matching (Levenshtein, scoring) at this stage.
+- No “prefer base title” when the extracted name already contains a parenthetical suffix (that should be handled by exact match, which wins by specificity).
 
 ---
 
@@ -285,5 +325,6 @@ Expected:
 - Initial spec: documents pipeline and current selection decision tree.
 - Added: unified selection evaluator plan (shared by runtime + Matching validation) and override validation semantics.
 - Implemented: unified selection evaluator (`org.tvrenamer.model.ShowSelectionEvaluator`) is now the source of truth for runtime selection and Matching-tab override validation.
+- Implemented: deterministic tie-breakers (base-title vs parenthetical variants, strict token match, FirstAiredYear ±1 when a year token is present).
 
 ```
