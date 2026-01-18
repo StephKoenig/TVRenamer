@@ -49,6 +49,7 @@ import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.ReplacementToken;
 import org.tvrenamer.model.ShowName;
 import org.tvrenamer.model.ShowOption;
+import org.tvrenamer.model.ShowSelectionEvaluator;
 import org.tvrenamer.model.ThemeMode;
 import org.tvrenamer.model.UserPreferences;
 
@@ -1773,7 +1774,8 @@ class PreferencesDialog extends Dialog {
         // OVERRIDE: key=extracted show, val=replacement text
         String replacementText = val;
 
-        // Simulate pipeline: override -> query string -> provider options -> disambiguation check
+        // Pragmatic semantics: treat replacementText as the "extracted name" input to selection.
+        // Simulate pipeline: replacementText -> query string -> provider options -> selection decision.
         String queryString = StringUtils.makeQueryString(replacementText);
 
         ShowName sn = ShowName.mapShowName(replacementText);
@@ -1789,47 +1791,23 @@ class PreferencesDialog extends Dialog {
         if (options == null || options.isEmpty()) {
             return ValidationResult.invalid("No matches");
         }
-        if (options.size() == 1) {
-            return ValidationResult.ok("Resolves uniquely");
-        }
 
-        // Treat as resolved if a candidate matches the replacement text exactly after punctuation normalization.
-        // This mirrors ShowStore's auto-selection heuristic (e.g., "The.Night.Manager" -> "The Night Manager")
-        // and avoids marking common cases as "would prompt" when they won't.
-        String normalizedReplacement = null;
-        try {
-            normalizedReplacement = StringUtils.replacePunctuation(
-                replacementText
-            );
-        } catch (Exception ignored) {
-            normalizedReplacement = null;
-        }
-        if (normalizedReplacement != null && !normalizedReplacement.isBlank()) {
-            for (ShowOption opt : options) {
-                if (opt == null) {
-                    continue;
-                }
-                String name = opt.getName();
-                if (
-                    name != null && name.equalsIgnoreCase(normalizedReplacement)
-                ) {
-                    return ValidationResult.ok(
-                        "Resolves via exact normalized name match"
-                    );
-                }
-            }
-        }
-
-        // Ambiguous: if a disambiguation exists and it matches a candidate, treat as valid.
         String pinnedId = prefs.resolveDisambiguatedSeriesId(queryString);
-        if (pinnedId != null) {
-            for (ShowOption opt : options) {
-                if (opt != null && pinnedId.equals(opt.getIdString())) {
-                    return ValidationResult.ok("Resolved via pinned ID");
-                }
+        ShowSelectionEvaluator.Decision decision =
+            ShowSelectionEvaluator.evaluate(replacementText, options, pinnedId);
+
+        if (decision.isResolved()) {
+            String msg = decision.getMessage();
+            if (msg == null || msg.isBlank()) {
+                msg = "Resolves";
             }
+            return ValidationResult.ok(msg);
         }
-        return ValidationResult.invalid("Still ambiguous (would prompt)");
+        if (decision.isNotFound()) {
+            return ValidationResult.invalid(decision.getMessage());
+        }
+        // Ambiguous: runtime would prompt.
+        return ValidationResult.invalid(decision.getMessage());
     }
 
     private void setRowValidating(

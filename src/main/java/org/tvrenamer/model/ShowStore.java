@@ -12,7 +12,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.logging.Logger;
 import org.tvrenamer.controller.ShowInformationListener;
 import org.tvrenamer.controller.TheTVDBProvider;
-import org.tvrenamer.controller.util.StringUtils;
 
 /**
  * ShowStore -- maps strings to Show objects.<p>
@@ -442,148 +441,37 @@ public class ShowStore {
 
                 // If the user previously disambiguated this query string, honor it.
                 String queryString = showName.getQueryString();
-
-                // 1) If the user previously disambiguated this query string, honor it.
                 String preferredId = prefs.resolveDisambiguatedSeriesId(
                     queryString
                 );
-                if (preferredId != null) {
-                    ShowOption preferred = null;
-                    for (ShowOption opt : showName.getShowOptions()) {
-                        if (
-                            opt != null && preferredId.equals(opt.getIdString())
-                        ) {
-                            preferred = opt;
-                            break;
-                        }
-                    }
-                    if (preferred != null) {
-                        logger.info(
-                            "ShowStore: using stored disambiguation for queryString='" +
-                                queryString +
-                                "' -> id='" +
-                                preferredId +
-                                "' (" +
-                                preferred.getName() +
-                                ")"
-                        );
-                        showOption = preferred;
-                    } else {
-                        logger.warning(
-                            "ShowStore: stored disambiguation id '" +
-                                preferredId +
-                                "' not found in current search results for queryString='" +
-                                queryString +
-                                "'; falling back to default selection"
-                        );
-                        // Stored mapping no longer matches current search results; fall back.
-                        showOption = showName.selectShowOption();
-                    }
+
+                // Unified decision: use shared evaluator to decide whether we can auto-resolve
+                // or must prompt. This keeps runtime behavior aligned with Preferences validation.
+                List<ShowOption> options = showName.getShowOptions();
+                ShowSelectionEvaluator.Decision decision =
+                    ShowSelectionEvaluator.evaluate(
+                        showName.getExampleFilename(),
+                        options,
+                        preferredId
+                    );
+
+                if (decision.isResolved()) {
+                    showOption = decision.getChosen();
+                } else if (decision.isAmbiguous()) {
+                    logger.info(
+                        "ShowStore: queuing disambiguation for queryString='" +
+                            queryString +
+                            "' (options=" +
+                            options.size() +
+                            ")"
+                    );
+                    queuePendingDisambiguation(showName, options);
+                    showOption = showName.getNonCachingFailedShow(
+                        new TVRenamerIOException("show selection required")
+                    );
                 } else {
-                    // 2) Improve auto-selection before queuing:
-                    // Prefer an exact SeriesName match (case-insensitive) against the extracted show name,
-                    // then an exact alias match.
-                    //
-                    // IMPORTANT: The extracted show name often contains filename separators like '.' '_' '-'
-                    // (e.g., "The.Night.Manager"). The provider results typically contain human-readable
-                    // spacing ("The Night Manager"). To avoid unnecessary prompts, we also compare against
-                    // a punctuation-normalized form (StringUtils.replacePunctuation), without changing the
-                    // query string logic (which is handled elsewhere via makeQueryString).
-                    //
-                    // This avoids prompting for common cases like "Doctor Who (2023)" where SeriesName matches
-                    // exactly but FirstAired may be 2024, and dot-separated downloads like "The.Night.Manager".
-                    List<ShowOption> options = showName.getShowOptions();
-
-                    ShowOption exactMatch = null;
-                    String extracted = showName.getExampleFilename();
-                    String extractedNormalized = null;
-                    if (extracted != null && !extracted.isBlank()) {
-                        try {
-                            extractedNormalized =
-                                StringUtils.replacePunctuation(extracted);
-                        } catch (Exception ignored) {
-                            extractedNormalized = null;
-                        }
-
-                        for (ShowOption opt : options) {
-                            if (opt == null) {
-                                continue;
-                            }
-                            String name = opt.getName();
-                            if (name == null) {
-                                continue;
-                            }
-
-                            if (name.equalsIgnoreCase(extracted)) {
-                                exactMatch = opt;
-                                break;
-                            }
-
-                            if (
-                                extractedNormalized != null &&
-                                !extractedNormalized.isBlank() &&
-                                name.equalsIgnoreCase(extractedNormalized)
-                            ) {
-                                exactMatch = opt;
-                                break;
-                            }
-                        }
-
-                        if (exactMatch == null) {
-                            outer: for (ShowOption opt : options) {
-                                if (opt == null) {
-                                    continue;
-                                }
-                                List<String> aliases = null;
-                                try {
-                                    aliases = opt.getAliasNames();
-                                } catch (Exception ignored) {
-                                    aliases = null;
-                                }
-                                if (aliases == null || aliases.isEmpty()) {
-                                    continue;
-                                }
-                                for (String a : aliases) {
-                                    if (a == null) {
-                                        continue;
-                                    }
-
-                                    if (a.equalsIgnoreCase(extracted)) {
-                                        exactMatch = opt;
-                                        break outer;
-                                    }
-
-                                    if (
-                                        extractedNormalized != null &&
-                                        !extractedNormalized.isBlank() &&
-                                        a.equalsIgnoreCase(extractedNormalized)
-                                    ) {
-                                        exactMatch = opt;
-                                        break outer;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (exactMatch != null) {
-                        showOption = exactMatch;
-                    } else if (options.size() > 1) {
-                        logger.info(
-                            "ShowStore: queuing disambiguation for queryString='" +
-                                queryString +
-                                "' (options=" +
-                                options.size() +
-                                ")"
-                        );
-                        queuePendingDisambiguation(showName, options);
-                        showOption = showName.getNonCachingFailedShow(
-                            new TVRenamerIOException("show selection required")
-                        );
-                    } else {
-                        // 3) Single (or zero) option: preserve existing behavior.
-                        showOption = showName.selectShowOption();
-                    }
+                    // NOT_FOUND: preserve existing failure behavior.
+                    showOption = showName.selectShowOption();
                 }
             } catch (DiscontinuedApiException e) {
                 showName.apiDiscontinued();
