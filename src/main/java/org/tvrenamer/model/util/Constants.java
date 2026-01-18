@@ -83,8 +83,6 @@ public class Constants {
     public static final String APPLICATION_ICON_PATH = "/icons/tvrenamer.png";
     public static final String SUBLINK_PATH = "/icons/SweetieLegacy/";
     public static final String LOGGING_PROPERTIES = "/logging.properties";
-    public static final String DEVELOPER_DEFAULT_OVERRIDES_FILENAME =
-        "etc/default-overrides.xml";
 
     @SuppressWarnings("SameParameterValue")
     private static String charsToSpaceString(final Set<Character> chars) {
