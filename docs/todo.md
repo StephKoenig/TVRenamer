@@ -70,17 +70,21 @@ These are suggested “first picks” from the backlog below—items that are li
 1. **Improve show selection heuristics when ambiguous**
    - **Why:** Avoid “choose first match” surprises; reduce incorrect auto-matches.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` (shared by runtime selection + Matching-tab validation)
-   - **Effort:** Medium (tie-breakers and/or user prompt; can start with better tie-breakers only)
+   - **Effort:** Medium (remaining tie-breakers, plus spec/tests; evaluator should remain deterministic and explainable)
 
-2. **Add tie-breaker: prefer base title over parenthetical region suffix when extracted name has no suffix**
-   - **Why:** When candidates include `Title`, `Title (IN)`, `Title (CN)` and the extracted show name is just `Title` (or normalizes to it), prefer the unsuffixed base title to avoid unnecessary prompts and incorrect picks.
-   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` (shared decision logic)
-   - **Effort:** Small (additional deterministic check before prompting)
+2. **Show selection tie-breakers: verify coverage and expand carefully (PARTIALLY DONE)**
+   - **Why:** Reduce unnecessary prompts while avoiding incorrect auto-matches.
+   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
+   - **Status:** Implemented deterministic tie-breakers:
+     - Prefer base title over parenthetical variants when base exists (e.g., `Title` beats `Title (IN)`/`(CN)`).
+     - Prefer exact canonical token match over extra tokens (strict).
+     - Prefer `FirstAiredYear` match with ±1 tolerance when extracted contains a year token.
+   - **Remaining:** Add any additional tie-breakers only if they are deterministic and do not auto-decide cases like `The Office (US)` vs `The Office (UK)` without a pin.
 
 3. **Add unit tests for show auto-selection with separator-heavy filenames (dot/underscore/hyphen)**
    - **Why:** Ensure common download naming like `The.Night.Manager.s01e03.mkv` auto-selects the correct base series (e.g., `The Night Manager`) without prompting when provider candidates include region-suffixed variants.
-   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` (shared selection rules) and its interaction with `StringUtils.replacePunctuation(...)`
-   - **Effort:** Small/Medium (may require provider mocking or fixture-based candidate injection; avoid live TVDB calls in CI)
+   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` and its interaction with `StringUtils.replacePunctuation(...)`
+   - **Effort:** Small/Medium (must not use live network/provider calls in CI; prefer provider mocking or fixture-based candidate injection)
 
 4. **Expand conflict detection beyond exact filename matches**
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
