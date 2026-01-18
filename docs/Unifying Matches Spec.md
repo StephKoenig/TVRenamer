@@ -2,7 +2,7 @@
 
 ## Goal
 
-Unify the two existing “show matching” mechanisms into one coherent user-facing editing experience under the Preferences **Matching** tab:
+Unify the two existing “show matching” mechanisms into one coherent user-facing editing experience under the Preferences **Matching** tab (implemented):
 
 1. **Overrides**: `extracted show name -> replacement show text`
 2. **Disambiguations**: `provider query string -> provider series id` (TVDB today)
@@ -59,27 +59,45 @@ The dialog/window may need to be slightly taller/wider to fit both tables comfor
 
 Columns:
 
-- **Extracted show** (editable)
-- **Replace with** (editable)
-- **Status** (read-only: `Validating…` / ✅ / ❌ + short message)
+- **Status** (icon; first column)
+- **Extracted show**
+- **Replace with**
+
+Editing model:
+
+- Entry text boxes above the table.
+- Clicking a row copies its values into the entry boxes.
+- **Add / Update** commits changes:
+  - if a row is selected, it updates that row
+  - otherwise it upserts by key (case-insensitive) or inserts a new row
 
 Row controls:
 
-- Add row
-- Delete row
+- Add / Update
+- Remove
+- Clear All (with confirmation)
 
 #### Disambiguations table
 
 Columns:
 
-- **Query string** (editable)
-- **Series ID** (editable)
-- **Status** (read-only: `Validating…` / ✅ / ❌ + short message)
+- **Status** (icon; first column)
+- **Query string**
+- **Series ID**
+
+Editing model:
+
+- Entry text boxes above the table.
+- Clicking a row copies its values into the entry boxes.
+- **Add / Update** commits changes:
+  - if a row is selected, it updates that row
+  - otherwise it upserts by key (case-insensitive) or inserts a new row
 
 Row controls:
 
-- Add row
-- Delete row
+- Add / Update
+- Remove
+- Clear All (with confirmation)
 
 #### Save / Apply behavior
 
@@ -102,9 +120,8 @@ This is a **pipeline-level validation**, not a simple syntax check.
 ### What to validate
 
 - Validate **new rows** and **changed rows** only.
-- Validation occurs when:
-  - the user “commits” a row edit (e.g., leaves the row / ends cell edit), AND
-  - the row has both required fields non-blank.
+- Validation occurs when the user **commits** a change via **Add / Update**.
+- Existing rows loaded from preferences are treated as “OK” by default and are not revalidated automatically.
 
 ### Validation is online (connected)
 
@@ -115,12 +132,13 @@ This is a **pipeline-level validation**, not a simple syntax check.
 
 ### Validation threading + UI feedback
 
-- Validation must run off the SWT UI thread (background thread).
-- Each row shows:
-  - `Validating…` while in-flight, with a small spinner animation (reuse the quadrant spinner idea) and the word **Validating**.
-- Validation should be debounced to avoid triggering on every keystroke:
-  - Validate on row-commit, not per keypress.
-  - If rapid edits occur, cancel or supersede older validation requests for that row.
+- Validation runs off the SWT UI thread (background thread) and posts results back to the UI thread.
+- Each row uses icons for state (matching the main results table icons):
+  - **Valid (OK):** check icon
+  - **Invalid:** cross icon
+  - **Validating:** clock icon
+- While validating, Save is disabled for dirty rows.
+- Validation requests are versioned with a per-row token so stale async results are ignored if the row is edited again.
 
 ---
 
@@ -168,10 +186,9 @@ We intentionally do not require that the query string is ambiguous; a pinned id 
 
 ## Handling blanks / partial edits
 
-- If required fields are blank, status should be neutral (e.g., empty or `Incomplete`).
-- If the row is dirty and incomplete, treat it as invalid for Save gating:
-  - ❌ `Incomplete`
-- Users may temporarily clear a field while editing; gating should treat it as dirty+invalid until corrected or the row is deleted.
+- If required fields are blank when committing via Add / Update, the row is marked:
+  - **Incomplete** (and treated as invalid for Save gating)
+- Because the commit model is explicit (Add / Update), transient in-field edits do not immediately invalidate until committed.
 
 ---
 
@@ -203,6 +220,9 @@ We intentionally do not require that the query string is ambiguous; a pinned id 
 - Select Shows dialog continues to create/modify disambiguations (`query string -> id`) through normal use.
 - Matching tab provides a manual editor over the same data.
 - If a user “breaks” a query string in Matching tab, they may re-enter Select Shows flow later; this is acceptable.
+
+### Validation message visibility (tooltip-like behavior)
+- SWT TableItem does not support true per-cell tooltips, so the UI shows a small message label near each table that updates as the user hovers rows.
 
 ---
 

@@ -55,6 +55,11 @@ This section summarizes TODOs that have been addressed, including what changed a
    - **Where:** `org.tvrenamer.view.BatchShowDisambiguationDialog`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.model.ShowStore`, `tvrenamer/agents.md`
    - **What we did:** Reworked candidate selection to use checkboxes (single-choice or none) with row-click toggling and double-click “select + advance”; enabled OK when at least one show is selected; streamed newly discovered ambiguous shows into an already-open dialog with a “Select Shows (Downloading …)” animated title; kept unresolved pending items queued (remove only resolved entries) so they can be reopened via the button; adjusted auto-open behavior to trigger only on an empty→non-empty pending transition (and otherwise rely on streaming / explicit button).
 
+11. **Unify show matching rules UI (Matching tab: Overrides + Disambiguations)**
+   - **Why:** Users need one place to view/edit/delete/validate all show-matching rules; reduces confusion and makes troubleshooting easier.
+   - **Where:** `org.tvrenamer.view.PreferencesDialog` (Matching tab), `org.tvrenamer.model.UserPreferences` (show name overrides + show disambiguation overrides), `org.tvrenamer.controller.ShowStore` (disambiguation persistence), `docs/Unifying Matches Spec.md`
+   - **What we did:** Renamed the Preferences “Overrides” tab to “Matching”; added two editors (Overrides and Disambiguations) using tables; implemented threaded online validation (TVDB) for new/changed entries with Save gating; added status icons consistent with the main results table; added per-table validation message display near each table; added Clear All confirmations; moved status icon column to the first column for cleaner alignment.
+
 
 ---
 
@@ -97,10 +102,7 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Where:** `org.tvrenamer.controller.util.StringUtils` and provider fetch paths
    - **Effort:** Medium (API cleanup + call-site audit + tests)
 
-8. **Unify show matching rules UI (Overrides + Disambiguations)**
-   - **Why:** Users need one place to view/edit/delete/validate all show-matching rules; reduces confusion and makes troubleshooting easier.
-   - **Where:** Preferences UI (Overrides tab / new “Show Matching” tab), `UserPreferences` storage, and `ShowStore` resolution flow
-   - **Effort:** Medium (UI table + validation + persistence wiring)
+
 
 ---
 
