@@ -1,64 +1,17 @@
 # TVRenamer — Consolidated TODO Notes
 
+Note: Completed work is tracked in `docs/Completed.md`. Keep this file focused on future work only.
+
 This document consolidates “future work” notes that are currently embedded throughout the codebase (e.g., `TODO:` comments and other forward-looking commentary such as “in the future…”, “maybe we should…”, “might be better…”, etc.). The intent is to make these ideas easier to discover, discuss, and prioritize—without removing or rewriting the original in-code notes.
 
 Notes are grouped by area and summarized at a high level. Where helpful, the source location is listed so you can jump directly to the original comment.
 
 ---
 
-## TODOs Done
+## Completed work
 
-This section summarizes TODOs that have been addressed, including what changed and where it lives, so future contributors (and upstream) have a clear record.
+Completed work is tracked in `docs/Completed.md`. Keep this file focused on future work only.
 
-1. **Make file modification-time behavior configurable**
-   - **Why:** Renaming/moving a file doesn’t change its contents; default behavior should preserve timestamps.
-   - **Where:** `org.tvrenamer.controller.FileMover` — `finishMove(...)` + Preferences UI/prefs model
-   - **What we did:** Added a preference to preserve original mtime by default, with an option to set mtime to “now”.
-
-2. **Fix Preferences dialog token drop insertion position**
-   - **Why:** Drag/drop should insert at caret (or replace selection), not always append.
-   - **Where:** `org.tvrenamer.view.PreferencesDialog` — `PreferencesDropTargetListener.drop(...)`
-   - **What we did:** Insert dropped token at current selection/caret and move caret to end of inserted token.
-
-3. **Thread the preload folder scan**
-   - **Why:** Folder scanning can block UI responsiveness during startup.
-   - **Where:** `org.tvrenamer.model.EpisodeDb` — `preload()`
-   - **What we did:** Run preload scanning on a background thread; note that `publish(...)` notifies listeners from that thread.
-
-4. **Harden XPath usage for potential concurrency**
-   - **Why:** Shared `XPath` instances are not guaranteed to be thread-safe.
-   - **Where:** `org.tvrenamer.controller.util.XPathUtilities`
-   - **What we did:** Replaced shared static `XPath` with `ThreadLocal<XPath>`.
-
-5. **Generalize “map to list” helper in MoveRunner**
-   - **Why:** Reduce boilerplate and prefer standard library constructs.
-   - **Where:** `org.tvrenamer.controller.MoveRunner`
-   - **What we did:** Replaced custom “get list or create” logic with `Map.computeIfAbsent(...)`.
-
-6. **Stabilize Windows permission-related tests**
-   - **Why:** Windows “read-only” simulation is unreliable without ACL tooling; tests should not flake.
-   - **Where:** `org.tvrenamer.controller.TestUtils.setReadOnly(Path)` and move-related tests
-   - **What we did:** Adopted a pragmatic “verify + skip” strategy when read-only cannot be reliably enforced; updated move tests to match default mtime preservation.
-
-7. **Make string handling more explicit (URL vs XML vs display vs filename)**
-   - **Why:** Mixing responsibilities can corrupt provider XML and break URLs/filenames in subtle ways.
-   - **Where:** `org.tvrenamer.controller.util.StringUtils` and `org.tvrenamer.controller.TheTVDBProvider`
-   - **What we did:** Use robust URL encode/decode, stop mutating downloaded XML payloads, and treat “special character encoding” as conservative display normalization only.
-
-9. **Improve move/copy throughput and overall progress reporting**
-   - **Why:** Copy+delete can be slow on fast networks; overall progress should be smooth and accurate for multi-file batches.
-   - **Where:** `org.tvrenamer.controller.util.FileUtilities.copyWithUpdates(...)`, `org.tvrenamer.view.FileMonitor`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.view.ProgressBarUpdater`
-   - **What we did:** Increased copy buffer to 4 MiB and throttled UI progress callbacks to ~4 MiB; implemented byte-accurate aggregate progress for copy+delete moves only so the bottom bar advances smoothly across the entire batch and resets after completion.
-
-10. **Batch “Select Shows” dialog: checkbox selection, partial OK, and streaming pending ambiguities**
-   - **Why:** Avoid repeated modal popups during background lookup; allow users to resolve what they can without blocking progress on unresolved shows; make selection UX reliable.
-   - **Where:** `org.tvrenamer.view.BatchShowDisambiguationDialog`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.model.ShowStore`, `tvrenamer/agents.md`
-   - **What we did:** Reworked candidate selection to use checkboxes (single-choice or none) with row-click toggling and double-click “select + advance”; enabled OK when at least one show is selected; streamed newly discovered ambiguous shows into an already-open dialog with a “Select Shows (Downloading …)” animated title; kept unresolved pending items queued (remove only resolved entries) so they can be reopened via the button; adjusted auto-open behavior to trigger only on an empty→non-empty pending transition (and otherwise rely on streaming / explicit button).
-
-11. **Unify show matching rules UI (Matching tab: Overrides + Disambiguations)**
-   - **Why:** Users need one place to view/edit/delete/validate all show-matching rules; reduces confusion and makes troubleshooting easier.
-   - **Where:** `org.tvrenamer.view.PreferencesDialog` (Matching tab), `org.tvrenamer.model.UserPreferences` (show name overrides + show disambiguation overrides), `org.tvrenamer.controller.ShowStore` (disambiguation persistence), `docs/Unifying Matches Spec.md`
-   - **What we did:** Renamed the Preferences “Overrides” tab to “Matching”; added two editors (Overrides and Disambiguations) using tables; implemented threaded online validation (TVDB) for new/changed entries with Save gating; added status icons consistent with the main results table; added per-table validation message display near each table; added Clear All confirmations; moved status icon column to the first column for cleaner alignment.
 
 
 ---
@@ -66,11 +19,6 @@ This section summarizes TODOs that have been addressed, including what changed a
 ## Top candidates (high impact / low risk)
 
 These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
-
-7. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
-   - **Why:** We removed legacy `etc/` scripts/configs; periodically scanning helps prevent reintroducing obsolete build/run paths and keeps docs accurate.
-   - **Where:** Repo-wide (docs + scripts + configs). Look for: `ant`, `ivy`, `out/`, `lib/`, old run scripts, and other pre-Gradle conventions.
-   - **Effort:** Small (grep + delete/update references)
 
 1. **Improve show selection heuristics when ambiguous**
    - **Why:** Avoid “choose first match” surprises; reduce incorrect auto-matches.
@@ -95,6 +43,11 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)
+
+5. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
+   - **Why:** We removed legacy `etc/` scripts/configs; periodically scanning helps prevent reintroducing obsolete build/run paths and keeps docs accurate.
+   - **Where:** Repo-wide (docs + scripts + configs). Look for: `ant`, `ivy`, `out/`, `lib/`, old run scripts, and other pre-Gradle conventions.
+   - **Effort:** Small (grep + delete/update references)
 
 3. **Consider canonicalization of file paths in EpisodeDb**
    - **Why:** Reduce duplication/confusion when multiple path strings refer to the same file.
