@@ -76,11 +76,13 @@ When to run packaging tasks (`shadowJar` / `createExe`):
 
 Artifacts:
 - JARs: `build/libs/`
+  - `build/libs/tvrenamer.jar` (stable fat JAR for scripts/testing)
+  - `build/libs/tvrenamer-<commitCount>.jar` (versioned fat JAR; preferred for Releases)
 - EXE: `build/launch4j/TVRenamer.exe`
 
 Notes:
 - On Windows, `clean` can fail if the last built EXE/JAR is still running or open/locked. Close any running `TVRenamer.exe` / Java process and retry.
-- The build generates a version file (`tvrenamer.version`) at build time using git commit count.
+- The build generates `tvrenamer.version` at build time using git commit count (`git rev-list --count HEAD`), and the EXE version metadata is aligned to the same number.
 
 ### Running and log capture (debug file logging)
 
@@ -181,6 +183,7 @@ Environment:
 - `runs-on: windows-latest`
 - JDK 17 (Temurin via `actions/setup-java`)
 - Gradle 8.5 via `gradle/actions/setup-gradle`
+- Checkout uses full history (`fetch-depth: 0`) so commit-count-based versioning is correct in CI.
 
 Build step (as configured in CI):
 ```/dev/null/commands.txt#L1-1
@@ -189,7 +192,9 @@ gradle build shadowJar createExe --info
 
 Artifacts uploaded by CI:
 - `TVRenamer-Windows-Exe` → `build/launch4j/TVRenamer.exe`
-- `TVRenamer-JAR` → `build/libs/*.jar`
+- `TVRenamer-JAR` →
+  - `build/libs/tvrenamer.jar`
+  - `build/libs/tvrenamer-*.jar` (versioned)
 
 ### Practical workflow for agents
 1. Make changes locally.
