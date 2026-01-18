@@ -1322,19 +1322,6 @@ class PreferencesDialog extends Dialog {
         }
     }
 
-    private void removeOverride(String from) {
-        if (overridesTable == null) {
-            return;
-        }
-        for (int i = 0; i < overridesTable.getItemCount(); i++) {
-            TableItem ti = overridesTable.getItem(i);
-            if (ti.getText(0).trim().equalsIgnoreCase(from)) {
-                overridesTable.remove(i);
-                break;
-            }
-        }
-    }
-
     private void upsertDisambiguation(String queryString, String seriesId) {
         int selected = (disambiguationsTable == null)
             ? -1
@@ -1365,19 +1352,6 @@ class PreferencesDialog extends Dialog {
             TableItem ti = new TableItem(disambiguationsTable, SWT.NONE);
             // Column 0 is the status icon column; values are columns 1 and 2.
             ti.setText(new String[] { "", queryString, seriesId });
-        }
-    }
-
-    private void removeDisambiguation(String queryString) {
-        if (disambiguationsTable == null) {
-            return;
-        }
-        for (int i = 0; i < disambiguationsTable.getItemCount(); i++) {
-            TableItem ti = disambiguationsTable.getItem(i);
-            if (ti.getText(0).trim().equalsIgnoreCase(queryString)) {
-                disambiguationsTable.remove(i);
-                break;
-            }
         }
     }
 
