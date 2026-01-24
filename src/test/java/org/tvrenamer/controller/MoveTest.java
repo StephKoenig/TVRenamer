@@ -22,7 +22,6 @@ import org.junit.rules.TemporaryFolder;
 import org.tvrenamer.model.EpisodeTestData;
 import org.tvrenamer.model.FileEpisode;
 import org.tvrenamer.model.MoveObserver;
-import org.tvrenamer.model.util.Environment;
 
 /**
  * MoveTest -- test FileMover and MoveRunner.
