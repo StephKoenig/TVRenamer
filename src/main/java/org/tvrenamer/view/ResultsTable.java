@@ -111,6 +111,13 @@ public final class ResultsTable
     private ProgressBar totalProgressBar;
     private TaskItem taskItem = null;
 
+    // Session-only override for "move selected" (does not persist to preferences).
+    // null means "no override; follow preferences".
+    private Boolean sessionMoveSelectedOverride = null;
+
+    // Bottom-bar "Move [ ]" control (session-only).
+    private Button sessionMoveCheckbox;
+
     // Aggregate overall copy progress for copy+delete operations only.
     // This drives the bottom progress bar smoothly (byte-based) instead of file-count chunks.
     private FileMonitor.AggregateCopyProgress aggregateCopyProgress = null;
@@ -1047,7 +1054,12 @@ public final class ResultsTable
     private void executeActionButton() {
         currentFailures.clear();
 
-        if (!prefs.isMoveEnabled() && !prefs.isRenameSelected()) {
+        // Session override: treat "move selected" as disabled when the session checkbox is OFF.
+        // Note: moveEnabled reflects destination validation; renameSelected reflects preferences.
+        if (
+            (!prefs.isMoveEnabled() || !isMoveSelectedForSession()) &&
+            !prefs.isRenameSelected()
+        ) {
             logger.fine("move and rename both disabled, nothing to be done.");
             return;
         }
@@ -1223,46 +1235,113 @@ public final class ResultsTable
         }
     }
 
-    private void setActionButtonText(final Button b) {
-        String label = JUST_MOVE_LABEL;
-        if (prefs.isRenameSelected()) {
-            if (prefs.isMoveSelected()) {
-                label = RENAME_AND_MOVE;
+    private boolean isMoveSelectedForSession() {
+        return (sessionMoveSelectedOverride != null)
+            ? sessionMoveSelectedOverride.booleanValue()
+            : prefs.isMoveSelected();
+    }
+
+    private void refreshSessionMoveToggleUi() {
+        if (sessionMoveCheckbox == null || sessionMoveCheckbox.isDisposed()) {
+            return;
+        }
+
+        final boolean effectiveMoveSelected = isMoveSelectedForSession();
+
+        // Checkbox label is stable; selection reflects effective state for session.
+        sessionMoveCheckbox.setText("Move");
+        sessionMoveCheckbox.setSelection(effectiveMoveSelected);
+
+        // If user has set "move selected" but move is not possible (dest invalid),
+        // communicate that in tooltip.
+        String tooltip;
+        if (effectiveMoveSelected) {
+            if (prefs.isMoveEnabled()) {
+                tooltip =
+                    "Session toggle: Move is ON.\n\n" +
+                    "Files will be moved to:\n" +
+                    prefs.getDestinationDirectoryName() +
+                    "\n\nThis toggle is temporary and resets when you restart TVRenamer.";
             } else {
-                label = RENAME_LABEL;
+                tooltip =
+                    "Session toggle: Move is ON, but move is currently not possible.\n\n" +
+                    "Destination folder cannot be used:\n" +
+                    prefs.getDestinationDirectoryName() +
+                    "\n\nThis toggle is temporary and resets when you restart TVRenamer.";
             }
-            // In the unlikely and erroneous case where neither is selected,
-            // we'll still stick with JUST_MOVE_LABEL for the label.
+        } else {
+            tooltip =
+                "Session toggle: Move is OFF.\n\n" +
+                "Files will not be moved (rename only if enabled).\n\n" +
+                "This toggle is temporary and resets when you restart TVRenamer.";
+        }
+        sessionMoveCheckbox.setToolTipText(tooltip);
+
+        sessionMoveCheckbox.requestLayout();
+        shell.layout(false, true);
+    }
+
+    private void setActionButtonText(final Button b) {
+        final boolean doRename = prefs.isRenameSelected();
+        final boolean doMove = isMoveSelectedForSession();
+
+        // Action button has four states:
+        // - Dry Run (neither rename nor move)
+        // - Rename (rename only)
+        // - Move (move only)
+        // - Full (rename + move)
+        String label;
+        if (!doRename && !doMove) {
+            label = "Dry Run";
+        } else if (doRename && !doMove) {
+            label = "Rename";
+        } else if (!doRename && doMove) {
+            label = "Move";
+        } else {
+            label = "Full";
         }
         b.setText(label);
 
-        // Enable the button, in case it had been disabled before. But we may
-        // disable it again, below.
+        // Enable the button by default; we may disable it if the chosen action is impossible.
         b.setEnabled(true);
 
-        String tooltip = RENAME_TOOLTIP;
-        if (prefs.isMoveSelected()) {
+        String tooltip;
+        if (!doRename && !doMove) {
+            tooltip =
+                "Dry Run: no rename and no move will be performed.\n\n" +
+                "Enable Rename in Preferences and/or enable Move using the session checkbox.";
+        } else if (doRename && !doMove) {
+            tooltip = RENAME_TOOLTIP;
+        } else if (!doRename && doMove) {
             if (prefs.isMoveEnabled()) {
                 tooltip =
+                    MOVE_INTRO +
                     INTRO_MOVE_DIR +
                     prefs.getDestinationDirectoryName() +
                     FINISH_MOVE_DIR;
-                if (prefs.isRenameSelected()) {
-                    tooltip = MOVE_INTRO + AND_RENAME + tooltip;
-                } else {
-                    tooltip = MOVE_INTRO + tooltip;
-                }
             } else {
                 b.setEnabled(false);
                 tooltip = CANT_CREATE_DEST + ". " + MOVE_NOT_POSSIBLE;
             }
-        } else if (!prefs.isRenameSelected()) {
-            // This setting, "do not move and do not rename", really makes no sense.
-            // But for now, we're not taking the effort to explicitly disable it.
-            b.setEnabled(false);
-            tooltip = NO_ACTION_TOOLTIP;
+        } else {
+            // Full (rename + move)
+            if (prefs.isMoveEnabled()) {
+                tooltip =
+                    MOVE_INTRO +
+                    AND_RENAME +
+                    INTRO_MOVE_DIR +
+                    prefs.getDestinationDirectoryName() +
+                    FINISH_MOVE_DIR;
+            } else {
+                b.setEnabled(false);
+                tooltip = CANT_CREATE_DEST + ". " + MOVE_NOT_POSSIBLE;
+            }
         }
+
         b.setToolTipText(tooltip);
+
+        // Keep the session checkbox in sync with any preference changes and action state.
+        refreshSessionMoveToggleUi();
 
         b.requestLayout();
         shell.layout(false, true);
@@ -1273,7 +1352,7 @@ public final class ResultsTable
             NEW_FILENAME_FIELD.getTableColumn();
         if (destinationColumn == null) {
             logger.warning("could not get destination column");
-        } else if (prefs.isMoveSelected()) {
+        } else if (isMoveSelectedForSession()) {
             destinationColumn.setText(MOVE_HEADER);
         } else {
             destinationColumn.setText(RENAME_HEADER);
@@ -1318,6 +1397,8 @@ public final class ResultsTable
             case DEST_DIR:
                 checkDestinationDirectory();
                 setColumnDestText();
+                // Keep session toggle label/tooltip synced when prefs change underneath.
+                refreshSessionMoveToggleUi();
                 setActionButtonText(actionButton);
             // Note: NO break! We WANT to fall through.
             case REPLACEMENT_MASK:
@@ -1684,29 +1765,40 @@ public final class ResultsTable
         );
         bottomButtonsComposite.setLayoutData(bottomButtonsCompositeGridData);
 
-        final Button quitButton = new Button(bottomButtonsComposite, SWT.PUSH);
-        GridData quitButtonGridData = new GridData(
+        totalProgressBar = new ProgressBar(bottomButtonsComposite, SWT.SMOOTH);
+        totalProgressBar.setLayoutData(
+            new GridData(SWT.FILL, SWT.CENTER, true, true)
+        );
+
+        // Session-only Move checkbox (does not persist to preferences).
+        sessionMoveCheckbox = new Button(bottomButtonsComposite, SWT.CHECK);
+        GridData sessionMoveCheckboxGridData = new GridData(
             GridData.BEGINNING,
             GridData.CENTER,
             false,
             false
         );
-        quitButtonGridData.minimumWidth = 70;
-        quitButtonGridData.widthHint = 70;
-        quitButton.setLayoutData(quitButtonGridData);
-        quitButton.setText(QUIT_LABEL);
-        quitButton.addSelectionListener(
+        sessionMoveCheckboxGridData.minimumWidth = 70;
+        sessionMoveCheckbox.setLayoutData(sessionMoveCheckboxGridData);
+
+        // On startup, reflect the preference setting (no override yet).
+        refreshSessionMoveToggleUi();
+
+        sessionMoveCheckbox.addSelectionListener(
             new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
-                    ui.quit();
+                    // Checkbox state is the session override value; lasts only for this run.
+                    sessionMoveSelectedOverride = Boolean.valueOf(
+                        sessionMoveCheckbox.getSelection()
+                    );
+
+                    // Refresh UI that depends on move-selected.
+                    setColumnDestText();
+                    setActionButtonText(actionButton);
+                    refreshDestinations();
                 }
             }
-        );
-
-        totalProgressBar = new ProgressBar(bottomButtonsComposite, SWT.SMOOTH);
-        totalProgressBar.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, true)
         );
 
         actionButton = new Button(bottomButtonsComposite, SWT.PUSH);
