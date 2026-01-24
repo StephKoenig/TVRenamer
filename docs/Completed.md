@@ -149,6 +149,14 @@ When you complete an item that was tracked in `docs/TODO.md`:
 - **Notes:**
   - Releases should prefer attaching the versioned jar to make the downloaded filename self-describing.
 
+### 16) Hygiene: scanned for legacy Ant/Ivy/out/lib references
+- **Why:** After removing legacy scripts/configs, ensure no stale references remain in docs or code.
+- **Where:** Repo-wide scan (docs, scripts, configs, source).
+- **What we did:**
+  - Scanned for `ant`, `ivy`, `build.xml`, `out/`, `lib/` references.
+  - Updated stale comment in `logging.properties` that referenced `build.xml` to reference Gradle instead.
+  - Confirmed no legacy directories or build files remain.
+
 ---
 
 ## Related records

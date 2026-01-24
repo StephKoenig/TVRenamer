@@ -69,13 +69,7 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)
 
-7. **Hygiene: scan for legacy Ant/Ivy/out/lib references after cleanup**
-   - **Why:** We removed legacy scripts/configs; periodic scanning helps prevent reintroducing obsolete build/run paths and keeps docs accurate.
-   - **Where:** Repo-wide (docs + scripts + configs). Look for: `ant`, `ivy`, `out/`, `lib/`, old run scripts, and other pre-Gradle conventions.
-   - **Effort:** Small (grep + delete/update references)
-
-
-8. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
+7. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
    - **Why:** SWT ≥ 3.130 crashed at startup on a Windows 11 x64 environment even with WebView2 + VC runtimes installed; pinning to 3.129 is a pragmatic compromise.
    - **Where:** Dependency management (`gradle/libs.versions.toml`) + docs (`docs/TODO.md` / release notes)
    - **What:** Identify the breaking dependency/OS requirement introduced in SWT 3.130+, document prerequisites (or decide to stay pinned).
