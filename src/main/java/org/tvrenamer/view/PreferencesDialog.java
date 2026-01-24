@@ -33,6 +33,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Dialog;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.MessageBox;
@@ -1007,9 +1008,40 @@ class PreferencesDialog extends Dialog {
             ti.setImage(0, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
-        for (TableColumn c : overridesTable.getColumns()) {
-            c.pack();
-        }
+        // Column sizing:
+        // - Col 0 (status icon): fixed-ish width
+        // - Cols 1 & 2: split the remaining width evenly so the table fills its bounds neatly
+        final int statusColWidth = 28;
+        oColStatus.setWidth(statusColWidth);
+
+        overridesTable.addListener(SWT.Resize, e -> {
+            if (overridesTable == null || overridesTable.isDisposed()) {
+                return;
+            }
+            TableColumn[] cols = overridesTable.getColumns();
+            if (cols == null || cols.length < 3) {
+                return;
+            }
+
+            int clientWidth = overridesTable.getClientArea().width;
+            if (clientWidth <= 0) {
+                return;
+            }
+
+            cols[0].setWidth(statusColWidth);
+
+            int remaining = clientWidth - cols[0].getWidth();
+            if (remaining < 0) {
+                remaining = 0;
+            }
+
+            int w = remaining / 2;
+            cols[1].setWidth(w);
+            cols[2].setWidth(remaining - w);
+        });
+
+        // Trigger an initial layout pass after population.
+        overridesTable.notifyListeners(SWT.Resize, new Event());
 
         // Ensure the Save button enabled state is correct after initial table population.
         // (Matching validation can disable Save; we must recompute once the tables exist.)
@@ -1245,9 +1277,43 @@ class PreferencesDialog extends Dialog {
             ti.setImage(0, MATCHING_ICON_OK);
             ti.setData(MATCHING_DIRTY_KEY, Boolean.FALSE);
         }
-        for (TableColumn c : disambiguationsTable.getColumns()) {
-            c.pack();
-        }
+        // Column sizing:
+        // - Col 0 (status icon): fixed-ish width
+        // - Cols 1 & 2: split the remaining width evenly so the table fills its bounds neatly
+        final int statusColWidth2 = 28;
+        dColStatus.setWidth(statusColWidth2);
+
+        disambiguationsTable.addListener(SWT.Resize, e -> {
+            if (
+                disambiguationsTable == null ||
+                disambiguationsTable.isDisposed()
+            ) {
+                return;
+            }
+            TableColumn[] cols = disambiguationsTable.getColumns();
+            if (cols == null || cols.length < 3) {
+                return;
+            }
+
+            int clientWidth = disambiguationsTable.getClientArea().width;
+            if (clientWidth <= 0) {
+                return;
+            }
+
+            cols[0].setWidth(statusColWidth2);
+
+            int remaining = clientWidth - cols[0].getWidth();
+            if (remaining < 0) {
+                remaining = 0;
+            }
+
+            int w = remaining / 2;
+            cols[1].setWidth(w);
+            cols[2].setWidth(remaining - w);
+        });
+
+        // Trigger an initial layout pass after population.
+        disambiguationsTable.notifyListeners(SWT.Resize, new Event());
 
         // Ensure the Save button enabled state is correct after initial table population.
         updateSaveEnabledFromMatchingValidation();
