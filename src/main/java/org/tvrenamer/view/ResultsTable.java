@@ -63,7 +63,6 @@ import org.tvrenamer.model.Show;
 import org.tvrenamer.model.ShowStore;
 import org.tvrenamer.model.UserPreference;
 import org.tvrenamer.model.UserPreferences;
-import org.tvrenamer.view.BatchShowDisambiguationDialog;
 
 public final class ResultsTable
     implements java.beans.PropertyChangeListener, AddEpisodeListener
@@ -525,9 +524,6 @@ public final class ResultsTable
                 continue;
             }
 
-            // Keep the extracted name available for UI correlation / disambiguation flows.
-            // (filenameShow may be overridden for provider lookup.)
-            final String extractedShowName = episode.getExtractedFilenameShow();
             ShowStore.mapStringToShow(
                 showName,
                 new ShowInformationListener() {
@@ -1415,11 +1411,11 @@ public final class ResultsTable
             case REMOVE_EMPTY:
             case DELETE_ROWS:
             case UPDATE_CHECK:
+            case SHOW_NAME_OVERRIDES:
+            case PREFER_DVD_ORDER:
+            case FILE_MTIME_POLICY:
                 // These changes don't require an immediate table update here
                 break;
-            // Also note, no default case. We know there are other types of
-            // UserPreference events that we might be notified of. We're
-            // just not interested.
         }
     }
 

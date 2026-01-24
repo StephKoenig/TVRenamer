@@ -3,7 +3,6 @@ package org.tvrenamer.controller;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.reflection.AbstractReflectionConverter.UnknownFieldException;
 import com.thoughtworks.xstream.converters.reflection.PureJavaReflectionProvider;
-import com.thoughtworks.xstream.converters.reflection.ReflectionConverter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
