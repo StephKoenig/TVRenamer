@@ -74,6 +74,12 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Where:** Dependency management (`gradle/libs.versions.toml`) + docs (`docs/TODO.md` / release notes)
    - **What:** Identify the breaking dependency/OS requirement introduced in SWT 3.130+, document prerequisites (or decide to stay pinned).
    - **Effort:** Small/Medium (investigation + documentation)
+   - **Research notes (Jan 2025):**
+     - Known SWT issues in 2024 don't explain the Windows 11 crash:
+       - [Issue #1252](https://github.com/eclipse-platform/eclipse.platform.swt/issues/1252): DPI APIs (`GetSystemMetricsForDpi`, `SystemParametersInfoForDpi`) requiring Windows 10 1607+ — fixed in [PR #1568](https://github.com/eclipse-platform/eclipse.platform.swt/pull/1568) (merged Oct 2024)
+       - [Issue #1500](https://github.com/eclipse-platform/eclipse.platform.swt/issues/1500): Windows Server 2016 DLL load crash — unrelated to Win11
+     - The Windows 11 x64 crash with up-to-date WebView2 remains unexplained
+     - **Next steps:** Retry SWT 3.130+ after confirming fix is included; if still failing, capture crash logs/stack trace for further diagnosis
 
 
 
