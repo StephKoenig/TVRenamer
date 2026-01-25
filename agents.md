@@ -15,7 +15,8 @@ This doc is intentionally pragmatic: it should be enough for an agent joining co
 - **UI framework:** SWT (native UI toolkit)
 - **Build system:** Gradle (wrapper included)
 - **Primary target OS:** Windows (SWT dependency is configured for Windows in `build.gradle`)
-- **Java version:** JDK 17 (toolchain enforced)
+- **Java version (build):** JDK 21 (toolchain enforced)
+- **Java version (runtime):** Java 17+ (bytecode compatibility target)
 
 Key files:
 - `build.gradle` — build + packaging (ShadowJar, Launch4j)
