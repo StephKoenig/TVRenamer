@@ -19,8 +19,14 @@ version = '1.0.0-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        // Build with Java 21.
+        languageVersion = JavaLanguageVersion.of(21)
     }
+}
+
+// Keep runtime compatibility at Java 17+ even when building with JDK 21.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
 }
 
 repositories {
