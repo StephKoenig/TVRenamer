@@ -114,6 +114,11 @@ public final class ResultsTable
     // null means "no override; follow preferences".
     private Boolean sessionMoveSelectedOverride = null;
 
+    // The move-selected value from preferences at app startup.
+    // We use this so the session checkbox can temporarily override move behavior
+    // and still revert to the saved preference on restart.
+    private final boolean initialMoveSelected = prefs.isMoveSelected();
+
     // Bottom-bar "Move [ ]" control (session-only).
     private Button sessionMoveCheckbox;
 
@@ -1232,9 +1237,11 @@ public final class ResultsTable
     }
 
     private boolean isMoveSelectedForSession() {
+        // If the user has toggled the session checkbox, prefer that.
+        // Otherwise, follow the saved preference (initial value at startup).
         return (sessionMoveSelectedOverride != null)
             ? sessionMoveSelectedOverride.booleanValue()
-            : prefs.isMoveSelected();
+            : initialMoveSelected;
     }
 
     private void refreshSessionMoveToggleUi() {
@@ -1785,9 +1792,13 @@ public final class ResultsTable
                 @Override
                 public void widgetSelected(SelectionEvent e) {
                     // Checkbox state is the session override value; lasts only for this run.
-                    sessionMoveSelectedOverride = Boolean.valueOf(
-                        sessionMoveCheckbox.getSelection()
-                    );
+                    final boolean selected = sessionMoveCheckbox.getSelection();
+                    sessionMoveSelectedOverride = Boolean.valueOf(selected);
+
+                    // Option 1: make the session toggle affect real behavior by temporarily
+                    // updating the in-memory UserPreferences. We do NOT persist preferences
+                    // from here; the Preferences dialog Save is what persists to disk.
+                    prefs.setMoveSelected(selected);
 
                     // Refresh UI that depends on move-selected.
                     setColumnDestText();
