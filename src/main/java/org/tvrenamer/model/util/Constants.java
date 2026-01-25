@@ -45,19 +45,19 @@ public class Constants {
 
     // Fork URLs (GitHub)
     public static final String TVRENAMER_PROJECT_URL =
-        "https://github.com/StephKoenig/tvrenamer";
+        "https://github.com/StephKoenig/TVRenamer";
     public static final String TVRENAMER_DOWNLOAD_URL =
-        "https://github.com/StephKoenig/tvrenamer/releases";
+        "https://github.com/StephKoenig/TVRenamer/releases";
     public static final String TVRENAMER_ISSUES_URL =
-        "https://github.com/StephKoenig/tvrenamer/issues";
+        "https://github.com/StephKoenig/TVRenamer/issues";
 
     // UpdateChecker should use GitHub Releases rather than tvrenamer.org.
     // Kept as a constant so the implementation can be swapped without UI churn.
     public static final String TVRENAMER_VERSION_URL =
-        "https://api.github.com/repos/StephKoenig/tvrenamer/releases/latest";
+        "https://api.github.com/repos/StephKoenig/TVRenamer/releases/latest";
 
     public static final String TVRENAMER_REPOSITORY_URL =
-        "https://github.com/StephKoenig/tvrenamer";
+        "https://github.com/StephKoenig/TVRenamer";
     public static final String TVRENAMER_LICENSE_URL =
         "http://www.gnu.org/licenses/gpl-2.0.html";
 
