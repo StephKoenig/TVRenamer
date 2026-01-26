@@ -276,6 +276,11 @@ This makes releases easy to scan and consistent across versions.
 #### Keep a committed release-notes record (recommended)
 To prevent “empty release body” mistakes and to keep a durable record in the repo, write the release notes into a versioned Markdown file under `docs/`, then publish that file as the GitHub Release body.
 
+**Note (avoid duplicate titles):**
+- GitHub Releases already have a **Release title** field (e.g., `TVRenamer v1.0.<commitCount>`).
+- When using a `docs/release-notes-*.md` file as the release body, prefer **not** starting the notes file with its own top-level `# TVRenamer v...` heading, to avoid the title being shown twice.
+- Instead, start the notes file directly with sections like `## New features / improvements`, `## Bug fixes`, etc.
+
 Suggested filename:
 - `docs/release-notes-v1.0.<commitCount>.md`
 
