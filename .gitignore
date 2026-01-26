@@ -4,6 +4,11 @@
 /lib/
 /build/
 /bin/
+
+/.classpath
+/.project
+/.settings/
+
 # docs/ is tracked (do not ignore) so feature specs and planning docs can be committed
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
