@@ -335,18 +335,40 @@ public class ShowStore {
     ) {
         Future<Boolean> result = null;
         FailedShow failure = null;
-        try {
-            result = threadPool.submit(showFetcher);
-        } catch (RejectedExecutionException | NullPointerException e) {
+
+        if (showFetcher == null) {
             logger.warning(
                 "unable to submit download task (" +
                     showName +
-                    ") for execution"
+                    "): showFetcher is null"
             );
             failure = showName.getFailedShow(
-                new TVRenamerIOException(e.getMessage())
+                new TVRenamerIOException("showFetcher is null")
             );
+        } else if (threadPool == null) {
+            logger.warning(
+                "unable to submit download task (" +
+                    showName +
+                    "): threadPool is null"
+            );
+            failure = showName.getFailedShow(
+                new TVRenamerIOException("threadPool is null")
+            );
+        } else {
+            try {
+                result = threadPool.submit(showFetcher);
+            } catch (RejectedExecutionException e) {
+                logger.warning(
+                    "unable to submit download task (" +
+                        showName +
+                        ") for execution"
+                );
+                failure = showName.getFailedShow(
+                    new TVRenamerIOException(e.getMessage())
+                );
+            }
         }
+
         if ((result == null) && (failure == null)) {
             logger.warning("not downloading " + showName);
             failure = showName.getFailedShow(null);

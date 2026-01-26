@@ -1,6 +1,7 @@
 package org.tvrenamer.model;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -202,8 +203,8 @@ public final class ShowSelectionEvaluator {
                 if (norm == null || norm.isBlank()) {
                     return "";
                 }
-                // Lowercase and collapse spaces; keep token order.
-                return norm.toLowerCase().replaceAll("\\s+", " ");
+                // Lowercase with Locale.ROOT (deterministic) and collapse spaces; keep token order.
+                return norm.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
             };
 
         final String extractedTokens = canonicalTokens.apply(extracted);
