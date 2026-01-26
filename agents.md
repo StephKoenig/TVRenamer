@@ -8,6 +8,8 @@ This file is agent-facing documentation for working on **TVRenamer**. It focuses
 
 This doc is intentionally pragmatic: it should be enough for an agent joining cold to build, test, diagnose, and ship changes without guesswork.
 
+Release note (artifact hygiene): local `build/libs/` can accumulate old versioned jars if `clean` fails (Windows locks). When creating a GitHub Release, avoid uploading stale jars by either running a clean packaging build or uploading explicit jar filenames (see “Manual GitHub Release procedure” below).
+
 ---
 
 ## Project basics
@@ -69,6 +71,12 @@ If Windows file locks prevent `clean`, fall back temporarily:
 ```/dev/null/commands.txt#L1-1
 ./gradlew build shadowJar createExe
 ```
+
+Artifact hygiene note:
+- If `clean` fails, `build/libs/` may still contain older `tvrenamer-*.jar` files from previous runs.
+- Before uploading release assets, either:
+  - retry a clean build once locks are cleared, OR
+  - delete stale jars from `build/libs/` (or upload only the intended jar filenames instead of `build/libs/*.jar`).
 
 When to run packaging tasks (`shadowJar` / `createExe`):
 - Run packaging when you change **UI behavior**, **SWT/layout**, **startup/Launcher**, **resources/icons**, **gradle packaging config**, or anything that might behave differently when launched as an EXE vs from your IDE.
@@ -285,7 +293,14 @@ This project intentionally does **not** auto-release on every successful build. 
 
 ### Release source of truth
 - Releases should use artifacts from the **latest successful GitHub Actions run** on `master` (Windows build), rather than an unverified local build.
-- Attach **all JARs** and the Windows EXE.
+- Attach the Windows EXE and the intended JARs.
+
+Artifact hygiene (important):
+- Do **not** blindly upload `build/libs/*.jar` from a local workspace unless you have a clean build output.
+- Prefer one of:
+  1) download CI artifacts for the exact commit and upload those, or
+  2) ensure `build/libs/` is clean (successful `clean`) before upload, or
+  3) upload explicit jar filenames (e.g., `build/libs/tvrenamer.jar` and `build/libs/tvrenamer-<commitCount>.jar`) to avoid stale versioned jars.
 
 ### Preconditions / safety checks
 1. Confirm `HEAD` is the commit you want to release.
