@@ -3,6 +3,9 @@ plugins {
     id 'application'
     alias(libs.plugins.launch4j)
     alias(libs.plugins.shadow)
+
+    // Static analysis
+    id 'com.github.spotbugs' version '6.0.26'
 }
 
 dependencyLocking {
@@ -27,6 +30,38 @@ java {
 // Keep runtime compatibility at Java 17+ even when building with JDK 21.
 tasks.withType(JavaCompile).configureEach {
     options.release = 17
+}
+
+spotbugs {
+    // Keep this conservative to start with. We can ratchet up later.
+    //
+    // Note: SpotBugs returns a non-zero exit code when it finds bugs, even if Gradle is
+    // configured to ignore failures. We keep this non-blocking for now.
+    ignoreFailures = true
+    showProgress = true
+
+    // SpotBugs Gradle plugin expects enum values (not strings) for these.
+    effort = com.github.spotbugs.snom.Effort.DEFAULT
+    reportLevel = com.github.spotbugs.snom.Confidence.valueOf('LOW')
+}
+
+// Run SpotBugs only for main sources by default (developers can run test analysis explicitly).
+// Run SpotBugs only for main sources by default (developers can run test analysis explicitly).
+// Some projects may not define SpotBugs tasks for custom test source sets, so guard with findByName.
+def spotbugsTestTask = tasks.findByName('spotbugsTest')
+if (spotbugsTestTask != null) {
+    spotbugsTestTask.enabled = false
+}
+def spotbugsIntegrationTestTask = tasks.findByName('spotbugsIntegrationTest')
+if (spotbugsIntegrationTestTask != null) {
+    spotbugsIntegrationTestTask.enabled = false
+}
+
+tasks.named('spotbugsMain') {
+    reports {
+        html.required = true
+        xml.required = false
+    }
 }
 
 repositories {

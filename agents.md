@@ -5,6 +5,7 @@ This file is agent-facing documentation for working on **TVRenamer**. It focuses
 - local development on Windows (build/run/debug logging)
 - how CI builds Windows artifacts
 - how we collaborate (TODO workflow, completed-work record, commits, PRs, releases)
+- static analysis (SpotBugs)
 
 This doc is intentionally pragmatic: it should be enough for an agent joining cold to build, test, diagnose, and ship changes without guesswork.
 
@@ -19,9 +20,10 @@ Release note (artifact hygiene): local `build/libs/` can accumulate old versione
 - **Primary target OS:** Windows (SWT dependency is configured for Windows in `build.gradle`)
 - **Java version (build):** JDK 21 (toolchain enforced)
 - **Java version (runtime):** Java 17+ (bytecode compatibility target)
+- **Static analysis:** SpotBugs (Gradle task: `spotbugsMain`)
 
 Key files:
-- `build.gradle` — build + packaging (ShadowJar, Launch4j)
+- `build.gradle` — build + packaging (ShadowJar, Launch4j) + static analysis (SpotBugs)
 - `.github/workflows/windows-build.yml` — Windows CI build + artifact uploads
 - `gradlew` / `gradlew.bat` — Gradle wrapper scripts
 
@@ -47,10 +49,15 @@ If you're running in a Windows environment, prefer commands that are stable acro
 ### Common local commands (repo root)
 
 Fast feedback:
-```/dev/null/commands.txt#L1-2
+```/dev/null/commands.txt#L1-3
 ./gradlew test
 ./gradlew build
+./gradlew spotbugsMain
 ```
+
+Notes:
+- `spotbugsMain` generates a report at `build/reports/spotbugs/main.html`.
+- SpotBugs findings are intended to be addressed over time; treat new high-signal issues as candidates for fixes, but avoid noisy “drive-by” refactors.
 
 Default “compile after each change”:
 - Run at least `./gradlew build` after each change to catch compile issues early.
