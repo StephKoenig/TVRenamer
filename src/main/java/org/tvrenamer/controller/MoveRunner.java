@@ -270,8 +270,12 @@ public class MoveRunner implements Runnable {
             getListValue(desiredBaseNames, base).add(move);
         }
 
-        for (String base : desiredBaseNames.keySet()) {
-            List<FileMover> moves = desiredBaseNames.get(base);
+        for (Map.Entry<
+            String,
+            List<FileMover>
+        > e : desiredBaseNames.entrySet()) {
+            String base = e.getKey();
+            List<FileMover> moves = e.getValue();
 
             // Check for any existing files in the destination directory whose base name matches.
             Set<Path> existing = existingConflictsByBaseName(destDir, base);
@@ -371,8 +375,8 @@ public class MoveRunner implements Runnable {
         // progressThread is already named/daemonized in the field initializer
 
         final Map<String, List<FileMover>> mappings = mapByDestDir(episodes);
-        for (String destDir : mappings.keySet()) {
-            resolveConflicts(mappings.get(destDir), destDir);
+        for (Map.Entry<String, List<FileMover>> e : mappings.entrySet()) {
+            resolveConflicts(e.getValue(), e.getKey());
         }
 
         int count = 0;

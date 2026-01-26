@@ -566,7 +566,7 @@ public final class ResultsTable
                         if (
                             msg != null &&
                             msg
-                                .toLowerCase()
+                                .toLowerCase(Locale.ROOT)
                                 .contains("show selection required")
                         ) {
                             display.asyncExec(() -> {
@@ -906,7 +906,7 @@ public final class ResultsTable
                             if (
                                 msg != null &&
                                 msg
-                                    .toLowerCase()
+                                    .toLowerCase(Locale.ROOT)
                                     .contains("show selection required")
                             ) {
                                 display.asyncExec(() -> {

@@ -157,6 +157,29 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Updated stale comment in `logging.properties` that referenced `build.xml` to reference Gradle instead.
   - Confirmed no legacy directories or build files remain.
 
+### 17) Support multi-episode filename parsing (single file contains multiple episodes)
+- **Why:** Many libraries include “double episodes” or “range episodes” in a single file. Without explicit support, parsing/renaming is confusing and users may worry the app will rename/move incorrectly.
+- **Where:** `org.tvrenamer.controller.FilenameParser`, `org.tvrenamer.model.FileEpisode`, `org.tvrenamer.controller.FilenameParserTest`
+- **What we did:**
+  - Added parsing support for case-insensitive multi-episode patterns in a single filename:
+    - `S01E04E05` / `S01E04E05E06` (explicit list)
+    - `S02E04-E06` and `S02E04-06` (inclusive range)
+  - When detected, TVRenamer selects the lowest episode (A) for lookup/matching and stores the `(A..B)` span on the `FileEpisode`.
+  - Appends a compact suffix `"(A-B)"` (no leading zeros) to the episode title token used for rename output, e.g. `Silver Linings (1-7)`.
+
+### 18) Add SpotBugs static analysis (local)
+- **Why:** Catch likely bugs and suspicious patterns early, without turning style discussions into review churn.
+- **Where:** `build.gradle`, `agents.md`
+- **What we did:**
+  - Added SpotBugs integration and documented how to run it locally (`spotbugsMain`) and where the HTML report is generated.
+  - Made the initial configuration conservative and non-blocking while we evaluate signal vs noise.
+
+### 19) Release asset hygiene: avoid stale jars in GitHub Releases
+- **Why:** Local builds can accumulate older versioned jars under `build/libs/` (especially when `clean` fails due to Windows file locks). Uploading `build/libs/*.jar` can unintentionally attach stale jars to a release.
+- **Where:** Release procedure in `agents.md`
+- **What we did:**
+  - Documented a safer release upload approach: prefer CI artifacts and/or ensure `build/libs/` is clean, and upload explicit jar filenames to avoid stale versioned jars.
+
 ---
 
 ## Related records

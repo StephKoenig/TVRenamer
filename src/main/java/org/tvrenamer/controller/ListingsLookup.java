@@ -1,8 +1,5 @@
 package org.tvrenamer.controller;
 
-import org.tvrenamer.model.Series;
-import org.tvrenamer.model.TVRenamerIOException;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -10,6 +7,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.model.Series;
+import org.tvrenamer.model.TVRenamerIOException;
 
 /**
  * A utility class to help with looking up series listings from the provider.
@@ -17,13 +16,16 @@ import java.util.logging.Logger;
  * It is just for managing threads and communication with the provider.
  */
 public class ListingsLookup {
-    private static final Logger logger = Logger.getLogger(ListingsLookup.class.getName());
+
+    private static final Logger logger = Logger.getLogger(
+        ListingsLookup.class.getName()
+    );
 
     /**
      * A pool of low-priority threads to execute the listings lookups.
      */
-    private static final ExecutorService THREAD_POOL
-        = Executors.newCachedThreadPool(r -> {
+    private static final ExecutorService THREAD_POOL =
+        Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r);
             t.setPriority(Thread.MIN_PRIORITY);
             t.setDaemon(true);
@@ -41,8 +43,14 @@ public class ListingsLookup {
      *           the series to download listings for
      */
     public static void downloadListings(final Series series) {
+        if (series == null) {
+            logger.warning("downloadListings called with null Series");
+            return;
+        }
         if (!series.beginDownload()) {
-            logger.warning("should not call downloadListings; Series is already download[ing/ed].");
+            logger.warning(
+                "should not call downloadListings; Series is already download[ing/ed]."
+            );
             return;
         }
         Callable<Boolean> listingsFetcher = () -> {
@@ -57,8 +65,11 @@ public class ListingsLookup {
                 // exception does not get caught by the main thread, and
                 // prevents this thread from dying.  Try to make sure that the
                 // thread dies, one way or another.
-                logger.log(Level.WARNING, "generic exception doing getListings for "
-                           + series, e);
+                logger.log(
+                    Level.WARNING,
+                    "generic exception doing getListings for " + series,
+                    e
+                );
                 series.listingsFailed(e);
                 return false;
             }
@@ -66,9 +77,20 @@ public class ListingsLookup {
         try {
             Future<Boolean> future = THREAD_POOL.submit(listingsFetcher);
             logger.fine("successfully submitted task " + future);
-        } catch (RejectedExecutionException | NullPointerException e) {
-            logger.log(Level.WARNING, "unable to submit listings download task ("
-                       + series.getName() + ") for execution", e);
+        } catch (RejectedExecutionException e) {
+            String name;
+            try {
+                name = series.getName();
+            } catch (Exception ignored) {
+                name = "<unknown>";
+            }
+            logger.log(
+                Level.WARNING,
+                "unable to submit listings download task (" +
+                    name +
+                    ") for execution",
+                e
+            );
         }
     }
 
@@ -84,5 +106,5 @@ public class ListingsLookup {
      * This is a utility class; prevent it from being instantiated.
      *
      */
-    private ListingsLookup() { }
+    private ListingsLookup() {}
 }

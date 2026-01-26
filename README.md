@@ -27,11 +27,12 @@ The screenshot currently references the upstream wiki:
  * Optionally move renamed files, e.g. a NAS or external HDD
 
 ### New / improved in this fork
- * **DVD ordering** option
+ * **DVD/BluRay ordering** options in addition to Aired Order
  * **Overrides** to map “show name → show name” when matching is incorrect
  * **Batch show disambiguation**: when TVDB returns multiple candidates for a show, TVRenamer prompts you to select the correct one (shows name/year/id/aliases).
  * **Remembered show selections**: your disambiguation choice is persisted and reused for future lookups of the same show query.
- * SMB/network renaming: supported for many Windows setups (report edge cases)
+ * **Multi-Episode Files**: Handles multi-episode files (S02E01-02, S02E01-E02, etc.)
+ * **SMB/network renaming**: supported for SMD renaming on network shares like NASs (report edge cases)
  * Theme support: **Light**, **Dark**, and **Auto** (OS-detected). (requires restart.)
 
 ## Usage & Download

@@ -134,31 +134,34 @@ public class FilenameParser {
                 // IMPORTANT: Many existing single-episode patterns also have 4 capture groups
                 // (the 4th being resolution). We must therefore only treat a match as
                 // "multi-episode" if we can parse (season, startEp, endEp) and endEp looks valid.
-                boolean handledMultiEpisode = false;
                 if (matcher.groupCount() >= 4) {
                     String seasonStr = matcher.group(2);
                     String startEpStr = matcher.group(3);
                     String endEpStr = matcher.group(4);
 
+                    int startEp;
+                    int endEp;
                     try {
-                        int startEp = Integer.parseInt(startEpStr);
-                        int endEp = Integer.parseInt(endEpStr);
-
-                        // Only treat as multi-episode if B is >= A; otherwise this is likely
-                        // a single-episode pattern where group(4) is actually resolution.
-                        if (endEp >= startEp) {
-                            episode.setMultiEpisodeSpan(startEp, endEp);
-
-                            // Use the lowest episode for placement/matching.
-                            episode.setEpisodePlacement(seasonStr, startEpStr);
-
-                            // Multi-episode patterns currently don't capture resolution; keep it empty.
-                            episode.setFilenameResolution("");
-                            episode.setParsed();
-                            return;
-                        }
-                    } catch (Exception ignored) {
+                        startEp = Integer.parseInt(startEpStr);
+                        endEp = Integer.parseInt(endEpStr);
+                    } catch (NumberFormatException ignored) {
                         // Not a multi-episode match; fall through to normal handling.
+                        startEp = -1;
+                        endEp = -1;
+                    }
+
+                    // Only treat as multi-episode if B is >= A; otherwise this is likely
+                    // a single-episode pattern where group(4) is actually resolution.
+                    if (startEp >= 0 && endEp >= startEp) {
+                        episode.setMultiEpisodeSpan(startEp, endEp);
+
+                        // Use the lowest episode for placement/matching.
+                        episode.setEpisodePlacement(seasonStr, startEpStr);
+
+                        // Multi-episode patterns currently don't capture resolution; keep it empty.
+                        episode.setFilenameResolution("");
+                        episode.setParsed();
+                        return;
                     }
                 }
 
