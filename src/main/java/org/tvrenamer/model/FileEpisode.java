@@ -118,7 +118,25 @@ public class FileEpisode {
     // - extractedFilenameShow: the exact (trimmed) substring parsed from the filename (user-facing)
     // - filenameShow: the effective show name used for provider lookup (after applying overrides)
     private String extractedFilenameShow = "";
+
+    // Multi-episode support (single file containing a span of episodes).
+
+    // When present, we select the lowest episode (A) for lookup and append "(A-B)"
+
+    // to the episode title token used for rename output.
+
+    //
+
+    // Note: this is filename-derived truth; even if provider lookup for B fails, we still
+
+    // append the suffix for user clarity and consistency.
+
+    private Integer multiEpisodeStart = null;
+
+    private Integer multiEpisodeEnd = null;
+
     private String filenameShow = "";
+
     private String filenameResolution = "";
 
     // These integers are meant to represent the indices into the Show's catalog
@@ -293,6 +311,25 @@ public class FileEpisode {
 
     public EpisodePlacement getEpisodePlacement() {
         return placement;
+    }
+
+    /**
+     * Set a multi-episode span for this file (single file represents episodes A..B).
+     *
+     * @param start lowest episode number in the file (A)
+     * @param end   highest episode number in the file (B)
+     */
+    public void setMultiEpisodeSpan(Integer start, Integer end) {
+        this.multiEpisodeStart = start;
+        this.multiEpisodeEnd = end;
+    }
+
+    public Integer getMultiEpisodeStart() {
+        return multiEpisodeStart;
+    }
+
+    public Integer getMultiEpisodeEnd() {
+        return multiEpisodeEnd;
     }
 
     /**
@@ -932,15 +969,23 @@ public class FileEpisode {
         final Show actualShow,
         final Episode actualEpisode,
         final EpisodePlacement placement,
-        final String resolution
+        final String resolution,
+        final String episodeTitleOverride
     ) {
         final String showName = actualShow.getName();
-        String episodeTitle = actualEpisode.getTitle();
+
+        String episodeTitle = (episodeTitleOverride != null)
+            ? episodeTitleOverride
+            : actualEpisode.getTitle();
+
         int len = episodeTitle.length();
+
         if (len > MAX_TITLE_LENGTH) {
             logger.fine("truncating episode title to " + episodeTitle);
+
             episodeTitle = episodeTitle.substring(0, MAX_TITLE_LENGTH);
         }
+
         String newFilename = replacementTemplate
             .replaceAll(SEASON_NUM.getToken(), String.valueOf(placement.season))
             .replaceAll(
@@ -970,7 +1015,9 @@ public class FileEpisode {
             .replaceAll(EPISODE_RESOLUTION.getToken(), resolution);
 
         // Date and times
+
         final LocalDate airDate = actualEpisode.getAirDate();
+
         if (airDate == null) {
             logger.log(
                 Level.WARNING,
@@ -983,10 +1030,15 @@ public class FileEpisode {
                     "\""
             );
         }
+
         // If the airDate is null, we warn (above) but we go ahead and do the
+
         // substitution anyway;
+
         // if the date is null, we need to replace the control strings with the empty
+
         // string.
+
         newFilename = plugInAirDate(airDate, newFilename);
 
         return StringUtils.sanitiseTitle(newFilename);
@@ -1090,6 +1142,7 @@ public class FileEpisode {
      *          the episode option to get the basename of
      * @return the basename to use for the replacement file
      */
+
     String getRenamedBasename(final int n) {
         if (!userPrefs.isRenameSelected()) {
             return null;
@@ -1097,25 +1150,61 @@ public class FileEpisode {
 
         if (actualShow == null) {
             logger.severe("cannot rename without an actual Show.");
+
             return originalBasename;
         }
+
         if (actualEpisodes == null) {
             logger.severe(
                 "should not be renaming when have no actual episodes"
             );
+
             return originalBasename;
         }
+
         if (actualEpisodes.size() <= n) {
             logger.severe("cannot get option " + n + " of " + this);
+
             return originalBasename;
+        }
+
+        // Multi-episode support: if this file represents episodes A..B in a single file,
+
+        // append "(A-B)" to the title token used for rename output.
+
+        // - Always use compact numbers (no leading zeros)
+
+        // - Always append when span is present, even if provider lookup for B fails
+
+        Episode ep = actualEpisodes.get(n);
+
+        String episodeTitleOverride = null;
+        if (
+            ep != null &&
+            multiEpisodeStart != null &&
+            multiEpisodeEnd != null &&
+            multiEpisodeEnd.intValue() >= multiEpisodeStart.intValue()
+        ) {
+            final String baseTitle = ep.getTitle();
+
+            if (baseTitle != null && !baseTitle.isEmpty()) {
+                episodeTitleOverride =
+                    baseTitle +
+                    " (" +
+                    multiEpisodeStart.intValue() +
+                    "-" +
+                    multiEpisodeEnd.intValue() +
+                    ")";
+            }
         }
 
         return plugInInformation(
             userPrefs.getRenameReplacementString(),
             actualShow,
-            actualEpisodes.get(n),
+            ep,
             placement,
-            filenameResolution
+            filenameResolution,
+            episodeTitleOverride
         );
     }
 
