@@ -40,7 +40,20 @@ These are suggested “first picks” from the backlog below—items that are li
    - **What:** Create a small set of static pages (e.g., Getting Started, Matching/Overrides, Select Shows & disambiguation, Troubleshooting/logging) and update the Help menu to open the help index URL. Keep “Visit Web Page” pointing to the project page.
    - **Effort:** Small/Medium (docs + one menu action)
 
-3. **Add unit tests for unified show selection (no network calls)**
+3. **Support multi-episode filename patterns (single-file episodes)**
+   - **Why:** Many libraries contain “double episodes” or “range episodes” in a single file; without explicit support, results look confusing and can lead users to worry files will be renamed/moved incorrectly.
+   - **Where:** `org.tvrenamer.controller.FilenameParser` and `org.tvrenamer.model.FileEpisode` (replacement text/title used for renaming).
+   - **What:**
+     - Parse additional case-insensitive patterns such as:
+       - `S01E04E05` / `S01E04E05E06` (explicit multi-episode list in one file)
+       - `S02E04-E06` and `S02E04-06` (inclusive range in one file)
+     - When detected:
+       - select the lowest episode (A) for lookup/matching
+       - append `"(A-B)"` to the episode title used for rename output (drop leading zeros)
+       - example: `The Hulk S04E01-E07 Silver Linings` → `Silver Linings (1-7)`
+   - **Effort:** Small/Medium (mostly parsing + display/rename formatting; keep deterministic)
+
+4. **Add unit tests for unified show selection (no network calls)**
    - **Why:** The unified selection evaluator is now critical behavior; tests prevent regressions and reduce risk when adjusting heuristics.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` and its interaction with `StringUtils.replacePunctuation(...)`
    - **What:** Add fixture-based candidate lists (no live provider calls) that verify:
@@ -49,12 +62,12 @@ These are suggested “first picks” from the backlog below—items that are li
      - year token ±1 behavior
    - **Effort:** Small/Medium (introduce fixtures/mocks; keep deterministic)
 
-4. **Improve handling of “unparsed” files**
+5. **Improve handling of “unparsed” files**
    - **Why:** Provide actionable feedback and better UX for files that fail parsing (common frustration point).
    - **Where:** `org.tvrenamer.model.EpisodeDb` / Results UI where unparsed items are inserted
    - **Effort:** Medium (mostly UX and messaging; low behavioral risk)
 
-5. **Show selection heuristics: verify coverage and expand carefully**
+6. **Show selection heuristics: verify coverage and expand carefully**
    - **Why:** Reduce unnecessary prompts while avoiding incorrect auto-matches.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
    - **Status:** Implemented deterministic tie-breakers:
@@ -64,12 +77,12 @@ These are suggested “first picks” from the backlog below—items that are li
    - **Guideline:** Only add new tie-breakers if deterministic + explainable; never auto-decide cases like `The Office (US)` vs `The Office (UK)` without a pin.
    - **Effort:** Medium (but keep changes incremental and spec-driven)
 
-6. **Expand conflict detection beyond exact filename matches**
+7. **Expand conflict detection beyond exact filename matches**
    - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
    - **Effort:** Medium (policy definition + detection improvements)
 
-7. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
+8. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
    - **Why:** SWT ≥ 3.130 crashed at startup on a Windows 11 x64 environment even with WebView2 + VC runtimes installed; pinning to 3.129 is a pragmatic compromise.
    - **Where:** Dependency management (`gradle/libs.versions.toml`) + docs (`docs/TODO.md` / release notes)
    - **What:** Identify the breaking dependency/OS requirement introduced in SWT 3.130+, document prerequisites (or decide to stay pinned).
@@ -327,6 +340,24 @@ This section captures additional improvement ideas expressed in comments that ar
 - Use episode titles parsed from filename as a secondary disambiguator.
 - When both season/episode and date patterns exist, cross-check them.
 - If provider offers absolute ordering or aired date ordering, optionally use it to break ties.
+
+#### Support multi-episode “single file” patterns (double-episodes / ranges)
+**Context:** Many TV libraries store two or more episodes in a single file. Common naming conventions include explicit lists (`E04E05`) and ranges (`E04-E06` / `E04-06`). Without explicit support, the proposed destination can look wrong and users may worry the app will move/rename incorrectly.
+
+**Goal:** When a multi-episode span is detected, treat the file as representing episodes `A..B`:
+- Select the lowest episode (A) for lookup/matching
+- Append `"(A-B)"` to the episode title used for rename output (drop leading zeros for compactness)
+
+**Patterns to support (case-insensitive):**
+- `S01E04E05` and `S01E04E05E06` (explicit list in one file)
+- `S02E04-E06` and `S02E04-06` (inclusive range in one file)
+
+**Example:**
+- `The Hulk S04E01-E07 Silver Linings.mkv` → title token becomes `Silver Linings (1-7)`
+
+**Notes / edge cases:**
+- Always append `"(A-B)"` even if episode B lookup fails; treat the span as filename-derived truth.
+- Ensure this only affects the *rename output title* (not provider metadata), and remains deterministic.
 
 ### Parsing fallbacks and “should never happen” paths
 **Context:** Parser code contains “this should never happen” style comments indicating areas where behavior could be tightened or more explicitly treated as errors.

@@ -27,6 +27,21 @@ public class FilenameParser {
     private static final String RESOLUTION_REGEX = "\\D(\\d+[pk]).*";
 
     private static final String[] REGEX = {
+        // --- Multi-episode (single file) patterns ---
+        //
+        // Explicit list in a single file:
+        //   S01E04E05
+        //   S01E04E05E06
+        //
+        // We capture: showName (1), season (2), startEp (3), endEp (4)
+        "(.+?[^a-zA-Z0-9]\\D*?)[sS](\\d\\d*)[eE](\\d\\d*)[eE](\\d\\d*)(?:[eE]\\d\\d*)*.*",
+        // Inclusive ranges in a single file:
+        //   S02E04-E06
+        //   S02E04-06
+        //
+        // We capture: showName (1), season (2), startEp (3), endEp (4)
+        "(.+?[^a-zA-Z0-9]\\D*?)[sS](\\d\\d*)[eE](\\d\\d*)-(?:[eE])?(\\d\\d*).*",
+        // --- Single-episode patterns ---
         // this one matches SXXEXX:
         "(.+?[^a-zA-Z0-9]\\D*?)[sS](\\d\\d*)[eE](\\d\\d*).*",
         // this one matches Season-XX-Episode-XX:
@@ -106,6 +121,48 @@ public class FilenameParser {
                     UserPreferences.getInstance().resolveShowName(foundName);
                 ShowName.mapShowName(overriddenName);
 
+                // Preserve the extracted show name for UI/display/debugging, but apply overrides
+                // to the effective lookup name used to query the provider.
+                episode.setExtractedFilenameShow(foundName);
+                episode.setFilenameShow(overriddenName);
+
+                // Multi-episode patterns include an extra capture group for "end episode"
+                // (A..B in a single file). When present:
+                // - store span on the episode (for later "(A-B)" suffix)
+                // - select the lowest episode (A) for placement/lookup
+                //
+                // IMPORTANT: Many existing single-episode patterns also have 4 capture groups
+                // (the 4th being resolution). We must therefore only treat a match as
+                // "multi-episode" if we can parse (season, startEp, endEp) and endEp looks valid.
+                boolean handledMultiEpisode = false;
+                if (matcher.groupCount() >= 4) {
+                    String seasonStr = matcher.group(2);
+                    String startEpStr = matcher.group(3);
+                    String endEpStr = matcher.group(4);
+
+                    try {
+                        int startEp = Integer.parseInt(startEpStr);
+                        int endEp = Integer.parseInt(endEpStr);
+
+                        // Only treat as multi-episode if B is >= A; otherwise this is likely
+                        // a single-episode pattern where group(4) is actually resolution.
+                        if (endEp >= startEp) {
+                            episode.setMultiEpisodeSpan(startEp, endEp);
+
+                            // Use the lowest episode for placement/matching.
+                            episode.setEpisodePlacement(seasonStr, startEpStr);
+
+                            // Multi-episode patterns currently don't capture resolution; keep it empty.
+                            episode.setFilenameResolution("");
+                            episode.setParsed();
+                            return;
+                        }
+                    } catch (Exception ignored) {
+                        // Not a multi-episode match; fall through to normal handling.
+                    }
+                }
+
+                // Single-episode patterns: group 4 (if present) is resolution.
                 String resolution = "";
                 if (matcher.groupCount() == 4) {
                     resolution = matcher.group(4);
@@ -114,11 +171,6 @@ public class FilenameParser {
                     // an error if it does, but not important.
                     continue;
                 }
-
-                // Preserve the extracted show name for UI/display/debugging, but apply overrides
-                // to the effective lookup name used to query the provider.
-                episode.setExtractedFilenameShow(foundName);
-                episode.setFilenameShow(overriddenName);
 
                 episode.setEpisodePlacement(matcher.group(2), matcher.group(3));
                 episode.setFilenameResolution(resolution);
