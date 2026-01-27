@@ -18,68 +18,52 @@ Completed work is tracked in `docs/Completed.md`. Keep this file focused on futu
 
 ---
 
-## Top candidates (high impact / low risk)
+## Prioritized backlog (user impact / robustness / effort)
 
-These are suggested “first picks” from the backlog below—items that are likely to improve user experience, correctness, or maintainability with relatively contained changes.
+This section is the “living” priority order for what’s left, based on:
+- **User impact** (how often it helps / how confusing it is today)
+- **Security/robustness** (reduces risk of data loss or hard-to-debug failures)
+- **Effort** (how contained the change is)
 
-1. **Headless CLI mode (automation/pipelines)**
-   - **Why:** Enable TVRenamer to be used in scripted workflows (NAS, scheduled jobs, CI-like pipelines) without requiring SWT/GUI interaction.
-   - **Where:** New entry point (e.g., `org.tvrenamer.controller.CliMain`), argument parsing, and a minimal headless execution path that reuses existing parsing/lookup/move logic.
-   - **What:** Add a CLI that can:
-     - accept input paths (files/folders),
-     - run parsing + show resolution (respecting Matching rules),
-     - output proposed renames/moves (dry-run),
-     - optionally perform moves/renames,
-     - emit machine-readable output (JSON) for pipeline integration.
-   - **Notes:** Needs a policy for ambiguous shows (fail with exit code + report pending disambiguations; optionally accept pinned IDs via args). Must not require SWT natives.
-   - **Effort:** Medium/Large (new mode, careful separation of UI vs core logic, robust error/exit codes)
-
-2. **Help: create simple static help pages and wire Help menu to open them**
-   - **Why:** The current Help menu has a “Help” item that isn’t wired; users need discoverable guidance without hunting through issues/releases.
-   - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions), plus new `docs/help/` content published via GitHub Pages (or similar).
-   - **What:** Create a small set of static pages (e.g., Getting Started, Matching/Overrides, Select Shows & disambiguation, Troubleshooting/logging) and update the Help menu to open the help index URL. Keep “Visit Web Page” pointing to the project page.
-   - **Effort:** Small/Medium (docs + one menu action)
-
-3. **Add unit tests for unified show selection (no network calls)**
-   - **Why:** The unified selection evaluator is now critical behavior; tests prevent regressions and reduce risk when adjusting heuristics.
-   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator` and its interaction with `StringUtils.replacePunctuation(...)`
-   - **What:** Add fixture-based candidate lists (no live provider calls) that verify:
-     - dot/underscore/hyphen-separated names resolve without prompting when an exact normalized match exists
-     - base-title vs parenthetical variants behavior
-     - year token ±1 behavior
-   - **Effort:** Small/Medium (introduce fixtures/mocks; keep deterministic)
-
-4. **Improve handling of “unparsed” files**
-   - **Why:** Provide actionable feedback and better UX for files that fail parsing (common frustration point).
+### P0 — High user impact / safety (do these first)
+1. **Improve handling of “unparsed” files**
+   - **Why:** Parse failures are a common frustration point; users need actionable feedback.
    - **Where:** `org.tvrenamer.model.EpisodeDb` / Results UI where unparsed items are inserted
-   - **Effort:** Medium (mostly UX and messaging; low behavioral risk)
+   - **What:** Show a parse-failure reason (status/tooltip), add quick actions (open folder/copy diagnostics), and optionally provide filters.
+   - **Effort:** Medium
 
-5. **Show selection heuristics: verify coverage and expand carefully**
-   - **Why:** Reduce unnecessary prompts while avoiding incorrect auto-matches.
-   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
-   - **Status:** Implemented deterministic tie-breakers:
-     - Prefer base title over parenthetical variants when base exists (e.g., `Title` beats `Title (IN)`/`(CN)`).
-     - Prefer exact canonical token match over extra tokens (strict).
-     - Prefer `FirstAiredYear` match with ±1 tolerance when extracted contains a year token.
-   - **Guideline:** Only add new tie-breakers if deterministic + explainable; never auto-decide cases like `The Office (US)` vs `The Office (UK)` without a pin.
-   - **Effort:** Medium (but keep changes incremental and spec-driven)
-
-6. **Expand conflict detection beyond exact filename matches**
-   - **Why:** Avoid accidental overwrites and improve conflict handling for common variants (codec/container/resolution).
+2. **Expand conflict detection beyond exact filename matches**
+   - **Why:** Prevent accidental overwrites and improve user trust when duplicates exist.
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
-   - **Effort:** Medium (policy definition + detection improvements)
+   - **What:** Define a clear “conflict policy” (skip/overwrite/version suffix/move to duplicates) and improve detection beyond exact filename matches.
+   - **Effort:** Medium
+
+### P1 — High impact, moderate effort
+3. **Help: create simple static help pages and wire Help menu to open them**
+   - **Why:** “Help” exists but is unwired; users need guidance without digging through issues/releases.
+   - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions) + new `docs/help/` published via GitHub Pages (or similar).
+   - **Effort:** Small/Medium
+
+4. **Add unit tests for unified show selection (no network calls)**
+   - **Why:** Prevent regressions in critical matching behavior.
+   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
+   - **Effort:** Small/Medium
+
+### P2 — Medium impact / longer horizon
+5. **Headless CLI mode (automation/pipelines)**
+   - **Why:** Enables scripted usage without SWT/GUI.
+   - **Where:** new entry point (e.g., `org.tvrenamer.controller.CliMain`) + separation of UI vs core logic.
+   - **Effort:** Medium/Large
+
+6. **Show selection heuristics: verify coverage and expand carefully**
+   - **Why:** Reduce unnecessary prompts while staying deterministic/spec-driven.
+   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
+   - **Effort:** Medium (incremental)
 
 7. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
-   - **Why:** SWT ≥ 3.130 crashed at startup on a Windows 11 x64 environment even with WebView2 + VC runtimes installed; pinning to 3.129 is a pragmatic compromise.
-   - **Where:** Dependency management (`gradle/libs.versions.toml`) + docs (`docs/TODO.md` / release notes)
-   - **What:** Identify the breaking dependency/OS requirement introduced in SWT 3.130+, document prerequisites (or decide to stay pinned).
-   - **Effort:** Small/Medium (investigation + documentation)
-   - **Research notes (Jan 2025):**
-     - Known SWT issues in 2024 don't explain the Windows 11 crash:
-       - [Issue #1252](https://github.com/eclipse-platform/eclipse.platform.swt/issues/1252): DPI APIs (`GetSystemMetricsForDpi`, `SystemParametersInfoForDpi`) requiring Windows 10 1607+ — fixed in [PR #1568](https://github.com/eclipse-platform/eclipse.platform.swt/pull/1568) (merged Oct 2024)
-       - [Issue #1500](https://github.com/eclipse-platform/eclipse.platform.swt/issues/1500): Windows Server 2016 DLL load crash — unrelated to Win11
-     - The Windows 11 x64 crash with up-to-date WebView2 remains unexplained
-     - **Next steps:** Retry SWT 3.130+ after confirming fix is included; if still failing, capture crash logs/stack trace for further diagnosis
+   - **Why:** Enables future SWT upgrades without breaking Windows startup.
+   - **Where:** dependency management + docs
+   - **Effort:** Small/Medium
 
 
 
@@ -328,23 +312,10 @@ This section captures additional improvement ideas expressed in comments that ar
 - When both season/episode and date patterns exist, cross-check them.
 - If provider offers absolute ordering or aired date ordering, optionally use it to break ties.
 
-#### Support multi-episode “single file” patterns (double-episodes / ranges)
-**Context:** Many TV libraries store two or more episodes in a single file. Common naming conventions include explicit lists (`E04E05`) and ranges (`E04-E06` / `E04-06`). Without explicit support, the proposed destination can look wrong and users may worry the app will move/rename incorrectly.
+#### Support multi-episode “single file” patterns (double-episodes / ranges) (DONE)
+This is implemented; see `docs/Completed.md` for the completed-work record.
 
-**Goal:** When a multi-episode span is detected, treat the file as representing episodes `A..B`:
-- Select the lowest episode (A) for lookup/matching
-- Append `"(A-B)"` to the episode title used for rename output (drop leading zeros for compactness)
-
-**Patterns to support (case-insensitive):**
-- `S01E04E05` and `S01E04E05E06` (explicit list in one file)
-- `S02E04-E06` and `S02E04-06` (inclusive range in one file)
-
-**Example:**
-- `The Hulk S04E01-E07 Silver Linings.mkv` → title token becomes `Silver Linings (1-7)`
-
-**Notes / edge cases:**
-- Always append `"(A-B)"` even if episode B lookup fails; treat the span as filename-derived truth.
-- Ensure this only affects the *rename output title* (not provider metadata), and remains deterministic.
+(We keep the historical note here only as a pointer. Do not re-add this as a future item.)
 
 ### Parsing fallbacks and “should never happen” paths
 **Context:** Parser code contains “this should never happen” style comments indicating areas where behavior could be tightened or more explicitly treated as errors.
