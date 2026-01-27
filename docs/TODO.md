@@ -71,23 +71,13 @@ This section is the “living” priority order for what’s left, based on:
 
 ## 1) File moving / filesystem behavior
 
-### Make modification-time behavior configurable (DONE)
-**Context:** After a successful move/rename, the app used to set the file’s modification time to “now”.  
-**Status:** Implemented as a user preference. Default behavior is now to **preserve** original modification time, with an option to set it to “now” instead.
-
-- Source (original note):
-  - `org.tvrenamer.controller.FileMover` — `finishMove(...)`
+(Completed items are tracked in `docs/Completed.md`. This section is future-work only.)
 
 ---
 
 ## 2) Move conflict detection & generalization
 
-### Generalize helper used for building map lists (DONE)
-**Context:** `MoveRunner` had a helper for “get list value from map, creating list if absent”.  
-**Status:** Updated to use `Map.computeIfAbsent(...)` (standard library), removing custom boilerplate.
-
-- Source (original note):
-  - `org.tvrenamer.controller.MoveRunner` — helper previously marked with a TODO
+(Completed items are tracked in `docs/Completed.md`. This section is future-work only.)
 
 ### Expand conflict detection beyond exact filename matches
 **Context:** Conflict detection currently assumes “exact filename match” is the primary conflict type, but the code anticipates more nuanced matching.  
@@ -152,12 +142,7 @@ This section is the “living” priority order for what’s left, based on:
 - Add tests for tricky titles (ampersands, apostrophes, unicode punctuation, etc.).
 - Audit filename construction paths to ensure `sanitiseTitle(...)` is consistently applied where needed.
 
-### Harden XPath usage for potential concurrency (DONE)
-**Context:** `XPathUtilities` used one shared static `XPath` instance for all requests.  
-**Status:** Updated to use a `ThreadLocal<XPath>` so background-thread callers can safely evaluate XPath expressions.
-
-- Source (original note):
-  - `org.tvrenamer.controller.util.XPathUtilities` — shared `XPath` instance
+(Completed items are tracked in `docs/Completed.md`.)
 
 ---
 
@@ -189,16 +174,7 @@ This section is the “living” priority order for what’s left, based on:
 - Be careful with UNC/SMB edge cases where “real path” may fail or be slow
 - Add tests for path normalization behavior on Windows
 
-### Preload folder in a separate thread (DONE)
-**Context:** Preload folder scanning can be slow and used to run synchronously.  
-**Status:** Preload now runs on a background thread to avoid blocking the UI thread.
-
-- Source (original note):
-  - `org.tvrenamer.model.EpisodeDb` — `preload()`
-
-**Follow-ups / caution:**
-- `publish(...)` notifies listeners from the background thread. Current UI listener paths are safe because they marshal UI updates onto the SWT thread, but any future listeners must not assume they are invoked on the UI thread.
-- Future enhancements could include cancellation and incremental/batched publishing for very large folders.
+(Completed items are tracked in `docs/Completed.md`.)
 
 ---
 
