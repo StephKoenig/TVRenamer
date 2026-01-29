@@ -180,6 +180,19 @@ When you complete an item that was tracked in `docs/TODO.md`:
 - **What we did:**
   - Documented a safer release upload approach: prefer CI artifacts and/or ensure `build/libs/` is clean, and upload explicit jar filenames to avoid stale versioned jars.
 
+### 20) Code consolidation and modernization (Refactor and Consolidate)
+- **Why:** Improve maintainability, reduce code duplication, and modernize patterns for easier future development.
+- **Where:** Multiple files across `controller`, `model`, and `controller/util` packages
+- **What we did:**
+  - Removed deprecated `loggingOff()`/`loggingOn()` methods from `FileUtilities` (unused legacy code)
+  - Consolidated duplicate `safePath(Path)` method: made `FileUtilities.safePath()` public and removed duplicate from `FileMover`
+  - Moved magic constants (`NO_FILE_SIZE`, `MAX_TITLE_LENGTH`) from `FileEpisode` to `Constants.java`
+  - Extracted `FileStatus` enum from string-based status tracking in `FileEpisode` (type safety improvement)
+  - Improved `UpdateChecker` thread safety: replaced mutable static fields with `AtomicReference<VersionCheckResult>` using a record for immutable result caching; narrowed `catch (Exception)` to `catch (RuntimeException)`
+- **Notes:**
+  - The `FileStatus` enum is a private inner enum in `FileEpisode` since it's only used internally
+  - `UpdateChecker` now uses lock-free compare-and-set pattern for thread-safe lazy initialization
+
 ---
 
 ## Related records

@@ -35,8 +35,20 @@ This section is the “living” priority order for what’s left, based on:
 2. **Expand conflict detection beyond exact filename matches**
    - **Why:** Prevent accidental overwrites and improve user trust when duplicates exist.
    - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
-   - **What:** Define a clear “conflict policy” (skip/overwrite/version suffix/move to duplicates) and improve detection beyond exact filename matches.
+   - **What:** Define a clear "conflict policy" (skip/overwrite/version suffix/move to duplicates) and improve detection beyond exact filename matches.
    - **Effort:** Medium
+
+3. **Refactor and Consolidate**
+   - **Why:** Improve maintainability, reduce code duplication, and modernize patterns for easier future development.
+   - **Effort:** Low to Medium (incremental)
+   - **Items:**
+     - Remove deprecated `loggingOff()`/`loggingOn()` methods from `FileUtilities` (unused)
+     - Consolidate duplicate `safePath(Path)` method (exists in both `FileMover` and `FileUtilities`)
+     - Extract `FileStatus` enum from string-based status tracking in `FileEpisode`
+     - Move magic constants (`NO_FILE_SIZE`, `MAX_TITLE_LENGTH`) from `FileEpisode` to `Constants`
+     - Use `AtomicReference` for thread-safe static fields in `UpdateChecker`
+     - Narrow overly broad `catch (Exception)` blocks to specific exception types where feasible
+     - Consider extracting `EpisodeReplacementFormatter` from `FileEpisode` (longer-term)
 
 ### P1 — High impact, moderate effort
 3. **Help: create simple static help pages and wire Help menu to open them**

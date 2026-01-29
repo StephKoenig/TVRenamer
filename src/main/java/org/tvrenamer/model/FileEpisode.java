@@ -88,12 +88,32 @@ public class FileEpisode {
         NOT_STARTED,
     }
 
-    private static final long NO_FILE_SIZE = -1L;
-
-    // Allow titles long enough to include this one:
-    // "The One With The Thanksgiving Flashbacks (a.k.a. The One With All The
-    // Thanksgivings)"
-    private static final int MAX_TITLE_LENGTH = 85;
+    /**
+     * The status of the file move/rename operation.
+     *
+     * <ul>
+     * <li>UNCHECKED means we haven't verified if the file exists</li>
+     * <li>NO_FILE means the source file does not exist</li>
+     * <li>UNMOVED means the file is ready to be moved but hasn't been yet</li>
+     * <li>MOVING means the file move operation is in progress</li>
+     * <li>ALREADY_IN_PLACE means the file is already at the destination</li>
+     * <li>RENAMED means the file was successfully renamed (same filesystem)</li>
+     * <li>COPIED means the file was successfully copied to a different filesystem</li>
+     * <li>FAIL_TO_MOVE means the move operation failed</li>
+     * <li>MISNAMED means the file exists but doesn't match the expected name</li>
+     * </ul>
+     */
+    private enum FileStatus {
+        UNCHECKED,
+        NO_FILE,
+        UNMOVED,
+        MOVING,
+        ALREADY_IN_PLACE,
+        RENAMED,
+        COPIED,
+        FAIL_TO_MOVE,
+        MISNAMED,
+    }
 
     // This class actually figures out the proposed new name for the file, so we
     // need
@@ -192,7 +212,7 @@ public class FileEpisode {
     private ParseStatus parseStatus = ParseStatus.UNPARSED;
     private SeriesStatus seriesStatus = SeriesStatus.NOT_STARTED;
 
-    public String fileStatus = "UNCHECKED";
+    private FileStatus fileStatus = FileStatus.UNCHECKED;
     private boolean currentPathMatchesTemplate = false;
 
     public enum FailureReason {
@@ -428,7 +448,7 @@ public class FileEpisode {
      *
      */
     public void setNoFile() {
-        fileStatus = "NO_FILE";
+        fileStatus = FileStatus.NO_FILE;
     }
 
     /**
@@ -436,7 +456,7 @@ public class FileEpisode {
      *
      */
     public void setFileVerified() {
-        fileStatus = "UNMOVED";
+        fileStatus = FileStatus.UNMOVED;
     }
 
     private void checkFile(boolean mustExist) {
@@ -618,7 +638,7 @@ public class FileEpisode {
      *
      */
     public void setMoving() {
-        fileStatus = "MOVING";
+        fileStatus = FileStatus.MOVING;
     }
 
     /**
@@ -628,8 +648,8 @@ public class FileEpisode {
      *
      */
     public void setAlreadyInPlace() {
-        fileStatus = "ALREADY_IN_PLACE";
-        currentPathMatchesTemplate = true; // Wait, currentPathMatchesTemplate was NOT in my removal list, verifying
+        fileStatus = FileStatus.ALREADY_IN_PLACE;
+        currentPathMatchesTemplate = true;
     }
 
     /**
@@ -647,7 +667,7 @@ public class FileEpisode {
      *
      */
     public void setRenamed() {
-        fileStatus = "RENAMED";
+        fileStatus = FileStatus.RENAMED;
         currentPathMatchesTemplate = true;
     }
 
@@ -659,7 +679,7 @@ public class FileEpisode {
      *
      */
     public void setCopied() {
-        fileStatus = "COPIED";
+        fileStatus = FileStatus.COPIED;
         currentPathMatchesTemplate = true;
     }
 
@@ -672,7 +692,7 @@ public class FileEpisode {
      *
      */
     public void setFailToMove() {
-        fileStatus = "FAIL_TO_MOVE";
+        fileStatus = FileStatus.FAIL_TO_MOVE;
         currentPathMatchesTemplate = false;
     }
 
@@ -683,7 +703,7 @@ public class FileEpisode {
      *
      */
     public void setMisnamed() {
-        fileStatus = "MISNAMED";
+        fileStatus = FileStatus.MISNAMED;
         currentPathMatchesTemplate = false;
     }
 

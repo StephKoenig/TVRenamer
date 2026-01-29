@@ -1,5 +1,6 @@
 package org.tvrenamer.controller;
 
+import static org.tvrenamer.controller.util.FileUtilities.safePath;
 import static org.tvrenamer.model.util.Constants.*;
 
 import java.io.IOException;
@@ -22,10 +23,6 @@ public class FileMover implements Callable<Boolean> {
 
     static final Logger logger = Logger.getLogger(FileMover.class.getName());
     static final UserPreferences userPrefs = UserPreferences.getInstance();
-
-    private static String safePath(Path p) {
-        return (p == null) ? "<null>" : p.toString();
-    }
 
     private final FileEpisode episode;
     private final Path destRoot;

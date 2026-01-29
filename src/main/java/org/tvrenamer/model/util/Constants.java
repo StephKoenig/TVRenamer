@@ -312,4 +312,15 @@ public class Constants {
     );
 
     public static final String EMPTY_STRING = "";
+
+    // FileEpisode constants
+    /** Sentinel value indicating file size is unknown or unavailable. */
+    public static final long NO_FILE_SIZE = -1L;
+
+    /**
+     * Maximum length for episode titles in replacement filenames.
+     * Long enough for titles like:
+     * "The One With The Thanksgiving Flashbacks (a.k.a. The One With All The Thanksgivings)"
+     */
+    public static final int MAX_TITLE_LENGTH = 85;
 }
