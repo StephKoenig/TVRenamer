@@ -25,24 +25,12 @@ public class FileUtilities {
     );
 
     /**
-     * Deprecated: logging levels should be configured via {@code logging.properties}.
-     * Kept for legacy callers.
+     * Returns a safe string representation of a Path, handling null gracefully.
+     *
+     * @param p the path to convert (may be null)
+     * @return the path as a string, or "&lt;null&gt;" if the path is null
      */
-    @Deprecated
-    public static void loggingOff() {
-        logger.setLevel(Level.SEVERE);
-    }
-
-    /**
-     * Deprecated: logging levels should be configured via {@code logging.properties}.
-     * Kept for legacy callers.
-     */
-    @Deprecated
-    public static void loggingOn() {
-        logger.setLevel(Level.INFO);
-    }
-
-    private static String safePath(Path p) {
+    public static String safePath(Path p) {
         return (p == null) ? "<null>" : p.toString();
     }
 
