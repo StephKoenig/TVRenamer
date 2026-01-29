@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.layout.GridData;
@@ -34,10 +33,6 @@ import org.tvrenamer.model.ShowStore;
  * If the user cancels, returns null.
  */
 public final class BatchShowDisambiguationDialog extends Dialog {
-
-    private static final Logger logger = Logger.getLogger(
-        BatchShowDisambiguationDialog.class.getName()
-    );
 
     private static final int MAX_OPTIONS_PER_SHOW = 5;
 
@@ -125,11 +120,9 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
             if (hasAnySelections()) {
                 cancelled = false;
-                closedViaWindowX = true;
                 // keep selections
             } else {
                 cancelled = true;
-                closedViaWindowX = true;
                 selections.clear();
             }
         });
@@ -163,10 +156,6 @@ public final class BatchShowDisambiguationDialog extends Dialog {
     }
 
     private boolean cancelled = false;
-
-    // When the user closes the dialog via the window close button (X), treat it as Cancel.
-    // This prevents the dialog from immediately reopening due to pending disambiguation callbacks.
-    private boolean closedViaWindowX = false;
 
     private void createContents(final Shell shell) {
         GridLayout layout = new GridLayout(1, false);
@@ -418,7 +407,6 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         );
         cancelButton.addListener(SWT.Selection, e -> {
             cancelled = true;
-            closedViaWindowX = false;
             selections.clear();
             close();
         });
@@ -772,22 +760,6 @@ public final class BatchShowDisambiguationDialog extends Dialog {
             }
         }
         return -1;
-    }
-
-    private boolean allResolved() {
-        for (Map.Entry<
-            String,
-            ShowStore.PendingDisambiguation
-        > entry : pending.entrySet()) {
-            String queryString = entry.getKey();
-            if (queryString == null || queryString.isBlank()) {
-                continue;
-            }
-            if (!selections.containsKey(queryString)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private boolean hasAnySelections() {
