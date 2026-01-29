@@ -88,33 +88,6 @@ public class FileEpisode {
         NOT_STARTED,
     }
 
-    /**
-     * The status of the file move/rename operation.
-     *
-     * <ul>
-     * <li>UNCHECKED means we haven't verified if the file exists</li>
-     * <li>NO_FILE means the source file does not exist</li>
-     * <li>UNMOVED means the file is ready to be moved but hasn't been yet</li>
-     * <li>MOVING means the file move operation is in progress</li>
-     * <li>ALREADY_IN_PLACE means the file is already at the destination</li>
-     * <li>RENAMED means the file was successfully renamed (same filesystem)</li>
-     * <li>COPIED means the file was successfully copied to a different filesystem</li>
-     * <li>FAIL_TO_MOVE means the move operation failed</li>
-     * <li>MISNAMED means the file exists but doesn't match the expected name</li>
-     * </ul>
-     */
-    private enum FileStatus {
-        UNCHECKED,
-        NO_FILE,
-        UNMOVED,
-        MOVING,
-        ALREADY_IN_PLACE,
-        RENAMED,
-        COPIED,
-        FAIL_TO_MOVE,
-        MISNAMED,
-    }
-
     // This class actually figures out the proposed new name for the file, so we
     // need
     // a link to the user preferences to know how the user wants the file renamed.
@@ -212,7 +185,6 @@ public class FileEpisode {
     private ParseStatus parseStatus = ParseStatus.UNPARSED;
     private SeriesStatus seriesStatus = SeriesStatus.NOT_STARTED;
 
-    private FileStatus fileStatus = FileStatus.UNCHECKED;
     private boolean currentPathMatchesTemplate = false;
 
     public enum FailureReason {
@@ -445,18 +417,18 @@ public class FileEpisode {
 
     /**
      * Updates the status to know that the source file is not found.
-     *
+     * (Status tracking removed; method retained for API compatibility.)
      */
     public void setNoFile() {
-        fileStatus = FileStatus.NO_FILE;
+        // No-op: fileStatus tracking removed
     }
 
     /**
      * Updates the status to know that the source file has been found.
-     *
+     * (Status tracking removed; method retained for API compatibility.)
      */
     public void setFileVerified() {
-        fileStatus = FileStatus.UNMOVED;
+        // No-op: fileStatus tracking removed
     }
 
     private void checkFile(boolean mustExist) {
@@ -635,27 +607,23 @@ public class FileEpisode {
     /**
      * Updates the status to know that the process of moving the file to its
      * desired name/location has begun, and is not known to have finished.
-     *
      */
     public void setMoving() {
-        fileStatus = FileStatus.MOVING;
+        // No-op: fileStatus tracking removed
     }
 
     /**
      * Updates the status to know that the source file is already in the
      * directory that the user wants it in, and has the best name that it
      * can be given.
-     *
      */
     public void setAlreadyInPlace() {
-        fileStatus = FileStatus.ALREADY_IN_PLACE;
         currentPathMatchesTemplate = true;
     }
 
     /**
      * Updates the status to know that there is already a file with the desired
      * name/location where the user's template requests we move the source file.
-     *
      */
     public void setConflict() {}
 
@@ -664,10 +632,8 @@ public class FileEpisode {
      * the name/location where the user's template specified. At the filesystem
      * level, this could mean the file was renamed, or that it was copied and
      * the original deleted.
-     *
      */
     public void setRenamed() {
-        fileStatus = FileStatus.RENAMED;
         currentPathMatchesTemplate = true;
     }
 
@@ -676,10 +642,8 @@ public class FileEpisode {
      * desired name/location, but we have not (yet?) deleted the original file.
      * If the move is in this state at the completion of the process, it means
      * we were not able to delete the original file.
-     *
      */
     public void setCopied() {
-        fileStatus = FileStatus.COPIED;
         currentPathMatchesTemplate = true;
     }
 
@@ -689,10 +653,8 @@ public class FileEpisode {
      * reason, it indicates that the original file is still where it originally
      * was, and that the destination file to which we tried to move the file,
      * does not exist.
-     *
      */
     public void setFailToMove() {
-        fileStatus = FileStatus.FAIL_TO_MOVE;
         currentPathMatchesTemplate = false;
     }
 
@@ -700,10 +662,8 @@ public class FileEpisode {
      * Updates the status to know that the original file has been moved, but
      * that it was not moved to where we expected. Thankfully, this is is very
      * likely impossible, but want to have infrastructure for it, just in case.
-     *
      */
     public void setMisnamed() {
-        fileStatus = FileStatus.MISNAMED;
         currentPathMatchesTemplate = false;
     }
 

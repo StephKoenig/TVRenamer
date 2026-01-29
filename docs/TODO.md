@@ -41,14 +41,10 @@ This section is the “living” priority order for what’s left, based on:
 3. **Refactor and Consolidate**
    - **Why:** Improve maintainability, reduce code duplication, and modernize patterns for easier future development.
    - **Effort:** Low to Medium (incremental)
-   - **Items:**
-     - Remove deprecated `loggingOff()`/`loggingOn()` methods from `FileUtilities` (unused)
-     - Consolidate duplicate `safePath(Path)` method (exists in both `FileMover` and `FileUtilities`)
-     - Extract `FileStatus` enum from string-based status tracking in `FileEpisode`
-     - Move magic constants (`NO_FILE_SIZE`, `MAX_TITLE_LENGTH`) from `FileEpisode` to `Constants`
-     - Use `AtomicReference` for thread-safe static fields in `UpdateChecker`
+   - **Items (remaining):**
      - Narrow overly broad `catch (Exception)` blocks to specific exception types where feasible
      - Consider extracting `EpisodeReplacementFormatter` from `FileEpisode` (longer-term)
+   - **Completed:** see `docs/Completed.md` item #20
 
 ### P1 — High impact, moderate effort
 3. **Help: create simple static help pages and wire Help menu to open them**
