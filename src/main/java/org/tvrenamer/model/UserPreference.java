@@ -19,6 +19,12 @@ public enum UserPreference {
     // File timestamp policy (e.g., preserve original mtime vs set to now) for move/rename operations.
     FILE_MTIME_POLICY,
 
+    // Overwrite destination files instead of creating versioned suffixes like (1), (2).
+    OVERWRITE_DESTINATION,
+
+    // After move, clean up duplicate video files (same base name, different extension).
+    CLEANUP_DUPLICATES,
+
     // Since these are only meaningful at startup, they probably should not be watched
     UPDATE_CHECK,
     @SuppressWarnings("unused")

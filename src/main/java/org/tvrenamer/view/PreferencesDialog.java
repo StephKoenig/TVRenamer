@@ -204,6 +204,8 @@ class PreferencesDialog extends Dialog {
     private Button recurseFoldersCheckbox;
     private Button rmdirEmptyCheckbox;
     private Button deleteRowsCheckbox;
+    private Button overwriteDestinationCheckbox;
+    private Button cleanupDuplicatesCheckbox;
 
     // If checked, set moved/renamed files' modification time to "now".
     // If unchecked (default), preserve original modification time.
@@ -647,6 +649,22 @@ class PreferencesDialog extends Dialog {
             DELETE_ROWS_TEXT,
             DELETE_ROWS_TOOLTIP,
             prefs.isDeleteRowAfterMove(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
+        overwriteDestinationCheckbox = createCheckbox(
+            OVERWRITE_DEST_TEXT,
+            OVERWRITE_DEST_TOOLTIP,
+            prefs.isAlwaysOverwriteDestination(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
+        cleanupDuplicatesCheckbox = createCheckbox(
+            CLEANUP_DUPLICATES_TEXT,
+            CLEANUP_DUPLICATES_TOOLTIP,
+            prefs.isCleanupDuplicateVideoFiles(),
             generalGroup,
             GridData.BEGINNING,
             3
@@ -1585,6 +1603,12 @@ class PreferencesDialog extends Dialog {
         prefs.setRecursivelyAddFolders(recurseFoldersCheckbox.getSelection());
         prefs.setRemoveEmptiedDirectories(rmdirEmptyCheckbox.getSelection());
         prefs.setDeleteRowAfterMove(deleteRowsCheckbox.getSelection());
+        prefs.setAlwaysOverwriteDestination(
+            overwriteDestinationCheckbox.getSelection()
+        );
+        prefs.setCleanupDuplicateVideoFiles(
+            cleanupDuplicatesCheckbox.getSelection()
+        );
 
         // Default is preserve; checkbox is the inverse ("set to now").
         if (setMtimeToNowCheckbox != null) {

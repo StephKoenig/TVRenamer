@@ -8,6 +8,8 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.tvrenamer.model.MoveObserver;
@@ -201,6 +203,26 @@ public class FileUtilities {
      *    the new destination if the file was renamed; null if it was not
      */
     public static Path renameFile(final Path srcFile, final Path destFile) {
+        return renameFile(srcFile, destFile, false);
+    }
+
+    /**
+     * Rename the given file to the given destination, optionally overwriting.
+     *
+     * @param srcFile
+     *    the file to be renamed
+     * @param destFile
+     *    the destination for the file to be renamed to
+     * @param overwrite
+     *    if true, overwrite existing destination file; if false, fail if destination exists
+     * @return
+     *    the new destination if the file was renamed; null if it was not
+     */
+    public static Path renameFile(
+        final Path srcFile,
+        final Path destFile,
+        final boolean overwrite
+    ) {
         if (srcFile == null || destFile == null) {
             logger.warning(
                 "cannot rename file: src/dest is null\n  src=" +
@@ -220,14 +242,26 @@ public class FileUtilities {
                     "renameFile does not take a directory; " +
                         "supply the entire path"
                 );
-            } else {
-                logger.warning("will not overwrite existing file: " + destFile);
+                return null;
             }
-            return null;
+            if (!overwrite) {
+                logger.warning("will not overwrite existing file: " + destFile);
+                return null;
+            }
+            // overwrite is true, proceed with REPLACE_EXISTING
+            logger.info("overwriting existing file: " + destFile);
         }
         Path actualDest = null;
         try {
-            actualDest = Files.move(srcFile, destFile);
+            if (overwrite) {
+                actualDest = Files.move(
+                    srcFile,
+                    destFile,
+                    StandardCopyOption.REPLACE_EXISTING
+                );
+            } else {
+                actualDest = Files.move(srcFile, destFile);
+            }
             // Files.move is specified to return the target path; still, be defensive.
             if (actualDest != null && Files.exists(actualDest)) {
                 return actualDest;
@@ -680,5 +714,146 @@ public class FileUtilities {
             }
         }
         return success;
+    }
+
+    /** Common video file extensions for duplicate detection (excludes subtitles). */
+    private static final Set<String> VIDEO_EXTENSIONS = Set.of(
+        ".mkv", ".mp4", ".avi", ".m4v", ".mov", ".wmv", ".flv", ".webm",
+        ".mpg", ".mpeg", ".ts", ".m2ts", ".vob", ".divx", ".xvid"
+    );
+
+    /**
+     * Check if a filename has a video extension.
+     *
+     * @param filename the filename to check
+     * @return true if the filename ends with a known video extension
+     */
+    public static boolean hasVideoExtension(String filename) {
+        if (filename == null) {
+            return false;
+        }
+        String lower = filename.toLowerCase(java.util.Locale.ROOT);
+        return VIDEO_EXTENSIONS.stream().anyMatch(lower::endsWith);
+    }
+
+    /**
+     * Find duplicate video files in the destination directory.
+     *
+     * After moving a file, this method scans the destination directory for other
+     * video files that represent the same episode. A file is considered a duplicate if:
+     * <ul>
+     *   <li>It has the same base name (ignoring extension) but a different video extension, OR</li>
+     *   <li>It has the same season/episode identity (fuzzy match via filename parsing)</li>
+     * </ul>
+     *
+     * Only video files are returned (not subtitles like .srt, .sub, .idx).
+     *
+     * @param movedFile the file that was just moved (used as reference)
+     * @param destDir the destination directory to scan
+     * @param seasonEp the [season, episode] array for fuzzy matching (may be null)
+     * @return list of duplicate file paths found (never null)
+     */
+    public static java.util.List<Path> findDuplicateVideoFiles(
+        Path movedFile,
+        Path destDir,
+        int[] seasonEp
+    ) {
+        java.util.List<Path> duplicates = new java.util.ArrayList<>();
+
+        if (movedFile == null || destDir == null) {
+            return duplicates;
+        }
+
+        String movedFileName = movedFile.getFileName().toString();
+        // Extract base name without extension
+        int lastDot = movedFileName.lastIndexOf('.');
+        String baseName = (lastDot > 0)
+            ? movedFileName.substring(0, lastDot).toLowerCase(java.util.Locale.ROOT)
+            : null;
+        String movedExt = (lastDot > 0)
+            ? movedFileName.substring(lastDot).toLowerCase(java.util.Locale.ROOT)
+            : "";
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(destDir)) {
+            for (Path candidate : stream) {
+                if (Files.isDirectory(candidate)) {
+                    continue;
+                }
+                String candidateName = candidate.getFileName().toString();
+                if (candidateName.equals(movedFileName)) {
+                    continue; // Skip the file we just moved
+                }
+
+                // Only consider video files (skip subtitles, nfo, etc.)
+                if (!hasVideoExtension(candidateName)) {
+                    continue;
+                }
+
+                boolean isDuplicate = false;
+
+                // Check 1: Same base name, different extension
+                if (baseName != null) {
+                    int candDot = candidateName.lastIndexOf('.');
+                    if (candDot > 0) {
+                        String candBase = candidateName.substring(0, candDot)
+                            .toLowerCase(java.util.Locale.ROOT);
+                        String candExt = candidateName.substring(candDot)
+                            .toLowerCase(java.util.Locale.ROOT);
+                        if (candBase.equals(baseName) && !candExt.equals(movedExt)) {
+                            isDuplicate = true;
+                        }
+                    }
+                }
+
+                // Check 2: Fuzzy match - same season/episode identity
+                if (!isDuplicate && seasonEp != null && seasonEp.length >= 2) {
+                    int[] candSeasonEp = org.tvrenamer.controller.FilenameParser
+                        .extractSeasonEpisode(candidateName);
+                    if (candSeasonEp != null
+                        && candSeasonEp[0] == seasonEp[0]
+                        && candSeasonEp[1] == seasonEp[1]) {
+                        isDuplicate = true;
+                    }
+                }
+
+                if (isDuplicate) {
+                    duplicates.add(candidate);
+                }
+            }
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Error scanning for duplicates in: " + destDir, e);
+        }
+
+        return duplicates;
+    }
+
+    /**
+     * Delete the specified files.
+     *
+     * @param files the files to delete
+     * @return number of files successfully deleted
+     */
+    public static int deleteFiles(java.util.List<Path> files) {
+        if (files == null || files.isEmpty()) {
+            return 0;
+        }
+        int deleted = 0;
+        for (Path file : files) {
+            if (!Files.exists(file)) {
+                logger.fine("File does not exist (already deleted?): " + file);
+                continue;
+            }
+            try {
+                Files.delete(file);
+                logger.fine("Deleted: " + file);
+                deleted++;
+            } catch (IOException e) {
+                logger.log(Level.WARNING, "Failed to delete: " + file, e);
+            }
+        }
+        if (deleted < files.size()) {
+            logger.warning("deleteFiles: deleted " + deleted + " of " + files.size() + " file(s)");
+        }
+        return deleted;
     }
 }

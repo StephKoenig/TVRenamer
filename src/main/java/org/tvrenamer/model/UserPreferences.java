@@ -59,6 +59,14 @@ public class UserPreferences {
     // Prefer DVD ordering/titles if present; fall back to aired ordering otherwise.
     private boolean preferDvdOrderIfPresent = false;
 
+    // If true, overwrite existing destination files instead of creating versioned suffixes (1), (2).
+    // Default is false (safe behavior).
+    private boolean alwaysOverwriteDestination = false;
+
+    // If true, after a successful move, scan destination for duplicate video files
+    // (same base name, different extension) and move them to a duplicates folder.
+    private boolean cleanupDuplicateVideoFiles = false;
+
     // Fun metric: count of files successfully processed (renamed and/or moved).
     // Persisted in prefs.xml. This should only be incremented once per successfully
     // processed TableItem to avoid double-counting rename+move operations.
@@ -287,6 +295,43 @@ public class UserPreferences {
         if (valuesAreDifferent(this.preferDvdOrderIfPresent, prefer)) {
             this.preferDvdOrderIfPresent = prefer;
             preferenceChanged(UserPreference.PREFER_DVD_ORDER);
+        }
+    }
+
+    /**
+     * @return true if existing destination files should be overwritten instead
+     *         of creating versioned suffixes like (1), (2)
+     */
+    public boolean isAlwaysOverwriteDestination() {
+        return alwaysOverwriteDestination;
+    }
+
+    /**
+     * @param overwrite true to overwrite existing destination files,
+     *                  false to create versioned suffixes
+     */
+    public void setAlwaysOverwriteDestination(boolean overwrite) {
+        if (valuesAreDifferent(this.alwaysOverwriteDestination, overwrite)) {
+            this.alwaysOverwriteDestination = overwrite;
+            preferenceChanged(UserPreference.OVERWRITE_DESTINATION);
+        }
+    }
+
+    /**
+     * @return true if duplicate video files (same base name, different extension)
+     *         should be moved to a duplicates folder after move
+     */
+    public boolean isCleanupDuplicateVideoFiles() {
+        return cleanupDuplicateVideoFiles;
+    }
+
+    /**
+     * @param cleanup true to enable duplicate cleanup, false to disable
+     */
+    public void setCleanupDuplicateVideoFiles(boolean cleanup) {
+        if (valuesAreDifferent(this.cleanupDuplicateVideoFiles, cleanup)) {
+            this.cleanupDuplicateVideoFiles = cleanup;
+            preferenceChanged(UserPreference.CLEANUP_DUPLICATES);
         }
     }
 
@@ -894,6 +939,10 @@ public class UserPreferences {
             checkForUpdates +
             ",\n  preferDvdOrderIfPresent=" +
             preferDvdOrderIfPresent +
+            ",\n  alwaysOverwriteDestination=" +
+            alwaysOverwriteDestination +
+            ",\n  cleanupDuplicateVideoFiles=" +
+            cleanupDuplicateVideoFiles +
             ",\n  deleteRowAfterMove=" +
             deleteRowAfterMove +
             ",\n  setRecursivelyAddFolders=" +

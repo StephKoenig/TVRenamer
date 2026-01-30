@@ -32,11 +32,9 @@ This section is the “living” priority order for what’s left, based on:
    - **What:** Show a parse-failure reason (status/tooltip), add quick actions (open folder/copy diagnostics), and optionally provide filters.
    - **Effort:** Medium
 
-2. **Expand conflict detection beyond exact filename matches**
-   - **Why:** Prevent accidental overwrites and improve user trust when duplicates exist.
-   - **Where:** `org.tvrenamer.controller.MoveRunner` — conflict detection notes
-   - **What:** Define a clear "conflict policy" (skip/overwrite/version suffix/move to duplicates) and improve detection beyond exact filename matches.
-   - **Effort:** Medium
+2. **Expand conflict detection beyond exact filename matches** — **DONE**
+   - **Completed:** see `docs/Completed.md` item #21
+   - Implemented: progress tick, always-overwrite option, duplicate cleanup, fuzzy episode matching
 
 3. **Refactor and Consolidate**
    - **Why:** Improve maintainability, reduce code duplication, and modernize patterns for easier future development.
@@ -85,27 +83,17 @@ This section is the “living” priority order for what’s left, based on:
 
 ## 2) Move conflict detection & generalization
 
-(Completed items are tracked in `docs/Completed.md`. This section is future-work only.)
+**COMPLETED:** See `docs/Completed.md` item #21 for implementation details.
 
-### Expand conflict detection beyond exact filename matches
-**Context:** Conflict detection currently assumes “exact filename match” is the primary conflict type, but the code anticipates more nuanced matching.  
-**Why it matters:** Users often have conflicts that aren’t identical filenames (different codecs, resolutions, containers, etc.). Better detection could reduce accidental overwrites or confusing “duplicates”.
+Implemented features:
+1. Progress tick after completion (checkmark icon, 500ms delay)
+2. "Always overwrite" preference option
+3. Duplicate cleanup (deletes video files with same base name or same season/episode; only video, not subtitles)
+4. Fuzzy matching for episode variants (season/episode identity matching in both conflict detection and cleanup)
 
-- Source:
-  - `org.tvrenamer.controller.MoveRunner` — comments around `existingConflicts(...)` and conflict resolution notes
-  - Notes include:
-    - future: find other potentially conflicting files
-    - questions like:
-      - can we rename files already in destination?
-      - is it still a conflict if resolution differs?
-      - if file formats differ?
-      - what about identical files?
-
-**Potential follow-ups:**
-- Define a “conflict policy” preference:
-  - overwrite / skip / version suffix / move to duplicates folder
-- Detect conflicts by episode identity rather than filename alone (requires metadata)
+**Remaining potential follow-ups (for future consideration):**
 - Optionally hash/compare files to detect identical content
+- Expose more granular conflict policy choices in preferences
 
 ---
 

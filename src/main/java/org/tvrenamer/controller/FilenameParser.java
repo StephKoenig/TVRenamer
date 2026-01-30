@@ -245,4 +245,37 @@ public class FilenameParser {
         }
         return pName;
     }
+
+    /**
+     * Extract just the season and episode numbers from a filename.
+     *
+     * This is a lightweight extraction used for conflict detection, without
+     * triggering show lookups or creating FileEpisode objects.
+     *
+     * @param filename the filename to parse (just the name, not full path)
+     * @return an int array [season, episode], or null if not parsed
+     */
+    public static int[] extractSeasonEpisode(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+
+        for (Pattern pattern : COMPILED_REGEX) {
+            Matcher matcher = pattern.matcher(filename);
+            if (matcher.matches()) {
+                int groupCount = matcher.groupCount();
+                // Need at least 3 groups: show (1), season (2), episode (3)
+                if (groupCount >= 3) {
+                    try {
+                        int season = Integer.parseInt(matcher.group(2));
+                        int episode = Integer.parseInt(matcher.group(3));
+                        return new int[] { season, episode };
+                    } catch (NumberFormatException ignored) {
+                        // Try next pattern
+                    }
+                }
+            }
+        }
+        return null;
+    }
 }

@@ -3,6 +3,7 @@ package org.tvrenamer.view;
 import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
+import org.eclipse.swt.custom.TableEditor;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.TableItem;
@@ -10,6 +11,12 @@ import org.tvrenamer.model.FileEpisode;
 import org.tvrenamer.model.MoveObserver;
 
 public class FileMonitor implements MoveObserver {
+
+    /**
+     * Result record containing both the progress label and its table editor.
+     * Both must be disposed when the progress display is finished.
+     */
+    public record ProgressLabelResult(Label label, TableEditor editor) {}
 
     private final NumberFormat format = NumberFormat.getPercentInstance();
 
@@ -22,6 +29,7 @@ public class FileMonitor implements MoveObserver {
     private final AggregateCopyProgress aggregate;
 
     private Label label = null;
+    private TableEditor editor = null;
     private long maximum = 0;
 
     /**
@@ -70,7 +78,11 @@ public class FileMonitor implements MoveObserver {
             if (item.isDisposed()) {
                 return;
             }
-            label = ui.getProgressLabel(item);
+            ProgressLabelResult result = ui.createProgressLabel(item);
+            if (result != null) {
+                label = result.label();
+                editor = result.editor();
+            }
         });
         maximum = Math.max(0, max);
 
@@ -141,7 +153,8 @@ public class FileMonitor implements MoveObserver {
     }
 
     /**
-     * Dispose of the label.  We need to do this whether the label was used or not.
+     * Dispose of the label and editor. We need to do this whether they were used or not.
+     * Disposing both ensures the underlying cell content (status icon) is visible.
      */
     @Override
     public void finishProgress(final FileEpisode episode) {
@@ -155,8 +168,13 @@ public class FileMonitor implements MoveObserver {
             if (display.isDisposed()) {
                 return;
             }
+            // Dispose both the label and the editor so the cell's underlying
+            // status icon (e.g., the completion checkmark) is visible.
             if (label != null && !label.isDisposed()) {
                 label.dispose();
+            }
+            if (editor != null) {
+                editor.dispose();
             }
             if (item == null || item.isDisposed()) {
                 return;

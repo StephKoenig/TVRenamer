@@ -951,28 +951,31 @@ public final class ResultsTable
     }
 
     /**
-     * Returns (and, really, creates) a progress label for the given item.
-     * This is used to display progress while the item's file is being copied.
-     * (We don't actually support "copying" the file, only moving it, but when
-     * the user chooses to "move" it across filesystems, that becomes a copy-
-     * and-delete operation.)
+     * Creates a progress label for the given item, used to display progress
+     * while the item's file is being copied. (We don't actually support "copying"
+     * the file, only moving it, but when the user chooses to "move" it across
+     * filesystems, that becomes a copy-and-delete operation.)
      *
      * @param item
      *             the item to create a progress label for
      * @return
-     *         a Label which is set as an editor for the status field of the given
-     *         item
+     *         a ProgressLabelResult containing both the Label and TableEditor,
+     *         which must both be disposed when progress is complete
      */
-    public Label getProgressLabel(final TableItem item) {
+    public FileMonitor.ProgressLabelResult createProgressLabel(final TableItem item) {
         Label progressLabel = new Label(swtTable, SWT.SHADOW_NONE | SWT.CENTER);
         TableEditor editor = new TableEditor(swtTable);
         editor.grabHorizontal = true;
         STATUS_FIELD.setEditor(item, editor, progressLabel);
 
-        return progressLabel;
+        return new FileMonitor.ProgressLabelResult(progressLabel, editor);
     }
 
     private void renameFiles() {
+        // Ensure items are sorted by the current sort column so moves
+        // are processed in the visual order displayed to the user.
+        ensureTableSorted();
+
         final List<FileMover> pendingMoves = new LinkedList<>();
         for (final TableItem item : swtTable.getItems()) {
             if (item.getChecked()) {
@@ -1421,6 +1424,8 @@ public final class ResultsTable
             case SHOW_NAME_OVERRIDES:
             case PREFER_DVD_ORDER:
             case FILE_MTIME_POLICY:
+            case OVERWRITE_DESTINATION:
+            case CLEANUP_DUPLICATES:
                 // These changes don't require an immediate table update here
                 break;
         }
@@ -1464,6 +1469,12 @@ public final class ResultsTable
     }
 
     void finishAllMoves() {
+        // Capture duplicates before clearing the mover reference.
+        java.util.List<java.nio.file.Path> foundDuplicates = java.util.Collections.emptyList();
+        if (activeMover != null) {
+            foundDuplicates = activeMover.getFoundDuplicates();
+        }
+
         // The current move batch (if any) is done.
         activeMover = null;
 
@@ -1480,6 +1491,29 @@ public final class ResultsTable
         }
         currentFailures.clear();
         actionButton.setEnabled(true);
+
+        // Show duplicate cleanup dialog if duplicates were found.
+        if (!foundDuplicates.isEmpty()) {
+            showDuplicateCleanupDialog(foundDuplicates);
+        }
+    }
+
+    /**
+     * Shows a dialog allowing the user to select which duplicate files to delete.
+     *
+     * @param duplicates list of duplicate file paths found after moves
+     */
+    private void showDuplicateCleanupDialog(java.util.List<java.nio.file.Path> duplicates) {
+        if (duplicates == null || duplicates.isEmpty()) {
+            return;
+        }
+        logger.fine("Showing duplicate cleanup dialog with " + duplicates.size() + " file(s)");
+        DuplicateCleanupDialog dialog = new DuplicateCleanupDialog(shell, duplicates);
+        java.util.List<java.nio.file.Path> toDelete = dialog.open();
+        if (toDelete != null && !toDelete.isEmpty()) {
+            int deleted = org.tvrenamer.controller.util.FileUtilities.deleteFiles(toDelete);
+            logger.fine("Deleted " + deleted + " of " + toDelete.size() + " duplicate file(s)");
+        }
     }
 
     /*
@@ -1560,6 +1594,9 @@ public final class ResultsTable
      * @param episode
      *                the related episode
      */
+    /** Delay (ms) before auto-clearing a completed row, allowing user to see the checkmark. */
+    private static final int COMPLETED_DISPLAY_DELAY_MS = 500;
+
     public void finishMove(final TableItem item, final FileEpisode episode) {
         if (episode.isSuccess()) {
             // Increment processed counter once per successful file operation (rename and/or move).
@@ -1575,12 +1612,20 @@ public final class ResultsTable
             }
 
             // Mark as completed for "Clear Completed" behavior when auto-clear is disabled.
+            // The SUCCESS icon (ready to rename) is already visible; no need to change it.
+            // For copy operations, the progress bar overlay was disposed in FileMonitor.finishProgress,
+            // revealing the underlying SUCCESS icon.
             if (item != null && !item.isDisposed()) {
                 item.setData("tvrenamer.moveCompleted", Boolean.TRUE);
             }
 
             if (prefs.isDeleteRowAfterMove()) {
-                deleteTableItem(item);
+                // Brief delay so user sees the completed checkmark before row disappears.
+                display.timerExec(COMPLETED_DISPLAY_DELAY_MS, () -> {
+                    if (!item.isDisposed()) {
+                        deleteTableItem(item);
+                    }
+                });
             } else {
                 updateTableItemAfterMove(item);
             }
@@ -1907,6 +1952,35 @@ public final class ResultsTable
         } else {
             swtTable.setSortColumn(sortColumn);
             swtTable.setSortDirection(SWT.UP);
+        }
+    }
+
+    /**
+     * Ensures the table items are sorted by the current sort column.
+     * This is called before processing moves to ensure items are processed
+     * in the visual order displayed to the user.
+     */
+    private void ensureTableSorted() {
+        TableColumn sortColumn = swtTable.getSortColumn();
+        int sortDirection = swtTable.getSortDirection();
+        if (sortColumn == null || sortDirection == SWT.NONE) {
+            return;
+        }
+        // Find the Column that matches the current sort column.
+        Column matchingColumn = null;
+        for (Field f : new Field[] {
+            CHECKBOX_FIELD,
+            CURRENT_FILE_FIELD,
+            NEW_FILENAME_FIELD,
+            STATUS_FIELD
+        }) {
+            if (f.getTableColumn() == sortColumn) {
+                matchingColumn = f.column;
+                break;
+            }
+        }
+        if (matchingColumn != null) {
+            sortTable(matchingColumn, sortDirection);
         }
     }
 

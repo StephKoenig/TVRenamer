@@ -24,6 +24,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.tvrenamer.model.ProgressUpdater;
+import org.tvrenamer.model.UserPreferences;
 
 public class MoveRunner implements Runnable {
 
@@ -47,11 +48,15 @@ public class MoveRunner implements Runnable {
         FILE_MOVE_THREAD_LABEL
     );
     private final Queue<Future<Boolean>> futures = new LinkedList<>();
+    private final List<FileMover> movers = new LinkedList<>();
     private final int numMoves;
     private final int timeout;
     private ProgressUpdater updater = null;
 
     private volatile boolean shutdownRequested = false;
+
+    // Aggregated duplicate files found after all moves complete.
+    private final List<Path> aggregatedDuplicates = new LinkedList<>();
 
     /**
      * Does the activity of the thread, which is to dequeue a move task, and block
@@ -68,6 +73,8 @@ public class MoveRunner implements Runnable {
                 }
 
                 if (remaining == 0) {
+                    // Aggregate duplicates found by all movers before finishing.
+                    aggregateDuplicates();
                     if (updater != null) {
                         updater.finish();
                     }
@@ -280,6 +287,19 @@ public class MoveRunner implements Runnable {
             // Check for any existing files in the destination directory whose base name matches.
             Set<Path> existing = existingConflictsByBaseName(destDir, base);
 
+            // Also check for episode identity matches (fuzzy matching).
+            // This catches files like "S01E02" vs "1x02" that have different filenames
+            // but represent the same episode.
+            if (!moves.isEmpty()) {
+                String sampleFilename = moves.get(0).getDesiredDestName();
+                int[] seasonEp = FilenameParser.extractSeasonEpisode(sampleFilename);
+                if (seasonEp != null) {
+                    Set<Path> episodeMatches = existingConflictsByEpisodeIdentity(destDir, seasonEp);
+                    // Merge into existing set (avoid duplicates)
+                    existing.addAll(episodeMatches);
+                }
+            }
+
             int nFiles = existing.size() + moves.size();
             if (nFiles > 1) {
                 addIndices(moves, existing);
@@ -296,6 +316,48 @@ public class MoveRunner implements Runnable {
             return filename;
         }
         return filename.substring(0, dot);
+    }
+
+    /**
+     * Find existing files in destination that match the same episode identity
+     * (season/episode numbers), regardless of filename format differences.
+     *
+     * @param destDirName the destination directory
+     * @param seasonEp the [season, episode] array to match against
+     * @return set of conflicting paths
+     */
+    private static Set<Path> existingConflictsByEpisodeIdentity(
+        final String destDirName,
+        final int[] seasonEp
+    ) {
+        Set<Path> hits = new HashSet<>();
+        if (seasonEp == null || seasonEp.length < 2) {
+            return hits;
+        }
+
+        Path destDir = Paths.get(destDirName);
+        if (!Files.exists(destDir) || !Files.isDirectory(destDir)) {
+            return hits;
+        }
+
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(destDir)) {
+            for (Path p : files) {
+                if (p == null || Files.isDirectory(p)) {
+                    continue;
+                }
+                String name = p.getFileName().toString();
+                int[] existingSeasonEp = FilenameParser.extractSeasonEpisode(name);
+                if (existingSeasonEp != null
+                    && existingSeasonEp[0] == seasonEp[0]
+                    && existingSeasonEp[1] == seasonEp[1]) {
+                    hits.add(p);
+                }
+            }
+        } catch (IOException ignored) {
+            // best-effort
+        }
+
+        return hits;
     }
 
     private static Set<Path> existingConflictsByBaseName(
@@ -374,19 +436,23 @@ public class MoveRunner implements Runnable {
 
         // progressThread is already named/daemonized in the field initializer
 
+        // Group by destination directory for conflict resolution.
         final Map<String, List<FileMover>> mappings = mapByDestDir(episodes);
-        for (Map.Entry<String, List<FileMover>> e : mappings.entrySet()) {
-            resolveConflicts(e.getValue(), e.getKey());
-        }
-
-        int count = 0;
-        for (List<FileMover> moves : mappings.values()) {
-            for (FileMover move : moves) {
-                futures.add(EXECUTOR.submit(move));
-                count++;
+        // Skip conflict resolution if user wants to always overwrite.
+        // When overwrite is enabled, FileMover will handle replacing existing files.
+        if (!UserPreferences.getInstance().isAlwaysOverwriteDestination()) {
+            for (Map.Entry<String, List<FileMover>> e : mappings.entrySet()) {
+                resolveConflicts(e.getValue(), e.getKey());
             }
         }
-        numMoves = count;
+
+        // Submit moves in original list order (table display order, top to bottom).
+        // Conflict resolution has already modified the FileMover objects in-place.
+        for (FileMover move : episodes) {
+            movers.add(move);
+            futures.add(EXECUTOR.submit(move));
+        }
+        numMoves = episodes.size();
         logger.fine("have " + numMoves + " files to move");
     }
 
@@ -429,5 +495,33 @@ public class MoveRunner implements Runnable {
     public void requestShutdown() {
         shutdownRequested = true;
         progressThread.interrupt();
+    }
+
+    /**
+     * Collects duplicate files found by all FileMover instances after moves complete.
+     * Called internally before finish() to aggregate results for the UI.
+     */
+    private void aggregateDuplicates() {
+        aggregatedDuplicates.clear();
+        for (FileMover mover : movers) {
+            List<Path> dups = mover.getFoundDuplicates();
+            if (dups != null && !dups.isEmpty()) {
+                aggregatedDuplicates.addAll(dups);
+            }
+        }
+        if (!aggregatedDuplicates.isEmpty()) {
+            logger.info("Aggregated " + aggregatedDuplicates.size() +
+                " duplicate video file(s) for review");
+        }
+    }
+
+    /**
+     * Returns the list of duplicate video files found after all moves completed.
+     * This should be called after finish() to retrieve files for user confirmation.
+     *
+     * @return unmodifiable list of duplicate file paths (may be empty)
+     */
+    public List<Path> getFoundDuplicates() {
+        return java.util.Collections.unmodifiableList(aggregatedDuplicates);
     }
 }
