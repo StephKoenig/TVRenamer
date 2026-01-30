@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -31,6 +34,9 @@ public class FileMover implements Callable<Boolean> {
     private MoveObserver observer = null;
     Integer destIndex = null;
 
+    // Duplicate video files found after the move (if cleanup preference is enabled).
+    private final List<Path> foundDuplicates = new ArrayList<>();
+
     /**
      * Constructs a FileMover to move the given episode.
      *
@@ -53,6 +59,15 @@ public class FileMover implements Callable<Boolean> {
      */
     public void addObserver(MoveObserver observer) {
         this.observer = observer;
+    }
+
+    /**
+     * Returns duplicate video files found after this move (if cleanup preference is enabled).
+     *
+     * @return unmodifiable list of duplicate paths found (empty if none or preference disabled)
+     */
+    public List<Path> getFoundDuplicates() {
+        return Collections.unmodifiableList(foundDuplicates);
     }
 
     private void setFailureAndLog(
@@ -200,6 +215,21 @@ public class FileMover implements Callable<Boolean> {
             observer.initializeProgress(episode.getFileSize());
         }
 
+        // If overwrite is enabled and destination exists, delete it first.
+        if (userPrefs.isAlwaysOverwriteDestination() && Files.exists(dest)) {
+            logger.info("overwriting existing file (copy path): " + dest);
+            if (!FileUtilities.deleteFile(dest)) {
+                setFailureAndLog(
+                    source,
+                    dest,
+                    "failed to delete existing destination for overwrite",
+                    null
+                );
+                failToCopy(source, dest);
+                return;
+            }
+        }
+
         boolean ok = FileUtilities.copyWithUpdates(source, dest, observer);
         if (ok) {
             ok = FileUtilities.deleteFile(source);
@@ -245,6 +275,29 @@ public class FileMover implements Callable<Boolean> {
                 ioe
             );
         }
+
+        // Optional: find duplicate video files in the destination directory.
+        // They'll be shown to the user for confirmation after all moves complete.
+        if (userPrefs.isCleanupDuplicateVideoFiles()) {
+            Path destDir = actualDest.getParent();
+            if (destDir != null) {
+                // Get season/episode for fuzzy matching
+                int[] seasonEp = null;
+                var placement = episode.getEpisodePlacement();
+                if (placement != null) {
+                    seasonEp = new int[] { placement.season, placement.episode };
+                }
+                List<Path> dups = FileUtilities.findDuplicateVideoFiles(
+                    actualDest,
+                    destDir,
+                    seasonEp
+                );
+                if (!dups.isEmpty()) {
+                    foundDuplicates.addAll(dups);
+                    logger.info("Found " + dups.size() + " duplicate video file(s) for review");
+                }
+            }
+        }
     }
 
     /**
@@ -284,7 +337,8 @@ public class FileMover implements Callable<Boolean> {
         willUseCopyAndDelete = !tryRename;
 
         if (tryRename) {
-            Path actualDest = FileUtilities.renameFile(srcPath, destPath);
+            boolean overwrite = userPrefs.isAlwaysOverwriteDestination();
+            Path actualDest = FileUtilities.renameFile(srcPath, destPath, overwrite);
             if (actualDest == null) {
                 setFailureAndLog(
                     srcPath,
@@ -445,13 +499,18 @@ public class FileMover implements Callable<Boolean> {
                 episode.setAlreadyInPlace();
                 return;
             }
-            setFailureAndLog(
-                srcPath,
-                destPath,
-                "cannot move; destination exists",
-                null
-            );
-            return;
+            // If overwrite is enabled, allow the move to proceed; doActualMove will handle replacement.
+            // Otherwise, fail because we can't move to an existing destination.
+            if (!userPrefs.isAlwaysOverwriteDestination()) {
+                setFailureAndLog(
+                    srcPath,
+                    destPath,
+                    "cannot move; destination exists",
+                    null
+                );
+                return;
+            }
+            logger.info("destination exists but overwrite is enabled: " + destPath);
         }
 
         tryToMoveRealPaths(realSrc, destPath, resolvedDestDir);

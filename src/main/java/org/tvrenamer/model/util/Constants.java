@@ -155,6 +155,15 @@ public class Constants {
     public static final String DELETE_ROWS_TOOLTIP =
         "If checked, after a file has been successfully " +
         "moved/renamed, clear the completed row from the table.";
+    public static final String OVERWRITE_DEST_TEXT = "Always overwrite destination [?]";
+    public static final String OVERWRITE_DEST_TOOLTIP =
+        "If checked, overwrite existing destination files instead of " +
+        "creating versioned filenames like (1), (2). Use with caution.";
+    public static final String CLEANUP_DUPLICATES_TEXT =
+        "Delete duplicate video files [?]";
+    public static final String CLEANUP_DUPLICATES_TOOLTIP =
+        "After moving a file, delete other video files that represent the same episode " +
+        "(same base name or same season/episode). Only video files are deleted, not subtitles.";
     public static final String RENAME_TOKEN_TEXT = "Rename Tokens [?]";
     public static final String RENAME_FORMAT_TEXT = "Rename Format [?]";
     public static final String RENAME_SELECTED_TOOLTIP =

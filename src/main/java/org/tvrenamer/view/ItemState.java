@@ -46,6 +46,12 @@ public class ItemState {
     );
     public static final ItemState FAIL = new ItemState("f", "16-em-cross.png");
 
+    // Indicates a file was successfully moved/renamed.
+    public static final ItemState COMPLETED = new ItemState(
+        "g",
+        "16-circle-green-check.png"
+    );
+
     private static final ItemState[] STANDARD_STATUSES = {
         SUCCESS,
         OPTIONS,
@@ -54,6 +60,7 @@ public class ItemState {
         ACTION_REQUIRED,
         RENAMING,
         FAIL,
+        COMPLETED,
     };
 
     private static final Map<Image, ItemState> IMAGES =

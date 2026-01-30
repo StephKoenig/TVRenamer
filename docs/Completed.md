@@ -194,6 +194,36 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - `UpdateChecker` now uses lock-free compare-and-set pattern for thread-safe lazy initialization
   - `MoveRunner.existingConflicts()` intentionally retained as infrastructure for future conflict detection (TODO item #2)
 
+### 21) File move enhancements: progress feedback, overwrite option, duplicate cleanup, fuzzy matching
+- **Why:** Improve user experience and file management during move/rename operations.
+- **Where:** `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.view.ItemState`, `org.tvrenamer.model.UserPreferences`, `org.tvrenamer.view.PreferencesDialog`, `org.tvrenamer.controller.FileMover`, `org.tvrenamer.controller.MoveRunner`, `org.tvrenamer.controller.util.FileUtilities`, `org.tvrenamer.controller.FilenameParser`
+- **What we did:**
+  1. **Progress tick after completion:** Added `COMPLETED` ItemState with checkmark icon; successful moves now briefly show the checkmark before row is cleared (500ms delay).
+  2. **Always overwrite preference:** Added preference to overwrite existing destination files instead of creating versioned suffixes (1), (2). Implemented in FileMover (same-disk rename uses `REPLACE_EXISTING`, cross-disk copy deletes first) and MoveRunner (skips conflict resolution when enabled). **Bug fix:** The early existence check in `tryToMoveFile()` was failing immediately when the destination existed, without checking the overwrite preference. Fixed to allow the move to proceed when overwrite is enabled.
+  3. **Duplicate cleanup:** Added preference to delete duplicate video files after successful move. Uses both base-name matching (same name, different extension) and fuzzy episode matching (same season/episode identity). Only video files are deleted (not subtitles like .srt, .sub, .idx). Helper `FileUtilities.deleteDuplicateVideoFiles()` with 15 video extension types.
+  4. **Fuzzy episode matching:** Added `FilenameParser.extractSeasonEpisode()` for lightweight season/episode extraction; integrated into both MoveRunner conflict detection and duplicate cleanup to catch files like "S01E02" vs "1x02" that represent the same episode but have different filenames.
+- **Notes:**
+  - Overwrite and duplicate cleanup preferences default to false (safe behavior).
+  - Fuzzy matching supplements base-name matching in both conflict detection and duplicate cleanup.
+  - Duplicate cleanup deletes files (relies on OS recycle bin) rather than moving to a subfolder to avoid orphaned folders and media library confusion.
+
+### 22) Tick display fix and duplicate cleanup dialog with user confirmation
+- **Why:** Progress tick (checkmark) wasn't visible after copy+delete moves; duplicate cleanup should require user confirmation before deleting files.
+- **Where:** `org.tvrenamer.view.FileMonitor`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.view.DuplicateCleanupDialog`, `org.tvrenamer.controller.MoveRunner`
+- **What we did:**
+  1. **Tick display fix:** The progress label (shown during copy operations) used a TableEditor overlay. When the label was disposed, the TableEditor was not disposed, preventing the underlying checkmark icon from showing. Fixed by tracking and disposing both the Label and TableEditor via a new `ProgressLabelResult` record.
+  2. **Duplicate cleanup dialog:** Instead of auto-deleting duplicates, now shows a modal dialog after all moves complete:
+     - Lists duplicate files in a table with checkboxes (checked = will be deleted)
+     - Shows filename and folder columns
+     - "Select All" / "Select None" buttons for convenience
+     - "Delete Selected" commits deletions; "Cancel" keeps all files
+  3. **Aggregate duplicates in MoveRunner:** Added `movers` list to track FileMover instances, `aggregateDuplicates()` method called when all moves complete, and `getFoundDuplicates()` getter for the UI.
+  4. **Tick icon consistency:** Removed explicit COMPLETED icon setting after move. The existing SUCCESS icon (ready to rename) now remains visible, ensuring consistent visual feedback.
+  5. **Move order:** Fixed moves to execute in table display order (top to bottom). Added `ensureTableSorted()` which applies the current sort column before collecting moves, ensuring items are in the visual order the user sees. MoveRunner now submits moves in original list order instead of arbitrary HashMap iteration order.
+- **Notes:**
+  - Duplicate cleanup preference must be enabled for duplicates to be detected and shown.
+  - Files are only deleted after explicit user confirmation via the dialog.
+
 ---
 
 ## Related records
