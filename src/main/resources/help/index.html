@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TVRenamer Help</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>TVRenamer Help</h1>
+
+    <p>TVRenamer is a utility to rename TV episode files using information from <a href="https://thetvdb.com/" target="_blank">TheTVDB</a>.</p>
+
+    <nav>
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="getting-started.html">Getting Started</a> - Quick introduction</li>
+            <li><a href="adding-files.html">Adding Files</a> - Drag-drop, file dialog, preload folder</li>
+            <li><a href="renaming.html">Renaming Files</a> - Format tokens, customization</li>
+            <li><a href="preferences.html">Preferences</a> - All settings explained</li>
+            <li><a href="show-matching.html">Show Matching</a> - Overrides, disambiguations</li>
+            <li><a href="metadata-tagging.html">Metadata Tagging</a> - Embedding TV info in files</li>
+            <li><a href="troubleshooting.html">Troubleshooting</a> - Common issues and solutions</li>
+        </ul>
+    </nav>
+
+    <h2>Quick Overview</h2>
+
+    <p>TVRenamer takes ugly filenames like:</p>
+    <pre><code>Lost.[6x05].DD51.720p.WEB-DL.AVC-FUSiON.mkv</code></pre>
+
+    <p>And renames them to:</p>
+    <pre><code>Lost S06E05 Lighthouse.mkv</code></pre>
+
+    <h2>Basic Workflow</h2>
+    <ol>
+        <li><strong>Add files</strong> - Drag and drop, use File menu, or set a preload folder</li>
+        <li><strong>Review matches</strong> - TVRenamer looks up show/episode info from TheTVDB</li>
+        <li><strong>Resolve any issues</strong> - Fix unrecognized shows or disambiguation prompts</li>
+        <li><strong>Rename</strong> - Click "Rename Selected" or use <kbd>Ctrl+R</kbd></li>
+    </ol>
+
+    <h2>Key Features</h2>
+    <ul>
+        <li>Batch renaming of multiple shows at once</li>
+        <li>Customizable filename format with tokens</li>
+        <li>DVD/BluRay ordering support (not just aired order)</li>
+        <li>Multi-episode file handling (S01E01-E02)</li>
+        <li>Optional metadata tagging for MP4 and MKV files</li>
+        <li>Theme support (Light, Dark, Auto)</li>
+        <li>SMB/network share support</li>
+    </ul>
+
+    <h2>Getting Help</h2>
+    <ul>
+        <li><a href="https://github.com/StephKoenig/TVRenamer/issues" target="_blank">Report issues on GitHub</a></li>
+        <li>Enable debug logging with <code>-Dtvrenamer.debug=true</code> for troubleshooting</li>
+    </ul>
+
+    <hr>
+    <p><small>TVRenamer - <a href="https://github.com/StephKoenig/TVRenamer" target="_blank">GitHub Project</a></small></p>
+</body>
+</html>

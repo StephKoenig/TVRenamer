@@ -336,6 +336,21 @@ git push origin v1.0.<commitCount>
 Notes:
 - GitHub Actions artifacts can expire; Releases are the long-lived distribution channel.
 
+### Documentation maintenance (before release)
+When preparing a release, review whether documentation needs updating:
+
+1. **Help files** (`src/main/resources/help/*.html`):
+   - Update if features were added, modified, or removed
+   - Ensure preferences descriptions match current behavior
+   - Add troubleshooting entries for known issues
+   - Help is embedded in the JAR, so changes require a new build
+
+2. **README.md**: Update feature list if significant changes were made
+
+3. **Release notes** (`docs/release-notes-*.md`): Create for the new version
+
+4. **TODO.md / Completed.md**: Move completed items, update priorities
+
 ---
 
 ## Platform notes (SWT + Windows)

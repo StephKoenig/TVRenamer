@@ -20,6 +20,7 @@ import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
+import org.tvrenamer.controller.HelpLauncher;
 import org.tvrenamer.controller.UrlLauncher;
 import org.tvrenamer.model.util.Environment;
 
@@ -212,7 +213,9 @@ public final class UIStarter {
         helpMenuHeader.setMenu(helpMenu);
 
         MenuItem helpHelpItem = new MenuItem(helpMenu, SWT.PUSH);
-        helpHelpItem.setText("Help");
+        helpHelpItem.setText("Help\tF1");
+        helpHelpItem.setAccelerator(SWT.F1);
+        helpHelpItem.addSelectionListener(new HelpLauncher());
 
         MenuItem helpVisitWebPageItem = new MenuItem(helpMenu, SWT.PUSH);
         helpVisitWebPageItem.setText("Visit Web Page");

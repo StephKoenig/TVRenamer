@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renaming Files - TVRenamer Help</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="index.html" class="back-link">&larr; Back to Help Index</a>
+
+    <h1>Renaming Files</h1>
+
+    <h2>Basic Renaming</h2>
+    <ol>
+        <li>Add files to TVRenamer</li>
+        <li>Wait for show/episode lookups to complete</li>
+        <li>Review the "Proposed Name" column</li>
+        <li>Select files to rename (or <kbd>Ctrl+A</kbd> for all)</li>
+        <li>Click <strong>Rename Selected</strong> or press <kbd>Ctrl+R</kbd></li>
+    </ol>
+
+    <h2>Rename Format</h2>
+    <p>Customize how renamed files are named using format tokens. Open <strong>Preferences</strong> to edit the Rename Format.</p>
+
+    <h3>Available Tokens</h3>
+    <table>
+        <tr>
+            <th>Token</th>
+            <th>Description</th>
+            <th>Example Output</th>
+        </tr>
+        <tr>
+            <td><code>%S</code></td>
+            <td>Show name</td>
+            <td>Breaking Bad</td>
+        </tr>
+        <tr>
+            <td><code>%s</code></td>
+            <td>Season number</td>
+            <td>1</td>
+        </tr>
+        <tr>
+            <td><code>%0s</code></td>
+            <td>Season number (zero-padded)</td>
+            <td>01</td>
+        </tr>
+        <tr>
+            <td><code>%e</code></td>
+            <td>Episode number</td>
+            <td>1</td>
+        </tr>
+        <tr>
+            <td><code>%0e</code></td>
+            <td>Episode number (zero-padded)</td>
+            <td>01</td>
+        </tr>
+        <tr>
+            <td><code>%t</code></td>
+            <td>Episode title</td>
+            <td>Pilot</td>
+        </tr>
+        <tr>
+            <td><code>%r</code></td>
+            <td>Resolution (if detected)</td>
+            <td>720p</td>
+        </tr>
+    </table>
+
+    <h3>Example Formats</h3>
+    <table>
+        <tr>
+            <th>Format</th>
+            <th>Result</th>
+        </tr>
+        <tr>
+            <td><code>%S S%0sE%0e %t</code></td>
+            <td>Breaking Bad S01E01 Pilot.mkv</td>
+        </tr>
+        <tr>
+            <td><code>%S - %sx%0e - %t</code></td>
+            <td>Breaking Bad - 1x01 - Pilot.mkv</td>
+        </tr>
+        <tr>
+            <td><code>%S/%S S%0sE%0e %t</code></td>
+            <td>Breaking Bad/Breaking Bad S01E01 Pilot.mkv</td>
+        </tr>
+    </table>
+
+    <div class="tip">
+        <strong>Tip:</strong> Use forward slashes (<code>/</code>) in the format to create subdirectories. The show name can be used to organize files into folders.
+    </div>
+
+    <h2>Destination Directory</h2>
+    <p>Configure where renamed files are placed:</p>
+    <ul>
+        <li><strong>Same folder</strong> - Rename in place (default if no destination set)</li>
+        <li><strong>Custom destination</strong> - Move files to a specific folder (e.g., your media library)</li>
+    </ul>
+    <p>Set this in <strong>Preferences &rarr; Destination Directory</strong>.</p>
+
+    <h2>Multi-Episode Files</h2>
+    <p>TVRenamer handles files containing multiple episodes:</p>
+    <ul>
+        <li>Recognized patterns: <code>S01E01-E02</code>, <code>S01E01-02</code>, <code>1x01-02</code></li>
+        <li>Episode titles are concatenated with " &amp; "</li>
+        <li>Example: <code>Show S01E01-E02 Pilot &amp; Day One.mkv</code></li>
+    </ul>
+
+    <h2>Conflict Handling</h2>
+    <p>When a file with the same name already exists at the destination:</p>
+
+    <h3>Default Behavior</h3>
+    <p>TVRenamer creates a versioned copy: <code>Show S01E01 Pilot (1).mkv</code></p>
+
+    <h3>Always Overwrite Option</h3>
+    <p>Enable "Always overwrite existing files" in Preferences to replace existing files instead of creating versions.</p>
+
+    <div class="warning">
+        <strong>Warning:</strong> The overwrite option will permanently replace existing files. Use with caution.
+    </div>
+
+    <h2>Episode Ordering</h2>
+    <p>TheTVDB provides multiple episode orderings:</p>
+    <ul>
+        <li><strong>Aired Order</strong> - Original broadcast order (default)</li>
+        <li><strong>DVD Order</strong> - Order on DVD/BluRay releases (may differ for some shows)</li>
+    </ul>
+    <p>Change this in <strong>Preferences &rarr; Episode Ordering</strong>.</p>
+
+    <div class="note">
+        <strong>Note:</strong> Some shows have different episode numbering between aired and DVD releases. If your files use DVD numbering, switch to DVD Order in Preferences.
+    </div>
+
+    <hr>
+    <p><a href="index.html">&larr; Back to Help Index</a></p>
+</body>
+</html>

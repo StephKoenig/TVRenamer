@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adding Files - TVRenamer Help</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="index.html" class="back-link">&larr; Back to Help Index</a>
+
+    <h1>Adding Files</h1>
+
+    <p>TVRenamer provides several ways to add video files for renaming.</p>
+
+    <h2>Drag and Drop</h2>
+    <p>The easiest way: simply drag video files from Windows Explorer and drop them onto the TVRenamer window.</p>
+    <ul>
+        <li>You can drag individual files or entire folders</li>
+        <li>Folders are scanned recursively for video files</li>
+        <li>Non-video files are ignored</li>
+    </ul>
+
+    <h2>File Menu</h2>
+    <p>Use <strong>File &rarr; Add Files</strong> to open a standard file selection dialog.</p>
+
+    <h2>Preload Folder (Automatic)</h2>
+    <p>Configure a folder in Preferences that TVRenamer will automatically scan on startup:</p>
+    <ol>
+        <li>Open <strong>File &rarr; Preferences</strong></li>
+        <li>Find "Preload folder" and enable it</li>
+        <li>Select or type the folder path</li>
+        <li>Save preferences</li>
+    </ol>
+
+    <div class="tip">
+        <strong>Tip:</strong> Use the preload folder for your download directory. TVRenamer will automatically show new episodes when you launch it.
+    </div>
+
+    <h2>Supported File Types</h2>
+    <p>TVRenamer recognizes these video extensions:</p>
+    <ul>
+        <li><code>.avi</code>, <code>.mkv</code>, <code>.mp4</code>, <code>.m4v</code>, <code>.mov</code></li>
+        <li><code>.wmv</code>, <code>.webm</code>, <code>.flv</code>, <code>.ogm</code></li>
+        <li><code>.ts</code>, <code>.m2ts</code>, <code>.mpg</code>, <code>.mpeg</code></li>
+        <li>And more...</li>
+    </ul>
+
+    <h2>Filename Parsing</h2>
+    <p>TVRenamer extracts show name and episode information from filenames. It recognizes patterns like:</p>
+    <table>
+        <tr>
+            <th>Pattern</th>
+            <th>Example</th>
+        </tr>
+        <tr>
+            <td>SxxExx</td>
+            <td><code>Breaking.Bad.S01E01.mkv</code></td>
+        </tr>
+        <tr>
+            <td>sXXeXX</td>
+            <td><code>breaking.bad.s01e01.mkv</code></td>
+        </tr>
+        <tr>
+            <td>XxXX</td>
+            <td><code>Breaking Bad 1x01.mkv</code></td>
+        </tr>
+        <tr>
+            <td>Multi-episode</td>
+            <td><code>Show.S01E01-E02.mkv</code> or <code>Show.S01E01-02.mkv</code></td>
+        </tr>
+    </table>
+
+    <h2>When Parsing Fails</h2>
+    <p>If TVRenamer can't parse a filename, the "Proposed Name" column will show a specific reason:</p>
+    <ul>
+        <li><strong>No show name found</strong> - Can't identify the show name portion</li>
+        <li><strong>No season/episode pattern</strong> - Missing S01E01-style numbering</li>
+        <li><strong>Filename too short</strong> - Not enough characters to parse</li>
+    </ul>
+
+    <div class="note">
+        <strong>Note:</strong> After adding files, TVRenamer shows a summary dialog if any files couldn't be parsed, listing the count and reasons.
+    </div>
+
+    <h2>Removing Files from the List</h2>
+    <ul>
+        <li>Select files and press <kbd>Delete</kbd></li>
+        <li>Or right-click and choose "Remove"</li>
+    </ul>
+    <p>This only removes them from TVRenamer's list, not from disk.</p>
+
+    <hr>
+    <p><a href="index.html">&larr; Back to Help Index</a></p>
+</body>
+</html>

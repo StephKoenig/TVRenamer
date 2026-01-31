@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preferences - TVRenamer Help</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="index.html" class="back-link">&larr; Back to Help Index</a>
+
+    <h1>Preferences</h1>
+
+    <p>Open preferences via <strong>File &rarr; Preferences</strong> or <kbd>Ctrl+P</kbd>.</p>
+
+    <h2>File Handling</h2>
+
+    <h3>Destination Directory</h3>
+    <p>Where renamed files are moved to. Leave empty to rename files in place.</p>
+    <ul>
+        <li>Can be a local path or network share (UNC path like <code>\\NAS\media</code>)</li>
+        <li>Subdirectories are created automatically based on your rename format</li>
+    </ul>
+
+    <h3>Move Enabled</h3>
+    <p>Whether to move files to the destination directory. If unchecked, files are renamed in their current location.</p>
+
+    <h3>Rename Enabled</h3>
+    <p>Whether to rename files. You can move files without renaming them by unchecking this.</p>
+
+    <h3>Always Overwrite</h3>
+    <p>When a file with the same name exists at the destination:</p>
+    <ul>
+        <li><strong>Unchecked</strong> - Create versioned copies: <code>file (1).mkv</code>, <code>file (2).mkv</code></li>
+        <li><strong>Checked</strong> - Overwrite existing files</li>
+    </ul>
+
+    <h3>Cleanup Duplicates</h3>
+    <p>After moving a file, optionally delete other video files that represent the same episode:</p>
+    <ul>
+        <li>Matches files with same base name or same season/episode numbers</li>
+        <li>Only deletes video files (preserves subtitle files)</li>
+        <li>Shows a confirmation dialog before deletion</li>
+        <li>Uses fuzzy matching (e.g., "S01E02" and "1x02" are recognized as the same episode)</li>
+    </ul>
+
+    <h2>Rename Format</h2>
+
+    <h3>Rename Format String</h3>
+    <p>Template for renamed filenames. See <a href="renaming.html">Renaming Files</a> for available tokens.</p>
+    <p>Default: <code>%S S%0sE%0e %t</code></p>
+
+    <h3>Drag and Drop Tokens</h3>
+    <p>Drag tokens from the list into the format field to insert them.</p>
+
+    <h2>Episode Ordering</h2>
+
+    <h3>Episode Ordering Preference</h3>
+    <ul>
+        <li><strong>Aired</strong> - Original broadcast order (recommended for most uses)</li>
+        <li><strong>DVD</strong> - DVD/BluRay release order (some shows reorder episodes)</li>
+    </ul>
+
+    <h2>Preload Folder</h2>
+
+    <h3>Enable Preload</h3>
+    <p>Automatically scan a folder for video files when TVRenamer starts.</p>
+
+    <h3>Preload Folder Path</h3>
+    <p>The folder to scan. Useful for your download directory.</p>
+
+    <h2>Metadata Tagging</h2>
+
+    <h3>Tag Video Files</h3>
+    <p>Embed TV metadata directly into video files after renaming:</p>
+    <ul>
+        <li>Show name, season, episode number, episode title, air date</li>
+        <li>Enables media players (Plex, Kodi, etc.) to display episode info</li>
+    </ul>
+
+    <h4>Supported Formats</h4>
+    <table>
+        <tr>
+            <th>Format</th>
+            <th>Requirements</th>
+        </tr>
+        <tr>
+            <td>MP4, M4V, MOV</td>
+            <td>Built-in (no additional software needed)</td>
+        </tr>
+        <tr>
+            <td>MKV, WebM</td>
+            <td>Requires <a href="https://mkvtoolnix.download/" target="_blank">MKVToolNix</a> installed</td>
+        </tr>
+    </table>
+
+    <p>See <a href="metadata-tagging.html">Metadata Tagging</a> for more details.</p>
+
+    <h2>Show Matching</h2>
+
+    <h3>Show Overrides</h3>
+    <p>Map extracted show names to different search terms. Useful when:</p>
+    <ul>
+        <li>The show name in your filenames differs from TheTVDB's name</li>
+        <li>You want to force a specific spelling or variation</li>
+    </ul>
+    <p>See <a href="show-matching.html">Show Matching</a> for details.</p>
+
+    <h3>Remembered Disambiguations</h3>
+    <p>When multiple shows match a query, TVRenamer prompts you to choose. Your selection is remembered for future lookups.</p>
+
+    <h2>Appearance</h2>
+
+    <h3>Theme</h3>
+    <ul>
+        <li><strong>Light</strong> - Light background, dark text</li>
+        <li><strong>Dark</strong> - Dark background, light text</li>
+        <li><strong>Auto</strong> - Follow system setting</li>
+    </ul>
+
+    <div class="note">
+        <strong>Note:</strong> Theme changes require restarting TVRenamer to take effect.
+    </div>
+
+    <h2>Ignore Keywords</h2>
+    <p>Words to strip from filenames before parsing. Useful for removing release group tags, quality markers, etc.</p>
+
+    <hr>
+    <p><a href="index.html">&larr; Back to Help Index</a></p>
+</body>
+</html>

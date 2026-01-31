@@ -18,10 +18,9 @@ This section is the “living” priority order for what’s left, based on:
 - **Effort** (how contained the change is)
 
 ### P1 — High impact, moderate effort
-1. **Help: create simple static help pages and wire Help menu to open them**
-   - **Why:** "Help" exists but is unwired; users need guidance without digging through issues/releases.
-   - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions) + new `docs/help/` published via GitHub Pages (or similar).
-   - **Effort:** Small/Medium
+1. **Help: create simple static help pages and wire Help menu to open them** — **DONE**
+   - **Completed:** see `docs/Completed.md` item #28
+   - Implemented: embedded HTML help in `src/main/resources/help/`, F1 shortcut, HelpLauncher class
 
 ### P2 — Medium impact / longer horizon
 2. **Headless CLI mode (automation/pipelines)**

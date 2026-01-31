@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metadata Tagging - TVRenamer Help</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="index.html" class="back-link">&larr; Back to Help Index</a>
+
+    <h1>Metadata Tagging</h1>
+
+    <p>TVRenamer can embed TV episode metadata directly into video files. This allows media players and library managers to display show information without relying on filename parsing or external databases.</p>
+
+    <h2>Enabling Metadata Tagging</h2>
+    <ol>
+        <li>Open <strong>Preferences</strong></li>
+        <li>Check "Tag video files with episode metadata"</li>
+        <li>Save preferences</li>
+    </ol>
+    <p>Metadata is written automatically when files are renamed/moved.</p>
+
+    <h2>Supported Formats</h2>
+
+    <h3>MP4 / M4V / MOV</h3>
+    <p><strong>Built-in support</strong> - No additional software required.</p>
+    <p>Uses iTunes-style metadata atoms, compatible with:</p>
+    <ul>
+        <li>Plex, Jellyfin, Emby, Kodi</li>
+        <li>iTunes, Apple TV</li>
+        <li>VLC, Infuse</li>
+        <li>Most modern media players</li>
+    </ul>
+
+    <h3>MKV / WebM</h3>
+    <p><strong>Requires MKVToolNix</strong> - Free, open-source software.</p>
+
+    <h4>Installing MKVToolNix</h4>
+    <ol>
+        <li>Download from <a href="https://mkvtoolnix.download/" target="_blank">mkvtoolnix.download</a></li>
+        <li>Install using the Windows installer</li>
+        <li>Default location: <code>C:\Program Files\MKVToolNix</code></li>
+    </ol>
+    <p>TVRenamer automatically detects MKVToolNix if installed in the default location or if <code>mkvpropedit</code> is in your PATH.</p>
+
+    <div class="note">
+        <strong>Note:</strong> If MKVToolNix is not installed, MKV files are silently skipped (not an error). MP4 tagging still works.
+    </div>
+
+    <h2>What Metadata is Written</h2>
+
+    <table>
+        <tr>
+            <th>Field</th>
+            <th>Description</th>
+            <th>MP4</th>
+            <th>MKV</th>
+        </tr>
+        <tr>
+            <td>Show Name</td>
+            <td>Series title</td>
+            <td>&#10003;</td>
+            <td>&#10003;</td>
+        </tr>
+        <tr>
+            <td>Season Number</td>
+            <td>Season</td>
+            <td>&#10003;</td>
+            <td>&#10003;</td>
+        </tr>
+        <tr>
+            <td>Episode Number</td>
+            <td>Episode within season</td>
+            <td>&#10003;</td>
+            <td>&#10003;</td>
+        </tr>
+        <tr>
+            <td>Episode Title</td>
+            <td>Name of the episode</td>
+            <td>&#10003;</td>
+            <td>&#10003;</td>
+        </tr>
+        <tr>
+            <td>Air Date</td>
+            <td>Original broadcast date</td>
+            <td>&#10003;</td>
+            <td>&#10003;</td>
+        </tr>
+        <tr>
+            <td>Media Kind</td>
+            <td>Marked as "TV Show"</td>
+            <td>&#10003;</td>
+            <td>&#10003;</td>
+        </tr>
+        <tr>
+            <td>Display Title</td>
+            <td>Filename (for players)</td>
+            <td>&#10003;</td>
+            <td>&#10003;</td>
+        </tr>
+    </table>
+
+    <h2>Media Player Compatibility</h2>
+
+    <h3>Plex</h3>
+    <p>Plex reads embedded metadata and can use it instead of (or alongside) its online agents.</p>
+    <ul>
+        <li>Reads all tagged fields</li>
+        <li>May need to refresh metadata after adding tagged files</li>
+        <li>Agent settings can override embedded tags</li>
+    </ul>
+
+    <h3>Kodi</h3>
+    <p>Kodi natively supports both MP4 iTunes atoms and MKV Matroska tags.</p>
+    <ul>
+        <li>Recognizes the "TV Show" media type</li>
+        <li>Displays episode information in library</li>
+    </ul>
+
+    <h3>Jellyfin / Emby</h3>
+    <p>Similar behavior to Plex. May prefer scraped metadata depending on library settings.</p>
+
+    <h3>VLC</h3>
+    <p>Displays the filename/title in the playlist and window title bar.</p>
+
+    <h3>iTunes / Apple TV</h3>
+    <p>Full native support for MP4 files. MKV is not supported by Apple software.</p>
+
+    <h2>Verifying Tags</h2>
+
+    <h3>For MP4 Files</h3>
+    <ul>
+        <li>Windows: Right-click &rarr; Properties &rarr; Details tab</li>
+        <li>Use tools like <a href="https://mediaarea.net/MediaInfo" target="_blank">MediaInfo</a></li>
+    </ul>
+
+    <h3>For MKV Files</h3>
+    <ul>
+        <li>Use <strong>MKVToolNix GUI</strong> (installed with MKVToolNix)</li>
+        <li>Or <a href="https://mediaarea.net/MediaInfo" target="_blank">MediaInfo</a></li>
+        <li>Command line: <code>mkvinfo file.mkv</code></li>
+    </ul>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>MKV files not being tagged</h3>
+    <ul>
+        <li>Verify MKVToolNix is installed</li>
+        <li>Check that <code>mkvpropedit.exe</code> exists in the installation folder</li>
+        <li>Try adding MKVToolNix to your system PATH</li>
+    </ul>
+
+    <h3>MP4 files not being tagged</h3>
+    <ul>
+        <li>Ensure the file is a valid MP4 container (not just renamed)</li>
+        <li>Check TVRenamer logs for errors (<code>-Dtvrenamer.debug=true</code>)</li>
+    </ul>
+
+    <h3>Media player not showing tags</h3>
+    <ul>
+        <li>Refresh the library/metadata in your media player</li>
+        <li>Check player settings for "prefer embedded metadata"</li>
+        <li>Clear cached metadata and rescan</li>
+    </ul>
+
+    <hr>
+    <p><a href="index.html">&larr; Back to Help Index</a></p>
+</body>
+</html>

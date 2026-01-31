@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - TVRenamer Help</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="index.html" class="back-link">&larr; Back to Help Index</a>
+
+    <h1>Troubleshooting</h1>
+
+    <h2>Enabling Debug Logging</h2>
+    <p>For detailed troubleshooting, enable debug logging:</p>
+    <pre><code>java -Dtvrenamer.debug=true -jar tvrenamer.jar</code></pre>
+    <p>This creates <code>tvrenamer.log</code> next to the executable (or in <code>%TEMP%</code>).</p>
+
+    <div class="tip">
+        <strong>Tip:</strong> When reporting issues on GitHub, always attach the log file if possible.
+    </div>
+
+    <h2>Common Issues</h2>
+
+    <h3>Application Won't Start</h3>
+
+    <h4>Java Version Error</h4>
+    <p>TVRenamer requires Java 17 or later. Check your version:</p>
+    <pre><code>java -version</code></pre>
+    <p>You should see <code>17.x.x</code> or higher.</p>
+
+    <h4>32-bit / 64-bit Mismatch</h4>
+    <p>Error: <code>Cannot load 32-bit SWT libraries on 64-bit JVM</code></p>
+    <p>Solution: Use 64-bit Java with the 64-bit TVRenamer build.</p>
+
+    <h4>Windows Security Warning</h4>
+    <p>Windows SmartScreen may warn about the EXE. This is a false positive.</p>
+    <ul>
+        <li>Click "More info" then "Run anyway"</li>
+        <li>Or use the JAR version: <code>java -jar tvrenamer.jar</code></li>
+    </ul>
+
+    <h3>Files Not Parsing</h3>
+
+    <h4>No Show Name Found</h4>
+    <p>TVRenamer couldn't extract a show name. Ensure your filename has:</p>
+    <ul>
+        <li>A recognizable show name before the episode numbers</li>
+        <li>Words separated by dots, dashes, spaces, or underscores</li>
+    </ul>
+    <p>Example of good format: <code>Show.Name.S01E01.mkv</code></p>
+
+    <h4>No Season/Episode Pattern</h4>
+    <p>TVRenamer expects patterns like:</p>
+    <ul>
+        <li><code>S01E01</code> or <code>s01e01</code></li>
+        <li><code>1x01</code> or <code>1X01</code></li>
+        <li><code>Season 1 Episode 1</code></li>
+    </ul>
+
+    <h4>Filename Too Short</h4>
+    <p>Filenames need enough characters to contain show name + episode numbers.</p>
+
+    <h3>Show Not Found on TheTVDB</h3>
+    <ul>
+        <li>Verify the show exists on <a href="https://thetvdb.com/" target="_blank">thetvdb.com</a></li>
+        <li>Check for spelling differences</li>
+        <li>Add a <a href="show-matching.html">show override</a> with the correct name</li>
+        <li>Some shows use different names internationally</li>
+    </ul>
+
+    <h3>Wrong Episode Information</h3>
+
+    <h4>Episode Numbers Don't Match</h4>
+    <ul>
+        <li>Check your <strong>Episode Ordering</strong> preference (Aired vs DVD)</li>
+        <li>Some shows have different numbering between broadcast and DVD releases</li>
+    </ul>
+
+    <h4>Wrong Show Selected</h4>
+    <ul>
+        <li>Clear the remembered disambiguation in Preferences</li>
+        <li>Re-add files to trigger a new lookup</li>
+        <li>Select the correct show when prompted</li>
+    </ul>
+
+    <h3>Network / Connection Issues</h3>
+
+    <h4>Cannot Connect to TheTVDB</h4>
+    <ul>
+        <li>Check your internet connection</li>
+        <li>Verify HTTPS traffic is not blocked by firewall</li>
+        <li>TheTVDB may be temporarily unavailable</li>
+    </ul>
+
+    <h4>Slow Lookups</h4>
+    <ul>
+        <li>TheTVDB API can be slow during high traffic</li>
+        <li>First lookup for a show is slower (subsequent lookups are cached)</li>
+    </ul>
+
+    <h3>File Operation Errors</h3>
+
+    <h4>Permission Denied</h4>
+    <ul>
+        <li>Ensure you have write access to the destination folder</li>
+        <li>Close other programs that may have the file open</li>
+        <li>On network shares, verify share permissions</li>
+    </ul>
+
+    <h4>File In Use</h4>
+    <ul>
+        <li>Close media players or other programs using the file</li>
+        <li>Windows may lock files that are being indexed</li>
+    </ul>
+
+    <h4>Path Too Long (Windows)</h4>
+    <ul>
+        <li>Windows has a 260-character path limit by default</li>
+        <li>Shorten your destination path or filename format</li>
+        <li>Enable long path support in Windows 10+ settings</li>
+    </ul>
+
+    <h3>Network Share Issues</h3>
+
+    <h4>SMB/NAS Renaming Fails</h4>
+    <ul>
+        <li>Use UNC paths: <code>\\server\share\folder</code></li>
+        <li>Ensure stable network connection</li>
+        <li>Some NAS systems have permission quirks</li>
+        <li>Try mapping a drive letter as a workaround</li>
+    </ul>
+
+    <h2>Reporting Issues</h2>
+    <p>If you can't resolve an issue:</p>
+    <ol>
+        <li>Enable debug logging and reproduce the problem</li>
+        <li>Open an issue on <a href="https://github.com/StephKoenig/TVRenamer/issues" target="_blank">GitHub</a></li>
+        <li>Include:
+            <ul>
+                <li>What you were trying to do</li>
+                <li>What happened instead</li>
+                <li>Example filename (if applicable)</li>
+                <li>The <code>tvrenamer.log</code> file</li>
+            </ul>
+        </li>
+    </ol>
+
+    <hr>
+    <p><a href="index.html">&larr; Back to Help Index</a></p>
+</body>
+</html>

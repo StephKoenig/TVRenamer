@@ -324,6 +324,29 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - 30-second process timeout with proper cleanup
   - See `docs/Tagging Spec.md` for detailed format documentation
 
+### 28) Embedded help system with static HTML pages
+- **Why:** The Help menu existed but was unwired; users need guidance without searching GitHub issues or releases.
+- **Where:** `src/main/resources/help/` (HTML files), `org.tvrenamer.controller.HelpLauncher`, `org.tvrenamer.view.UIStarter`
+- **What we did:**
+  - Created 8 HTML help pages covering all major features:
+    - `index.html` - Table of contents and overview
+    - `getting-started.html` - First launch and quick start guide
+    - `adding-files.html` - Drag-drop, file dialog, preload folder
+    - `renaming.html` - Format tokens, customization, conflict handling
+    - `preferences.html` - All preferences explained
+    - `show-matching.html` - Overrides, disambiguations, troubleshooting matches
+    - `metadata-tagging.html` - MP4/MKV tagging, MKVToolNix requirements
+    - `troubleshooting.html` - Common issues and debug logging
+  - Created `style.css` with light/dark mode support (respects system preference)
+  - Created `HelpLauncher` class to extract help from JAR to temp directory and open in browser
+  - Wired Help menu item with F1 keyboard shortcut
+  - Added documentation maintenance reminder to `agents.md` release process
+- **Notes:**
+  - Help is embedded in the JAR for offline access
+  - Extraction is cached per session for performance
+  - Opens in system default browser via `Program.launch()`
+  - Temp files marked for deletion on JVM exit
+
 ---
 
 ## Related records

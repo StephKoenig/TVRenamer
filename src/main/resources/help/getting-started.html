@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started - TVRenamer Help</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="index.html" class="back-link">&larr; Back to Help Index</a>
+
+    <h1>Getting Started</h1>
+
+    <h2>Requirements</h2>
+    <ul>
+        <li><strong>Windows 64-bit</strong> (primary supported platform)</li>
+        <li><strong>Java 17+</strong> runtime</li>
+        <li><strong>Internet connection</strong> (for TheTVDB lookups)</li>
+    </ul>
+
+    <h2>First Launch</h2>
+    <ol>
+        <li>Download TVRenamer.exe or the JAR file</li>
+        <li>Run the application</li>
+        <li>On first run, you may want to open <strong>File &rarr; Preferences</strong> to configure:
+            <ul>
+                <li>Destination directory (where renamed files go)</li>
+                <li>Rename format (how filenames are structured)</li>
+                <li>Episode ordering preference (Aired vs DVD)</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h2>Quick Start: Rename Your First File</h2>
+
+    <h3>Step 1: Add Files</h3>
+    <p>Drag and drop video files onto the TVRenamer window, or use <strong>File &rarr; Add Files</strong>.</p>
+
+    <h3>Step 2: Wait for Lookup</h3>
+    <p>TVRenamer will parse the filename, identify the show, and look up episode information from TheTVDB. You'll see:</p>
+    <ul>
+        <li><strong>Current Name</strong> - The original filename</li>
+        <li><strong>Proposed Name</strong> - What it will be renamed to</li>
+        <li><strong>Status</strong> - Whether the file is ready to rename</li>
+    </ul>
+
+    <h3>Step 3: Review and Fix Issues</h3>
+    <p>If TVRenamer can't identify a show:</p>
+    <ul>
+        <li>Check if the filename has recognizable show name and episode numbers</li>
+        <li>Use <a href="show-matching.html">Show Overrides</a> in Preferences to help matching</li>
+        <li>If multiple shows match, you'll be prompted to choose the correct one</li>
+    </ul>
+
+    <h3>Step 4: Rename</h3>
+    <p>Select files and click <strong>Rename Selected</strong>, or press <kbd>Ctrl+R</kbd>.</p>
+
+    <div class="tip">
+        <strong>Tip:</strong> Use <kbd>Ctrl+A</kbd> to select all files, then <kbd>Ctrl+R</kbd> to rename everything at once.
+    </div>
+
+    <h2>Understanding the Interface</h2>
+
+    <h3>Main Table Columns</h3>
+    <table>
+        <tr>
+            <th>Column</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Current Name</td>
+            <td>Original filename (before renaming)</td>
+        </tr>
+        <tr>
+            <td>Proposed Name</td>
+            <td>New filename (after renaming). Shows error messages if parsing failed.</td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>Icon showing ready (&#10003;), error, or in-progress state</td>
+        </tr>
+    </table>
+
+    <h3>Keyboard Shortcuts</h3>
+    <table>
+        <tr>
+            <th>Shortcut</th>
+            <th>Action</th>
+        </tr>
+        <tr>
+            <td><kbd>Ctrl+A</kbd></td>
+            <td>Select all files</td>
+        </tr>
+        <tr>
+            <td><kbd>Ctrl+R</kbd></td>
+            <td>Rename selected files</td>
+        </tr>
+        <tr>
+            <td><kbd>Ctrl+P</kbd></td>
+            <td>Open Preferences</td>
+        </tr>
+        <tr>
+            <td><kbd>Ctrl+Q</kbd></td>
+            <td>Quit application</td>
+        </tr>
+        <tr>
+            <td><kbd>Delete</kbd></td>
+            <td>Remove selected files from list</td>
+        </tr>
+    </table>
+
+    <h2>Next Steps</h2>
+    <ul>
+        <li><a href="adding-files.html">Learn more about adding files</a></li>
+        <li><a href="renaming.html">Customize the rename format</a></li>
+        <li><a href="preferences.html">Explore all preferences</a></li>
+    </ul>
+
+    <hr>
+    <p><a href="index.html">&larr; Back to Help Index</a></p>
+</body>
+</html>
