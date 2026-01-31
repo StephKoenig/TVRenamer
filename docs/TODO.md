@@ -91,11 +91,27 @@ Evaluated available updates for all dependencies and plugins.
 | SpotBugs Plugin | 6.4.8 | 6.4.8 | ✅ Updated |
 
 ### SWT 3.130+ Investigation Results
-Tested SWT 3.131.0 with Gradle 9.3.1 and Shadow 9.3.1. The native-load issue persists:
+Tested multiple SWT versions with Gradle 9.3.1 and Shadow 9.3.1 on Java 21:
+
+| Version | Result |
+|---------|--------|
+| 3.129.0 | ✅ Works |
+| 3.130.0 | ❌ Fails |
+| 3.131.0 | ❌ Fails |
+| 3.132.0 | ❌ Fails |
+
+All failing versions show the same error:
 ```
 Libraries for platform win32 cannot be loaded because of incompatible environment
 ```
-This is NOT related to Gradle/Shadow versions. The issue appears to be in how SWT 3.130+ handles native library loading on Windows. Staying on SWT 3.129.0 until Eclipse fixes this upstream or a workaround is found.
+
+**Findings:**
+- Issue started at SWT 3.130.0 (not related to Gradle/Shadow versions)
+- Appears to be a change in how SWT handles native library loading when packaged in a fat/shadow JAR
+- Not related to Java version (tested on Java 21)
+- No release notes available on GitHub for SWT 3.130+
+
+**Staying on SWT 3.129.0** until Eclipse fixes this upstream or a workaround is found.
 
 ### JUnit 6 Migration (Deferred)
 JUnit 6 was released September 2025. Migration would require:
