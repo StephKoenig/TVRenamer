@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.shadow)
 
     // Static analysis
-    id 'com.github.spotbugs' version '6.0.26'
+    id 'com.github.spotbugs' version '6.4.8'
 }
 
 dependencyLocking {
