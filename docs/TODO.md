@@ -51,21 +51,11 @@ This section is the “living” priority order for what’s left, based on:
    - Created comprehensive test suite with 30+ tests for ShowSelectionEvaluator
 
 ### P2 — Medium impact / longer horizon
-5. **MKV metadata tagging via mkvpropedit**
-   - **Why:** Extend metadata tagging to MKV files (currently only MP4/M4V/MOV supported).
-   - **How:** Use `mkvpropedit` CLI from mkvtoolnix (if installed) to write Matroska tags:
-     - `TITLE` - Episode title
-     - `COLLECTION` - Series/show name
-     - `PART_NUMBER` - Episode number
-     - `SEASON` - Season number
-     - `DATE_RELEASED` - Air date
-     - `CONTENT_TYPE` - "TV Show"
-   - **Where:** new `MkvMetadataTagger implements VideoMetadataTagger` in `org.tvrenamer.controller.metadata`
-   - **Notes:**
-     - Requires mkvtoolnix to be installed and `mkvpropedit` on PATH
-     - Should gracefully skip if mkvpropedit not available
-     - Alternative: pure Java EBML library (more complex, no external dependency)
-   - **Effort:** Small/Medium
+5. **MKV metadata tagging via mkvpropedit** — **DONE**
+   - **Completed:** see `docs/Completed.md` item #27
+   - Implemented: `MkvMetadataTagger` using mkvpropedit CLI
+   - Writes Matroska tags at Collection/Season/Episode levels plus segment title
+   - Gracefully skips if mkvpropedit not installed
 
 6. **Headless CLI mode (automation/pipelines)**
    - **Why:** Enables scripted usage without SWT/GUI.

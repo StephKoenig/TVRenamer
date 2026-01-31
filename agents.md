@@ -355,6 +355,24 @@ Notes:
 
 ---
 
+## Balanced analysis (pros AND cons)
+
+When presenting options, proposals, or technical approaches:
+- **Always include downsides** alongside benefits
+- Don't be a "yes-agent" — honest assessment beats enthusiasm
+- If you're only seeing pros, you haven't thought hard enough
+- Include: complexity cost, maintenance burden, edge cases, failure modes, dependencies, performance implications
+
+Example of what NOT to do:
+> "This approach is great because X, Y, Z!"
+
+Example of what TO do:
+> "This approach offers X and Y. However, the downsides are: adds complexity to Z, creates two code paths to maintain, and detection logic is messier than it sounds on Windows."
+
+The user benefits more from honest tradeoffs than from cheerful agreement.
+
+---
+
 ## When diagnosing issues
 
 CI failures:

@@ -302,6 +302,28 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Summary dialog is non-blocking (shown after parsing completes, not during)
   - All user-facing strings centralized in `Constants.java` for future localization
 
+### 27) MKV metadata tagging via mkvpropedit
+- **Why:** Extend metadata tagging to MKV files; MKV is a common container format and users benefit from embedded metadata for media managers.
+- **Where:** `org.tvrenamer.controller.metadata.MkvMetadataTagger`, `org.tvrenamer.controller.metadata.MetadataTaggingController`, `org.tvrenamer.model.util.Constants`
+- **What we did:**
+  - Created `MkvMetadataTagger` implementing `VideoMetadataTagger` interface
+  - Uses mkvpropedit CLI from MKVToolNix (external dependency)
+  - Detection strategy: checks PATH, Windows Program Files, macOS Homebrew locations
+  - Gracefully skips if mkvpropedit not installed (not an error)
+  - Writes Matroska tags via XML file at three target levels:
+    - Target 70 (Collection): `TITLE`, `COLLECTION`, `CONTENT_TYPE`
+    - Target 60 (Season): `PART_NUMBER`, `TITLE`
+    - Target 50 (Episode): `TITLE`, `PART_NUMBER`, `DATE_RELEASED`, `DATE_RECORDED`
+  - Sets segment `title` (via `--edit info --set title=...`) to filename without extension for display name compatibility
+  - Registered in `MetadataTaggingController` alongside `Mp4MetadataTagger`
+  - Updated preferences tooltip to mention MKV support and mkvpropedit requirement
+- **Notes:**
+  - Supported extensions: `.mkv`, `.webm`
+  - Requires MKVToolNix installed; detection is cached at startup
+  - Proper XML escaping for show/episode titles containing special characters
+  - 30-second process timeout with proper cleanup
+  - See `docs/Tagging Spec.md` for detailed format documentation
+
 ---
 
 ## Related records

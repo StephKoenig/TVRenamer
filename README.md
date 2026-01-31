@@ -28,12 +28,19 @@ The screenshot currently references the upstream wiki:
 
 ### New / improved in this fork
  * **DVD/BluRay ordering** options in addition to Aired Order
- * **Overrides** to map “show name → show name” when matching is incorrect
+ * **Overrides** to map "show name → show name" when matching is incorrect
  * **Batch show disambiguation**: when TVDB returns multiple candidates for a show, TVRenamer prompts you to select the correct one (shows name/year/id/aliases).
  * **Remembered show selections**: your disambiguation choice is persisted and reused for future lookups of the same show query.
  * **Multi-Episode Files**: Handles multi-episode files (S02E01-02, S02E01-E02, etc.)
- * **SMB/network renaming**: supported for SMD renaming on network shares like NASs (report edge cases)
- * Theme support: **Light**, **Dark**, and **Auto** (OS-detected). (requires restart.)
+ * **SMB/network renaming**: supported for SMB renaming on network shares like NASs (report edge cases)
+ * **Theme support**: Light, Dark, and Auto (OS-detected). Requires restart.
+ * **Metadata tagging**: Embed TV metadata (show, season, episode, title, air date) directly into video files:
+   - **MP4/M4V/MOV**: Built-in support using iTunes-style atoms (works with Plex, Kodi, Jellyfin, iTunes, VLC)
+   - **MKV/WebM**: Requires [MKVToolNix](https://mkvtoolnix.download/) installed (uses mkvpropedit)
+ * **Always overwrite**: Option to overwrite existing destination files instead of creating versioned copies
+ * **Duplicate cleanup**: After moving, optionally delete other video files representing the same episode (same base name or season/episode). User confirmation required before deletion.
+ * **Fuzzy episode matching**: Detects files like "S01E02" vs "1x02" as the same episode for conflict detection and duplicate cleanup
+ * **Parse failure diagnostics**: When files can't be parsed, shows specific reasons (no show name, no season/episode pattern, etc.) with a summary dialog after batch processing
 
 ## Usage & Download
 
@@ -134,7 +141,7 @@ Runtime dependencies:
 - mp4parser 1.9.56
 
 Test dependencies:
-- JUnit 4.13.2
+- JUnit 5.11.4 (Jupiter)
 
 Build tooling:
 - Gradle 9.3.1

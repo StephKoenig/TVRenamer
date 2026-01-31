@@ -122,9 +122,9 @@ Before tagging, `Mp4MetadataTagger` validates:
 
 ---
 
-## MKV Tagging (Future)
+## MKV Tagging (Implemented)
 
-### Supported Extensions (Planned)
+### Supported Extensions
 - `.mkv`
 - `.webm` (if Matroska-based)
 
@@ -174,32 +174,40 @@ For broad media manager compatibility, we'll write tags at multiple target level
 
 ### Cross-Reference: MP4 to MKV Mapping
 
-| Semantic Field | MP4 Atom(s) | MKV Tag | MKV Target |
-|----------------|-------------|---------|------------|
+| Semantic Field | MP4 Atom(s) | MKV Property/Tag | MKV Target |
+|----------------|-------------|------------------|------------|
 | Show Name | `tvsh`, `©alb` | `TITLE`, `COLLECTION` | 70 |
 | Season Number | `tvsn` | `PART_NUMBER` | 60 |
 | Episode Number | `tves` | `PART_NUMBER` | 50 |
 | Episode Title | `tven` | `TITLE` | 50 |
-| Display Title | `©nam` | `TITLE` | 50 |
+| Display Title | `©nam` | Segment `title` | Info |
 | Air Date | `©day` | `DATE_RELEASED`, `DATE_RECORDED` | 50 |
 | Media Kind | `stik` | `CONTENT_TYPE` | 70 |
 
-### Implementation Options
+### Implementation: mkvpropedit (MKVToolNix)
 
-1. **mkvpropedit CLI** (MKVToolNix)
-   - Command: `mkvpropedit file.mkv --tags track:v1:tags.xml`
-   - Pros: Reliable, well-tested, handles edge cases
-   - Cons: External dependency (user must install MKVToolNix)
+**Decision:** Use mkvpropedit CLI only. No pure-Java fallback.
 
-2. **Pure Java EBML**
-   - Libraries: jebml, WebM SDK
-   - Pros: No external dependency
-   - Cons: More complex, less mature
+**Rationale:**
+- mkvpropedit is mature, well-tested, handles all edge cases
+- Pure Java EBML libraries (jebml) are old and focused on file creation, not surgical tag editing
+- Writing our own EBML tag editor would be 500+ lines with many edge cases
+- Users who want MKV tagging likely already have MKVToolNix installed
 
-3. **FFmpeg**
-   - Command: `ffmpeg -i input.mkv -c copy -metadata ... output.mkv`
-   - Pros: Handles many formats
-   - Cons: Large dependency, may re-mux unnecessarily
+**Behavior:**
+- MKV tagging is an **optional feature** requiring MKVToolNix
+- If mkvpropedit is not found, MKV files are silently skipped (not an error)
+- Detection is cached at startup for performance
+
+**Detection Strategy:**
+1. Try `mkvpropedit --version` in PATH
+2. On Windows, also check `C:\Program Files\MKVToolNix\mkvpropedit.exe`
+3. Cache result (static) - don't re-check per file
+
+**Alternatives Considered (rejected):**
+- Pure Java EBML: jebml is unmaintained, focused on file creation not tag editing
+- FFmpeg: Overkill dependency, may re-mux unnecessarily
+- Dual implementation: Two code paths = double maintenance, inconsistent behavior
 
 ### Matroska Tag XML Structure (for mkvpropedit)
 
@@ -270,14 +278,18 @@ For broad media manager compatibility, we'll write tags at multiple target level
 
 ### mkvpropedit Command
 
-```bash
-# Write tags from XML file
-mkvpropedit "Show.S01E01.Episode.Title.mkv" --tags global:tags.xml
+TVRenamer uses a single mkvpropedit call to set both Matroska tags and the segment title:
 
-# Or set individual tags directly
-mkvpropedit "Show.S01E01.mkv" \
-  --edit info --set "title=Show - S01E01 - Episode Title"
+```bash
+# Write tags from XML file AND set segment title (display name)
+mkvpropedit "Show.S01E01.Episode.Title.mkv" \
+  --tags global:tags.xml \
+  --edit info --set "title=Show.S01E01.Episode.Title"
 ```
+
+The segment `title` (set via `--edit info --set title=...`) is used by media players as the display name, equivalent to MP4's `©nam` atom.
+
+**Note:** The segment title is set to the filename without extension, providing a fallback display name for players that don't read Matroska tags.
 
 ---
 
@@ -292,7 +304,7 @@ All taggers receive metadata via `FileEpisode`, which provides:
 | `getEpisodePlacement().episode` | int | Episode number | `tves` | `PART_NUMBER`@50 |
 | `getActualEpisode().getTitle()` | String | Episode title | `tven` | `TITLE`@50 |
 | `getActualEpisode().getAirDate()` | LocalDate | Original air date | `©day` | `DATE_RELEASED`@50 |
-| `videoFile.getFileName()` | String | Filename (no ext) | `©nam` | (segment title) |
+| `videoFile.getFileName()` | String | Filename (no ext) | `©nam` | Segment `title` |
 
 ### Future: Explicit Metadata Record
 
@@ -360,16 +372,18 @@ ffprobe -show_format -show_streams file.mp4
 
 | Manager | MP4 | MKV | Notes |
 |---------|-----|-----|-------|
-| **Plex** | ✅ | 🔜 | Uses `tvsh`, `tvsn`, `tves`, `tven`; falls back to `©alb` |
-| **Kodi** | ✅ | 🔜 | Reads most iTunes atoms; prefers Matroska tags for MKV |
-| **Jellyfin** | ✅ | 🔜 | Similar to Plex behavior |
-| **Emby** | ✅ | 🔜 | Similar to Plex behavior |
+| **Plex** | ✅ | ✅ | Uses `tvsh`, `tvsn`, `tves`, `tven`; falls back to `©alb` |
+| **Kodi** | ✅ | ✅ | Reads most iTunes atoms; prefers Matroska tags for MKV |
+| **Jellyfin** | ✅ | ✅ | Similar to Plex behavior |
+| **Emby** | ✅ | ✅ | Similar to Plex behavior |
 | **iTunes/Apple TV** | ✅ | ❌ | Native support for all atoms; no MKV support |
-| **VLC** | ✅ | 🔜 | Uses `©nam` for display; reads MKV tags |
-| **Infuse** | ✅ | 🔜 | Full iTunes atom support |
-| **Windows Explorer** | ⚠️ | ⚠️ | Limited; shows `©nam` as title |
+| **VLC** | ✅ | ✅ | Uses `©nam` for display; reads MKV segment title |
+| **Infuse** | ✅ | ✅ | Full iTunes atom support |
+| **Windows Explorer** | ⚠️ | ⚠️ | Limited; shows `©nam`/segment title |
 
-Legend: ✅ Supported | 🔜 Planned | ⚠️ Partial | ❌ Not applicable
+Legend: ✅ Supported | ⚠️ Partial | ❌ Not applicable
+
+**Note:** MKV tagging requires MKVToolNix (mkvpropedit) to be installed on the system.
 
 ### Known Quirks
 
