@@ -128,8 +128,8 @@ public class TheTVDBProvider {
                     firstAiredYear = Integer.parseInt(
                         firstAired.substring(0, 4)
                     );
-                } catch (Exception ignored) {
-                    // best-effort only
+                } catch (NumberFormatException e) {
+                    logger.fine("Could not parse year from firstAired: " + firstAired);
                 }
             }
 
