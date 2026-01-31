@@ -48,6 +48,7 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.TaskBar;
 import org.eclipse.swt.widgets.TaskItem;
 import org.tvrenamer.controller.AddEpisodeListener;
+import org.tvrenamer.controller.FilenameParser;
 import org.tvrenamer.controller.FileMover;
 import org.tvrenamer.controller.MoveRunner;
 import org.tvrenamer.controller.ShowInformationListener;
@@ -382,6 +383,40 @@ public final class ResultsTable
         item.setChecked(false);
     }
 
+    /**
+     * Shows a summary dialog after batch parsing if there were failures.
+     * This is non-blocking and displayed after all files have been processed.
+     */
+    private void showParseSummary(
+        final int totalAdded,
+        final int failureCount,
+        final Map<FilenameParser.ParseFailureReason, Integer> failureBreakdown
+    ) {
+        if (failureCount == 0) {
+            return;
+        }
+
+        StringBuilder message = new StringBuilder();
+        int successCount = totalAdded - failureCount;
+        if (successCount > 0) {
+            message.append("Added ").append(successCount).append(" file(s) successfully.\n");
+        }
+        message.append(failureCount).append(" file(s) could not be parsed:\n\n");
+
+        for (Map.Entry<FilenameParser.ParseFailureReason, Integer> entry : failureBreakdown.entrySet()) {
+            message.append("  \u2022 ").append(entry.getKey().getUserMessage())
+                   .append(": ").append(entry.getValue()).append("\n");
+        }
+
+        message.append("\nFiles that failed to parse are marked with a red X icon.");
+
+        ui.showMessageBox(
+            SWTMessageBoxType.DLG_WARN,
+            PARSE_SUMMARY_TITLE,
+            message.toString()
+        );
+    }
+
     private void setTableItemStatus(final TableItem item, final int epsFound) {
         if (epsFound > 1) {
             STATUS_FIELD.setCellImage(item, OPTIONS);
@@ -510,10 +545,22 @@ public final class ResultsTable
 
     @Override
     public void addEpisodes(final Queue<FileEpisode> episodes) {
+        // Track parse failures for summary dialog
+        int totalAdded = 0;
+        int parseFailures = 0;
+        Map<FilenameParser.ParseFailureReason, Integer> failureBreakdown = new LinkedHashMap<>();
+
         for (final FileEpisode episode : episodes) {
+            totalAdded++;
             final TableItem item = createTableItem(episode);
             if (!episode.wasParsed()) {
                 failTableItem(item);
+                parseFailures++;
+                // Track failure reason for summary
+                FilenameParser.ParseFailureReason reason = episode.getParseFailureReason();
+                if (reason != null) {
+                    failureBreakdown.merge(reason, 1, Integer::sum);
+                }
                 continue;
             }
             synchronized (this) {
@@ -588,6 +635,11 @@ public final class ResultsTable
                     }
                 }
             );
+        }
+
+        // Show summary dialog if there were parse failures
+        if (parseFailures > 0) {
+            showParseSummary(totalAdded, parseFailures, failureBreakdown);
         }
 
         // Refresh any existing "Select Show..." rows in case adding files (or other table refresh
@@ -1426,6 +1478,7 @@ public final class ResultsTable
             case FILE_MTIME_POLICY:
             case OVERWRITE_DESTINATION:
             case CLEANUP_DUPLICATES:
+            case TAG_VIDEO_METADATA:
                 // These changes don't require an immediate table update here
                 break;
         }

@@ -185,7 +185,7 @@ public class UpdateChecker {
         for (int i = 0; i < parts.length; i++) {
             try {
                 out[i] = Integer.parseInt(parts[i].replaceAll("[^0-9]", ""));
-            } catch (Exception ignored) {
+            } catch (NumberFormatException ignored) {
                 out[i] = 0;
             }
         }

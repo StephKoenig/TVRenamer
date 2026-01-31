@@ -157,6 +157,7 @@ public final class ShowSelectionEvaluator {
             try {
                 extractedNormalized = StringUtils.replacePunctuation(extracted);
             } catch (Exception ignored) {
+                // Broad catch intentional: utility method may throw various exceptions; graceful fallback.
                 extractedNormalized = null;
             }
             extractedNormalized = safeTrim(extractedNormalized);
@@ -197,6 +198,7 @@ public final class ShowSelectionEvaluator {
                 try {
                     norm = StringUtils.replacePunctuation(s);
                 } catch (Exception ignored) {
+                    // Broad catch intentional: utility method may throw various exceptions; graceful fallback.
                     norm = s;
                 }
                 norm = safeTrim(norm);
@@ -232,6 +234,7 @@ public final class ShowSelectionEvaluator {
             try {
                 aliases = opt.getAliasNames();
             } catch (Exception ignored) {
+                // Broad catch intentional: defensive for external data; graceful fallback.
                 aliases = null;
             }
             if (aliases == null || aliases.isEmpty()) {
@@ -357,6 +360,7 @@ public final class ShowSelectionEvaluator {
                 try {
                     y = opt.getFirstAiredYear();
                 } catch (Exception ignored) {
+                    // Broad catch intentional: defensive for external data; graceful fallback.
                     y = null;
                 }
                 if (y == null) {
@@ -397,7 +401,7 @@ public final class ShowSelectionEvaluator {
         }
         try {
             return Integer.parseInt(m.group("year"));
-        } catch (Exception ignored) {
+        } catch (NumberFormatException ignored) {
             return null;
         }
     }

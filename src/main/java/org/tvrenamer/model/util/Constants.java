@@ -98,6 +98,7 @@ public class Constants {
     public static final String CANCEL_LABEL = "Cancel";
     public static final String SAVE_LABEL = "Save";
     public static final String ERROR_LABEL = "Error";
+    public static final String PARSE_SUMMARY_TITLE = "Parse Summary";
     public static final String EXIT_LABEL = "Exit";
     public static final String OK_LABEL = "OK";
     public static final String PREFERENCES_LABEL = "Preferences";

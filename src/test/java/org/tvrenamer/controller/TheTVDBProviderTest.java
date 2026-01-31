@@ -18,13 +18,13 @@
 
 package org.tvrenamer.controller;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.tvrenamer.model.DiscontinuedApiException;
 import org.tvrenamer.model.Episode;
@@ -195,22 +195,22 @@ public class TheTVDBProviderTest {
             } catch (Exception e) {
                 fail("exception getting show options for " + queryString);
             }
-            assertTrue("got no options on showName <[" + showName.getExampleFilename()
-                    + "]> (from input <[" + queryString + "]>)",
-                    showName.hasShowOptions());
+            assertTrue(showName.hasShowOptions(),
+                    "got no options on showName <[" + showName.getExampleFilename()
+                    + "]> (from input <[" + queryString + "]>)");
 
             best = showName.selectShowOption();
         }
-        assertEquals("resolved show name <[" + showName.getExampleFilename() + "]> to wrong series;",
-                actualName, best.getName());
+        assertEquals(actualName, best.getName(),
+                "resolved show name <[" + showName.getExampleFilename() + "]> to wrong series;");
 
         Show show = best.getShowInstance();
-        assertTrue("expected valid Series (<[" + epdata.properShowName + "]>) for \""
-                + showName.getExampleFilename() + "\" but got <[" + show + "]>",
-                show.isValidSeries());
+        assertTrue(show.isValidSeries(),
+                "expected valid Series (<[" + epdata.properShowName + "]>) for \""
+                + showName.getExampleFilename() + "\" but got <[" + show + "]>");
         Series series = show.asSeries();
-        assertEquals("got wrong series ID for <[" + actualName + "]>;",
-                epdata.showId, String.valueOf(series.getId()));
+        assertEquals(epdata.showId, String.valueOf(series.getId()),
+                "got wrong series ID for <[" + actualName + "]>;");
 
         if (epdata.preferDvd != null) {
             series.setPreferDvd(epdata.preferDvd);
@@ -961,7 +961,7 @@ public class TheTVDBProviderTest {
 
     }
 
-    @Ignore("currently disabled due to an incorrect show coming back")
+    @Disabled("currently disabled due to an incorrect show coming back")
     @Test
     public void testEpisode40() {
         if (RUN_EXTRA_TESTS) {
@@ -1197,7 +1197,7 @@ public class TheTVDBProviderTest {
         }
     }
 
-    @Ignore("currently disabled due to an incorrect show coming back")
+    @Disabled("currently disabled due to an incorrect show coming back")
     @Test
     public void testEpisode58() {
         if (RUN_EXTRA_TESTS) {
@@ -1211,7 +1211,7 @@ public class TheTVDBProviderTest {
         }
     }
 
-    @Ignore("currently disabled due to an incorrect show coming back")
+    @Disabled("currently disabled due to an incorrect show coming back")
     @Test
     public void testEpisode59() {
         if (RUN_EXTRA_TESTS) {
@@ -1264,7 +1264,7 @@ public class TheTVDBProviderTest {
         }
     }
 
-    @Ignore("currently disabled due to an incorrect show coming back")
+    @Disabled("currently disabled due to an incorrect show coming back")
     @Test
     public void testEpisode63() {
         if (RUN_EXTRA_TESTS) {
@@ -1339,11 +1339,11 @@ public class TheTVDBProviderTest {
                 return null;
             }
             Show show = gotShow.getShowInstance();
-            assertTrue("expected valid Series (<[" + properShowName + "]>) for \""
-                    + queryString + "\" but got <[" + show + "]>",
-                    show.isValidSeries());
-            assertEquals("resolved show name <[" + properShowName + "]> to wrong series;",
-                    properShowName, show.getName());
+            assertTrue(show.isValidSeries(),
+                    "expected valid Series (<[" + properShowName + "]>) for \""
+                    + queryString + "\" but got <[" + show + "]>");
+            assertEquals(properShowName, show.getName(),
+                    "resolved show name <[" + properShowName + "]> to wrong series;");
             return show;
         } catch (TimeoutException e) {
             String failMsg = "timeout trying to query for " + queryString;
@@ -1399,17 +1399,17 @@ public class TheTVDBProviderTest {
 
     private static void assertGotShow(final Show show,
             final EpisodeTestData testInput) {
-        assertNotNull("got null value from testQueryShow on <["
-                + testInput.queryString + "]>",
-                show);
+        assertNotNull(show,
+                "got null value from testQueryShow on <["
+                + testInput.queryString + "]>");
     }
 
     private static void assertValidSeries(final Show show,
             final EpisodeTestData testInput) {
-        assertTrue("expected valid Series (<[" + testInput.properShowName
+        assertTrue(show.isValidSeries(),
+                "expected valid Series (<[" + testInput.properShowName
                 + "]>) for \"" + testInput.queryString
-                + "\" but got <[" + show + "]>",
-                show.isValidSeries());
+                + "\" but got <[" + show + "]>");
     }
 
     private static CompletableFuture<String> createListingsFuture(final Series series,

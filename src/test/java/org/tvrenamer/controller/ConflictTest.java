@@ -1,10 +1,14 @@
 package org.tvrenamer.controller;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.tvrenamer.model.EpisodeTestData;
 import org.tvrenamer.model.util.Constants;
 
@@ -75,11 +79,9 @@ public class ConflictTest extends MoveTest {
         // Default behavior now preserves original modification time.
         long originalMtime = 0L;
         try {
-            originalMtime = java.nio.file.Files.getLastModifiedTime(
-                srcFile
-            ).toMillis();
-        } catch (java.io.IOException ioe) {
-            org.junit.Assert.fail("could not obtain timestamp of " + srcFile);
+            originalMtime = Files.getLastModifiedTime(srcFile).toMillis();
+        } catch (IOException ioe) {
+            fail("could not obtain timestamp of " + srcFile);
         }
 
         FileMover mover = new FileMover(episode);

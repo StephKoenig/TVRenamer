@@ -1,9 +1,9 @@
 package org.tvrenamer.controller;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,10 +15,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.tvrenamer.model.EpisodeTestData;
 import org.tvrenamer.model.FileEpisode;
 import org.tvrenamer.model.MoveObserver;
@@ -49,7 +48,7 @@ public class MoveTest {
      * specific tests.
      *
      */
-    @BeforeClass
+    @BeforeAll
     public static void initializePrefs() {
         FileMover.userPrefs.setCheckForUpdates(false);
 
@@ -79,8 +78,8 @@ public class MoveTest {
             .expectedReplacement("S07E04 Rebel Appliance")
             .build();
 
-    @Rule
-    public final TemporaryFolder tempFolder = new TemporaryFolder();
+    @TempDir
+    Path tempFolder;
 
     Path destDir;
     FileEpisode episode;
@@ -89,9 +88,8 @@ public class MoveTest {
     Path expectedDest;
 
     void setValues(final EpisodeTestData epdata) {
-        Path tempPath = tempFolder.getRoot().toPath();
-        Path sandbox = tempPath.resolve("input");
-        destDir = tempPath.resolve("output");
+        Path sandbox = tempFolder.resolve("input");
+        destDir = tempFolder.resolve("output");
 
         FileMover.userPrefs.setDestinationDirectory(destDir.toString());
         FileMover.userPrefs.setRenameReplacementString(epdata.replacementMask);
@@ -114,52 +112,52 @@ public class MoveTest {
     }
 
     void assertReady() {
-        assertNotNull("failed to create FileEpisode", episode);
-        assertNotNull("FileEpisode does not have path", srcFile);
+        assertNotNull(episode, "failed to create FileEpisode");
+        assertNotNull(srcFile, "FileEpisode does not have path");
 
         assertTrue(
-            "failed to create file for FileEpisode",
-            Files.exists(srcFile)
+            Files.exists(srcFile),
+            "failed to create file for FileEpisode"
         );
         assertTrue(
-            "output dir exists before it should",
-            Files.notExists(destDir)
+            Files.notExists(destDir),
+            "output dir exists before it should"
         );
     }
 
     void assertMoved() {
         assertTrue(
+            Files.exists(expectedDest),
             "did not move\n" +
                 srcFile +
                 "\n to expected destination\n" +
                 expectedDest +
                 "\n (it appears to now be in\n" +
                 episode.getPath() +
-                ")",
-            Files.exists(expectedDest)
+                ")"
         );
     }
 
     private void assertNotMoved() {
         assertTrue(
-            "although set to read-only " + srcFile + " is no longer in place",
-            Files.exists(srcFile)
+            Files.exists(srcFile),
+            "although set to read-only " + srcFile + " is no longer in place"
         );
         assertTrue(
+            Files.notExists(expectedDest),
             "although " +
                 srcFile +
                 " was read-only, destination " +
                 expectedDest +
-                " was created",
-            Files.notExists(expectedDest)
+                " was created"
         );
         // We expect to create the actual dest dir -- the top level.
         // (Though, if not, that's ok, too.)
         // Presumably, in trying to move the file, we created some subdirs.
         // If so, they should be cleaned up by the time we get here.
         assertTrue(
-            "extra files were created even though couldn't move file",
-            Files.notExists(destDir) || TestUtils.isDirEmpty(destDir)
+            Files.notExists(destDir) || TestUtils.isDirEmpty(destDir),
+            "extra files were created even though couldn't move file"
         );
     }
 
@@ -176,12 +174,12 @@ public class MoveTest {
         // (Setting mtime to "now" is now an opt-in preference.)
         long difference = expected - actualMillis;
         assertTrue(
+            Math.abs(difference) < 1000,
             "expected preserved modification time for " +
                 expectedDest +
                 " to match original; delta was " +
                 difference +
-                " ms",
-            Math.abs(difference) < 1000
+                " ms"
         );
     }
 
@@ -239,7 +237,7 @@ public class MoveTest {
         TestUtils.setWritable(srcFile);
 
         assertNotMoved();
-        assertFalse("FileMover.call returned true on read-only file", didMove);
+        assertFalse(didMove, "FileMover.call returned true on read-only file");
     }
 
     static class FutureCompleter implements MoveObserver {
@@ -288,8 +286,8 @@ public class MoveTest {
             assertMoved();
             assertTimestamp(originalMtime);
             assertTrue(
-                "got " + didMove + " in finishProgress for successful move",
-                didMove
+                didMove,
+                "got " + didMove + " in finishProgress for successful move"
             );
         } catch (TimeoutException e) {
             String failMsg = "timeout trying to move " + srcFile;
@@ -367,8 +365,8 @@ public class MoveTest {
             // observer will be called with a negative status.
             assertNotMoved();
             assertFalse(
-                "expected to get false in finish progress, but got " + didMove,
-                didMove
+                didMove,
+                "expected to get false in finish progress, but got " + didMove
             );
         } catch (TimeoutException e) {
             String failMsg = "timeout trying to move " + srcFile;

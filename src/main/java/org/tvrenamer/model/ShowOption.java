@@ -88,7 +88,7 @@ public class ShowOption {
         try {
             parsedId = Integer.parseInt(idString);
             return Series.createSeries(parsedId, name);
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             String msg = "ShowOption could not be created with ID " + idString;
             logger.info(msg);
             return new Show(idString, name);

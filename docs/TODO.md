@@ -26,34 +26,29 @@ This section is the “living” priority order for what’s left, based on:
 - **Effort** (how contained the change is)
 
 ### P0 — High user impact / safety (do these first)
-1. **Improve handling of “unparsed” files**
-   - **Why:** Parse failures are a common frustration point; users need actionable feedback.
-   - **Where:** `org.tvrenamer.model.EpisodeDb` / Results UI where unparsed items are inserted
-   - **What:** Show a parse-failure reason (status/tooltip), add quick actions (open folder/copy diagnostics), and optionally provide filters.
-   - **Effort:** Medium
+1. **Improve handling of "unparsed" files** — **DONE**
+   - **Completed:** see `docs/Completed.md` item #26
+   - Implemented: ParseFailureReason enum, diagnostic logic, summary dialog after batch parsing
 
 2. **Expand conflict detection beyond exact filename matches** — **DONE**
    - **Completed:** see `docs/Completed.md` item #21
    - Implemented: progress tick, always-overwrite option, duplicate cleanup, fuzzy episode matching
 
-3. **Refactor and Consolidate**
-   - **Why:** Improve maintainability, reduce code duplication, and modernize patterns for easier future development.
-   - **Effort:** Low to Medium (incremental)
+3. **Refactor and Consolidate** — **PARTIALLY DONE**
+   - **Completed:** see `docs/Completed.md` items #20, #25
+   - Narrowed overly broad `catch (Exception)` blocks to specific exception types
    - **Items (remaining):**
-     - Narrow overly broad `catch (Exception)` blocks to specific exception types where feasible
      - Consider extracting `EpisodeReplacementFormatter` from `FileEpisode` (longer-term)
-   - **Completed:** see `docs/Completed.md` item #20
 
 ### P1 — High impact, moderate effort
-3. **Help: create simple static help pages and wire Help menu to open them**
-   - **Why:** “Help” exists but is unwired; users need guidance without digging through issues/releases.
+4. **Help: create simple static help pages and wire Help menu to open them**
+   - **Why:** "Help" exists but is unwired; users need guidance without digging through issues/releases.
    - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions) + new `docs/help/` published via GitHub Pages (or similar).
    - **Effort:** Small/Medium
 
-4. **Add unit tests for unified show selection (no network calls)**
-   - **Why:** Prevent regressions in critical matching behavior.
-   - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
-   - **Effort:** Small/Medium
+5. **Add unit tests for unified show selection (no network calls)** — **DONE**
+   - **Completed:** see `docs/Completed.md` item #24
+   - Created comprehensive test suite with 30+ tests for ShowSelectionEvaluator
 
 ### P2 — Medium impact / longer horizon
 5. **MKV metadata tagging via mkvpropedit**
@@ -101,7 +96,7 @@ Evaluated available updates for all dependencies and plugins.
 | Commons Codec | 1.21.0 | 1.21.0 | ✅ Updated |
 | OkHttp | 5.3.2 | 5.3.2 | ✅ Updated |
 | mp4parser | 1.9.56 | 1.9.56 | ✅ New (metadata tagging) |
-| JUnit | 4.13.2 | 6.0.0 | 📋 Deferred (see below) |
+| JUnit | 5.11.4 | 5.11.4 | ✅ Updated (JUnit 5/Jupiter) |
 | Gradle | 9.3.1 | 9.3.1 | ✅ Updated |
 | Shadow Plugin | 9.3.1 | 9.3.1 | ✅ Updated |
 | Launch4j Plugin | 4.0.0 | 4.0.0 | ✅ Latest |
@@ -130,13 +125,17 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 **Staying on SWT 3.129.0** until Eclipse fixes this upstream or a workaround is found.
 
-### JUnit 6 Migration (Deferred)
-JUnit 6 was released September 2025. Migration would require:
-- Updating 10 test files with ~19 import changes
-- Annotation changes: `@BeforeClass` → `@BeforeAll`, `@Before` → `@BeforeEach`, etc.
+### JUnit 5 (Jupiter) Migration — COMPLETED
+Migrated from JUnit 4.13.2 to JUnit 5.11.4 (Jupiter). Changes included:
+- Updated 8 test files with annotation and import changes
+- Annotation changes: `@BeforeClass` → `@BeforeAll`, `@Before` → `@BeforeEach`, `@After` → `@AfterEach`, `@Ignore` → `@Disabled`
 - Import changes: `org.junit.*` → `org.junit.jupiter.api.*`
+- `@Rule TemporaryFolder` → `@TempDir Path` annotation (JUnit Jupiter idiom)
+- Assertion parameter order: message argument moved from first to last position
+- Added `testRuntimeOnly("org.junit.platform:junit-platform-launcher")` for Gradle compatibility
+- Added `useJUnitPlatform()` to test tasks in build.gradle
 
-This is moderate effort with no functional benefit for the current test suite. Deferred until a larger test refactoring effort or when JUnit 4 support is deprecated.
+All tests pass. See `docs/Completed.md` for full details.
 
 ---
 
