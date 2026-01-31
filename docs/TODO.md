@@ -71,7 +71,40 @@ This section is the “living” priority order for what’s left, based on:
    - **Where:** dependency management + docs
    - **Effort:** Small/Medium
 
+---
 
+## Dependency Updates (January 2026)
+
+Evaluated available updates for all dependencies and plugins. Status as of v1.0.1382:
+
+### Current Versions
+| Dependency | Version | Latest Available |
+|------------|---------|------------------|
+| SWT | 3.129.0 | 3.131.0 (⚠️ see P2 item #7) |
+| XStream | 1.4.21 | 1.4.21 ✅ |
+| Commons Codec | 1.17.0 | 1.21.0 |
+| OkHttp | 4.12.0 | 5.3.2 |
+| JUnit | 4.13.2 | 6.0.0 |
+| Shadow Plugin | 8.1.1 | 9.3.1 (requires Gradle 9) |
+| Launch4j Plugin | 4.0.0 | 4.0.0 ✅ |
+| SpotBugs Plugin | 6.0.26 | 6.4.8 |
+
+### Update Plan
+1. **Safe updates (no breaking changes expected):**
+   - Commons Codec 1.17.0 → 1.21.0
+   - SpotBugs Plugin 6.0.26 → 6.4.8
+
+2. **Gradle/Shadow upgrade:**
+   - Gradle 8.x → 9.x
+   - Shadow Plugin 8.1.1 → 9.3.1 (new plugin ID: `com.gradleup.shadow`)
+   - May resolve SWT 3.130+ native-load issues
+
+3. **Major version evaluations:**
+   - OkHttp 4.12.0 → 5.3.2 (API changes, Kotlin rewrite)
+   - JUnit 4.13.2 → 6.0.0 (test migration required)
+
+4. **Deferred:**
+   - SWT 3.129.0 → 3.131.0 (blocked by native-load investigation)
 
 ---
 
