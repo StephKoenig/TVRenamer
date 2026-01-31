@@ -29,12 +29,15 @@ import org.tvrenamer.model.Show;
 /**
  * Tags MP4 files with TV episode metadata using mp4parser.
  *
- * Writes standard iTunes-style TV atoms:
+ * Writes iTunes-style TV atoms for broad media manager compatibility:
  * - tvsh: TV Show name
+ * - (c)alb: Album (show name - used by some players like Plex)
  * - tvsn: Season number
  * - tves: Episode number
- * - (c)nam: Episode title
- * - (c)day: Year (from episode air date or show first aired)
+ * - tven: Episode title (TV Episode Name)
+ * - (c)nam: Title (filename without extension - general display name)
+ * - (c)day: Air date (ISO-8601 format)
+ * - stik: Media kind (10 = TV Show)
  */
 public class Mp4MetadataTagger implements VideoMetadataTagger {
 
@@ -46,9 +49,11 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
 
     // iTunes atom types (4CC codes)
     private static final String ATOM_TVSH = "tvsh";  // TV Show name
+    private static final String ATOM_ALB = "\u00A9alb";  // Album (©alb) - show name for Plex/others
     private static final String ATOM_TVSN = "tvsn";  // TV Season number
     private static final String ATOM_TVES = "tves";  // TV Episode number
-    private static final String ATOM_NAM = "\u00A9nam";  // Title (©nam)
+    private static final String ATOM_TVEN = "tven";  // TV Episode name/title
+    private static final String ATOM_NAM = "\u00A9nam";  // Title (©nam) - filename without extension
     private static final String ATOM_DAY = "\u00A9day";  // Date/Year (©day)
     private static final String ATOM_STIK = "stik";  // Media kind (10 = TV Show)
 
@@ -89,7 +94,12 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
         String showName = show.getName();
         int season = placement.season;
         int episodeNum = placement.episode;
-        String title = ep.getTitle();
+        String episodeTitle = ep.getTitle();
+
+        // Get filename without extension for ©nam (general title/display name)
+        String filename = videoFile.getFileName().toString();
+        int dotIndex = filename.lastIndexOf('.');
+        String filenameNoExt = (dotIndex > 0) ? filename.substring(0, dotIndex) : filename;
 
         // Get air date - use full ISO date (YYYY-MM-DD) if available, else just year
         String airDateStr = null;
@@ -98,9 +108,9 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
             airDateStr = airDate.toString();  // ISO-8601 format: YYYY-MM-DD
         }
 
-        logger.fine("Tagging " + videoFile.getFileName() + " with: " +
+        logger.fine("Tagging " + filename + " with: " +
             "show=" + showName + ", S" + season + "E" + episodeNum +
-            ", title=" + title + ", airDate=" + airDateStr);
+            ", title=" + episodeTitle + ", airDate=" + airDateStr);
 
         // Verify file is a valid MP4 container before attempting to parse
         if (!isValidMp4File(videoFile)) {
@@ -121,13 +131,15 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
                 return false;
             }
 
-            // Update metadata atoms
+            // Update metadata atoms for broad media manager compatibility
             setStringAtom(ilst, ATOM_TVSH, showName);
+            setStringAtom(ilst, ATOM_ALB, showName);  // Album = show name (Plex, others)
             setIntegerAtom(ilst, ATOM_TVSN, season);
             setIntegerAtom(ilst, ATOM_TVES, episodeNum);
-            if (title != null && !title.isBlank()) {
-                setStringAtom(ilst, ATOM_NAM, title);
+            if (episodeTitle != null && !episodeTitle.isBlank()) {
+                setStringAtom(ilst, ATOM_TVEN, episodeTitle);  // TV Episode Name
             }
+            setStringAtom(ilst, ATOM_NAM, filenameNoExt);  // Title = filename (display name)
             if (airDateStr != null) {
                 setStringAtom(ilst, ATOM_DAY, airDateStr);
             }

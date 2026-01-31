@@ -1,10 +1,10 @@
 package org.tvrenamer.controller.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.tvrenamer.controller.util.StringUtils.*;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class StringUtilsTest {
 
@@ -40,13 +40,13 @@ public class StringUtilsTest {
         final String actual = encodeSpecialCharacters(input);
 
         assertEquals(
+            expected,
+            actual,
             "Expected: [" +
                 debugWhitespace(expected) +
                 "] but got [" +
                 debugWhitespace(actual) +
-                "]",
-            expected,
-            actual
+                "]"
         );
     }
 

@@ -184,6 +184,7 @@ public class FileEpisode {
     // The state of this object, not the state of the actual TV episode.
     private ParseStatus parseStatus = ParseStatus.UNPARSED;
     private SeriesStatus seriesStatus = SeriesStatus.NOT_STARTED;
+    private FilenameParser.ParseFailureReason parseFailureReason = null;
 
     private boolean currentPathMatchesTemplate = false;
 
@@ -353,12 +354,12 @@ public class FileEpisode {
         int episodeNum = Show.NO_EPISODE;
         try {
             seasonNum = Integer.parseInt(filenameSeason);
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             logger.fine("unable to parse season number: " + filenameSeason);
         }
         try {
             episodeNum = Integer.parseInt(filenameEpisode);
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             logger.fine("unable to parse episode number: " + filenameEpisode);
         }
         placement = new EpisodePlacement(seasonNum, episodeNum);
@@ -582,10 +583,32 @@ public class FileEpisode {
      *
      * This causes it to update its replacementText to notify the user as such.
      *
+     * @param reason the specific reason why parsing failed (may be null for legacy calls)
+     */
+    public void setFailToParse(FilenameParser.ParseFailureReason reason) {
+        parseStatus = ParseStatus.BAD_PARSE;
+        parseFailureReason = reason;
+        replacementText = (reason != null) ? reason.getUserMessage() : BAD_PARSE_MESSAGE;
+    }
+
+    /**
+     * Update this object to know that its path has failed to parse.
+     *
+     * This causes it to update its replacementText to notify the user as such.
+     * Uses a default failure reason.
      */
     public void setFailToParse() {
-        parseStatus = ParseStatus.BAD_PARSE;
-        replacementText = BAD_PARSE_MESSAGE;
+        setFailToParse(FilenameParser.ParseFailureReason.NO_SHOW_NAME);
+    }
+
+    /**
+     * Returns the specific reason why parsing failed, or null if parsing succeeded
+     * or no specific reason was recorded.
+     *
+     * @return the parse failure reason, or null
+     */
+    public FilenameParser.ParseFailureReason getParseFailureReason() {
+        return parseFailureReason;
     }
 
     /**

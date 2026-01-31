@@ -118,7 +118,7 @@ class CocoaUIEnhancer {
         try {
             // Initialize the menuItems.
             initialize(target);
-        } catch (Exception e) {
+        } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
             throw new IllegalStateException(e);
         }
 
@@ -284,7 +284,7 @@ class CocoaUIEnhancer {
         try {
             Method m = cls.getDeclaredMethod(SHARED_APPLICATION, paramTypes);
             return m.invoke(null, arguments);
-        } catch (Exception e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -298,7 +298,7 @@ class CocoaUIEnhancer {
         try {
             Method m = obj.getClass().getDeclaredMethod(methodName, paramTypes);
             return m.invoke(obj, arguments);
-        } catch (Exception e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException(e);
         }
     }

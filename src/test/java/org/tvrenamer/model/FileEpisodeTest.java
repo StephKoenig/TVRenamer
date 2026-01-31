@@ -1,13 +1,13 @@
 package org.tvrenamer.model;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.tvrenamer.model.util.Constants.*;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.tvrenamer.controller.util.FileUtilities;
 
@@ -95,7 +95,7 @@ public class FileEpisodeTest {
     /**
      * Just makes sure our temp directory exists.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         createNewDirectory(OUR_TEMP_DIR);
     }
@@ -150,7 +150,7 @@ public class FileEpisodeTest {
     // we don't have to stuff it all into one huge method.  We can break it down arbitrarily.
     // As we change the test data to be more meaningful, we could change the method names as well.
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues() {
         /**
          * Test case for <a href="https://github.com/tvrenamer/tvrenamer/issues/36">Issue 36</a>
@@ -202,7 +202,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesLongName() {
         // This example has a very, very long episode title, and yet, still not too long
         // for us to allow it.  It should be incorporated into the filename untouched.
@@ -220,7 +220,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesTooLongName() {
         // This example has an episode title which is simply too long to be included
         // in a filename.  We should truncate it appropriately.
@@ -242,7 +242,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesBadSuffix() {
         // This example essentially has no filename suffix, in reality.  Instead it has
         // "junk" after its final dot.  Luckily, it works out just the same.  If we used
@@ -260,7 +260,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues03() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("nip tuck")
@@ -302,7 +302,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues04() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("reign 2013")
@@ -338,7 +338,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues05() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("modern family")
@@ -377,7 +377,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues06() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("24")
@@ -418,7 +418,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues07() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("lost")
@@ -459,7 +459,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues08() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("gossip girl")
@@ -496,7 +496,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues09() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("the big bang theory")
@@ -535,7 +535,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues10() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("californication")
@@ -572,7 +572,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues11() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("family guy")
@@ -609,7 +609,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues12() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("grimm")
@@ -646,7 +646,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues13() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("offspring")
@@ -672,7 +672,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues14() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("the big bang theory")
@@ -708,7 +708,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues15() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("witches of east end")
@@ -745,7 +745,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesFirefly1() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("firefly")
@@ -793,7 +793,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesFirefly2() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("firefly")
@@ -841,7 +841,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesFirefly3() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("firefly")
@@ -889,7 +889,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesFirefly4() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("firefly")
@@ -915,7 +915,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues17() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("strike back")
@@ -944,7 +944,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues18() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("marvels agents of shield")
@@ -989,7 +989,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues19() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("channel zero")
@@ -1019,7 +1019,7 @@ public class FileEpisodeTest {
                    .build());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues20() {
         values.add(new EpisodeTestData.Builder()
                    .filenameShow("House Hunters International")
@@ -1065,10 +1065,10 @@ public class FileEpisodeTest {
                 prefs.setRenameReplacementString(data.replacementMask);
 
                 FileEpisode episode = data.createFileEpisode(OUR_TEMP_DIR);
-                assertEquals("suffix fail on " + data.inputFilename,
-                             data.filenameSuffix, episode.getFilenameSuffix());
-                assertEquals("test which " + data.documentation,
-                             data.expectedReplacement, episode.getRenamedBasename(0));
+                assertEquals(data.filenameSuffix, episode.getFilenameSuffix(),
+                             "suffix fail on " + data.inputFilename);
+                assertEquals(data.expectedReplacement, episode.getRenamedBasename(0),
+                             "test which " + data.documentation);
             } catch (Exception e) {
                 verboseFail("testing " + data, e);
             }
@@ -1084,7 +1084,7 @@ public class FileEpisodeTest {
      * if we stuck with the rule of doing everything inside OUR_TEMP_DIR.
      * Try to basically do an <code>/bin/rm -rf</code> on our temp directory.
      */
-    @After
+    @AfterEach
     public void cleanUp() {
         if (Files.exists(OUR_TEMP_DIR)) {
             logger.warning("trying to clean up " + OUR_TEMP_DIR);

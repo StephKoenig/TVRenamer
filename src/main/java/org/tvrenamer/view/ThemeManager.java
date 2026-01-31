@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Rectangle;
@@ -163,12 +164,12 @@ public final class ThemeManager {
         // Best-effort: on some SWT/platforms these setters are honored; on others they're ignored.
         try {
             tabFolder.setBackground(palette.getControlBackground());
-        } catch (Exception ex) {
+        } catch (SWTException ex) {
             logger.log(Level.FINEST, "TabFolder background not supported", ex);
         }
         try {
             tabFolder.setForeground(palette.getControlForeground());
-        } catch (Exception ex) {
+        } catch (SWTException ex) {
             logger.log(Level.FINEST, "TabFolder foreground not supported", ex);
         }
 

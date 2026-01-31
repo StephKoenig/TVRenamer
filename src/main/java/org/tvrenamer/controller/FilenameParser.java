@@ -16,6 +16,35 @@ public class FilenameParser {
         FilenameParser.class.getName()
     );
 
+    /**
+     * Reasons why filename parsing may fail.
+     * Used to provide actionable feedback to users.
+     */
+    public enum ParseFailureReason {
+        /** Could not extract show name from filename. */
+        NO_SHOW_NAME("Could not extract show name from filename"),
+        /** No season/episode pattern found (e.g., S01E02, 1x03). */
+        NO_SEASON_EPISODE("Could not find season/episode pattern (e.g., S01E02, 1x03)"),
+        /** Filename too short to parse meaningfully. */
+        FILENAME_TOO_SHORT("Filename too short to parse"),
+        /** Filename contains no recognizable alphanumeric text. */
+        NO_ALPHANUMERIC("Filename contains no recognizable text");
+
+        private final String userMessage;
+
+        ParseFailureReason(String userMessage) {
+            this.userMessage = userMessage;
+        }
+
+        /**
+         * Returns a user-friendly message describing this failure reason.
+         * @return the user message
+         */
+        public String getUserMessage() {
+            return userMessage;
+        }
+    }
+
     private static final String FILENAME_BEGINS_WITH_SEASON =
         "(([sS]\\d\\d?[eE]\\d\\d?)|([sS]?\\d\\d?[x.]?\\d\\d\\d?)).*";
     private static final String DIR_LOOKS_LIKE_SEASON = "[sS][0-3]\\d";
@@ -110,8 +139,27 @@ public class FilenameParser {
      */
     public static void parseFilename(final FileEpisode episode) {
         Path filePath = episode.getPath();
+        if (filePath == null) {
+            episode.setFailToParse(ParseFailureReason.NO_SHOW_NAME);
+            return;
+        }
+
         String withShowName = insertShowNameIfNeeded(filePath);
+
+        // Early validation: filename too short
+        if (withShowName == null || withShowName.length() < 4) {
+            episode.setFailToParse(ParseFailureReason.FILENAME_TOO_SHORT);
+            return;
+        }
+
         String strippedName = stripJunk(withShowName);
+
+        // Early validation: no alphanumeric content
+        if (!containsAlphanumeric(strippedName)) {
+            episode.setFailToParse(ParseFailureReason.NO_ALPHANUMERIC);
+            return;
+        }
+
         Matcher matcher;
         for (Pattern patt : COMPILED_REGEX) {
             matcher = patt.matcher(strippedName);
@@ -183,7 +231,45 @@ public class FilenameParser {
             }
         }
 
-        episode.setFailToParse();
+        // Diagnose why parsing failed
+        ParseFailureReason reason = diagnoseFailure(strippedName);
+        episode.setFailToParse(reason);
+    }
+
+    /**
+     * Diagnose why parsing failed by checking for common patterns.
+     */
+    private static ParseFailureReason diagnoseFailure(String strippedName) {
+        // Check if we have any season/episode pattern at all
+        if (!containsEpisodePattern(strippedName)) {
+            return ParseFailureReason.NO_SEASON_EPISODE;
+        }
+        // Has episode pattern but couldn't extract show name
+        return ParseFailureReason.NO_SHOW_NAME;
+    }
+
+    // Basic pattern to detect if ANY episode numbering exists (even if we can't fully parse it)
+    private static final Pattern BASIC_EP_PATTERN = Pattern.compile(
+        ".*([sS]\\d+[eE]\\d+|\\d+[xX]\\d+|\\d{1,2}\\d{2}).*"
+    );
+
+    private static boolean containsEpisodePattern(String s) {
+        if (s == null || s.isEmpty()) {
+            return false;
+        }
+        return BASIC_EP_PATTERN.matcher(s).matches();
+    }
+
+    private static boolean containsAlphanumeric(String s) {
+        if (s == null) {
+            return false;
+        }
+        for (int i = 0; i < s.length(); i++) {
+            if (Character.isLetterOrDigit(s.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String stripJunk(String input) {

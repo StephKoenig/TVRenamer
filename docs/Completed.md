@@ -224,6 +224,84 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Duplicate cleanup preference must be enabled for duplicates to be detected and shown.
   - Files are only deleted after explicit user confirmation via the dialog.
 
+### 23) JUnit 5 (Jupiter) migration
+- **Why:** Modernize test framework to current JUnit 5 (Jupiter) from legacy JUnit 4; benefit from improved annotations, extension model, and better IDE/tooling support.
+- **Where:** `build.gradle`, `gradle/libs.versions.toml`, all test files under `src/test/java/org/tvrenamer/`
+- **What we did:**
+  - Updated `libs.versions.toml`: replaced JUnit 4.13.2 with JUnit 5.11.4 (`junit-jupiter`)
+  - Updated `build.gradle`: changed `testImplementation` to use JUnit 5, added `useJUnitPlatform()` to both `test` and `integrationTest` tasks, added `testRuntimeOnly("org.junit.platform:junit-platform-launcher")`
+  - Migrated 8 test files with annotation and import changes:
+    - `@BeforeClass` → `@BeforeAll`, `@AfterClass` → `@AfterAll`
+    - `@Before` → `@BeforeEach`, `@After` → `@AfterEach`
+    - `@Ignore` → `@Disabled`
+    - `org.junit.*` → `org.junit.jupiter.api.*`
+  - Converted `@Rule TemporaryFolder` to `@TempDir Path` annotation (JUnit Jupiter idiom)
+  - Reordered assertion parameters (message argument moved from first to last position)
+  - Regenerated Gradle dependency lock files with `--write-locks`
+- **Notes:**
+  - The original TODO.md mentioned "JUnit 6" but that was a mislabel; the described changes (BeforeAll, jupiter imports, etc.) are JUnit 5 features.
+  - All tests pass after migration.
+
+### 24) Unit tests for ShowSelectionEvaluator
+- **Why:** Prevent regressions in critical show-matching behavior; improve code confidence for future heuristic changes.
+- **Where:** `src/test/java/org/tvrenamer/model/ShowSelectionEvaluatorTest.java`
+- **What we did:**
+  - Created comprehensive test suite with 30+ test cases covering:
+    - NOT_FOUND scenarios (null/empty candidates)
+    - Pinned ID resolution
+    - Exact name matching (case-insensitive)
+    - Punctuation-normalized matching
+    - Alias matching
+    - Parenthetical variant tie-breaker ("Show" vs "Show (IN)")
+    - Token set and year tolerance (±1) tie-breakers
+    - Single candidate auto-resolution
+    - Ambiguous multi-candidate scenarios
+    - Edge cases (nulls, blanks, null names in options)
+    - Priority ordering (pinned ID > exact name > alias)
+
+### 25) Narrow overly broad `catch (Exception)` blocks
+- **Why:** Improve code robustness by catching specific exception types; make error handling more explicit and maintainable.
+- **Where:** Multiple files across `controller`, `model`, and `view` packages
+- **What we did:**
+  - Narrowed `Exception` to `NumberFormatException` in:
+    - `UpdateChecker.java:188` (version parsing)
+    - `FileEpisode.java:356,361` (season/episode number parsing)
+    - `ShowOption.java:91` (show ID parsing)
+    - `ShowSelectionEvaluator.java:400` (year parsing)
+  - Narrowed `Exception` to `SWTException` in:
+    - `ThemeManager.java:166,171` (TabFolder color setters)
+  - Used multi-catch for reflection exceptions in:
+    - `CocoaUIEnhancer.java:121,287,301` (`NoSuchMethodException | IllegalAccessException | InvocationTargetException`)
+  - Added justification comments to intentionally broad catches in `ShowSelectionEvaluator.java` (defensive for external data/utility calls)
+- **Notes:**
+  - Thread safety nets (top-level UI, background threads) intentionally kept broad
+  - Platform compatibility catches (best-effort UI features) documented with comments
+
+### 26) Improve handling of unparsed files (parse failure diagnostics)
+- **Why:** Parse failures are a common frustration; users need actionable feedback about WHY parsing failed.
+- **Where:** `org.tvrenamer.controller.FilenameParser`, `org.tvrenamer.model.FileEpisode`, `org.tvrenamer.view.ResultsTable`, `org.tvrenamer.model.util.Constants`
+- **What we did:**
+  - Added `ParseFailureReason` enum to `FilenameParser` with 4 specific failure reasons:
+    - `NO_SHOW_NAME` - Could not extract show name from filename
+    - `NO_SEASON_EPISODE` - No season/episode pattern found (e.g., S01E02, 1x03)
+    - `FILENAME_TOO_SHORT` - Filename too short to parse (< 4 chars)
+    - `NO_ALPHANUMERIC` - Filename contains no recognizable text
+  - Added `parseFailureReason` field and getter to `FileEpisode`
+  - Updated `setFailToParse()` to accept and store a specific reason
+  - Added diagnostic logic to `FilenameParser.parseFilename()`:
+    - Early validation for too-short/no-alphanumeric filenames
+    - `diagnoseFailure()` helper to determine specific failure reason
+    - `containsEpisodePattern()` helper to distinguish "no episode pattern" from "no show name"
+  - Added summary dialog in `ResultsTable.addEpisodes()`:
+    - Tracks parse failures by reason during batch processing
+    - Shows non-blocking summary dialog after all files processed (if failures exist)
+    - Displays success count, failure count, and breakdown by failure reason
+  - Added `PARSE_SUMMARY_TITLE` constant for i18n readiness
+- **Notes:**
+  - Failure reason is displayed in the "Proposed File Path" column via `getReplacementText()`
+  - Summary dialog is non-blocking (shown after parsing completes, not during)
+  - All user-facing strings centralized in `Constants.java` for future localization
+
 ---
 
 ## Related records

@@ -87,7 +87,12 @@ dependencies {
     implementation(libs.mp4parser)
 
     // Testing
-    testImplementation(libs.junit4)
+    testImplementation(libs.junit5Jupiter)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+test {
+    useJUnitPlatform()
 }
 
 application {
@@ -368,6 +373,7 @@ tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     shouldRunAfter(tasks.named('test'))
+    useJUnitPlatform()
 }
 
 tasks.named('check') {

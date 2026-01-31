@@ -1,12 +1,12 @@
 package org.tvrenamer.controller;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.LinkedList;
 import java.util.List;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.tvrenamer.model.EpisodePlacement;
 import org.tvrenamer.model.EpisodeTestData;
 import org.tvrenamer.model.FileEpisode;
@@ -54,7 +54,7 @@ public class FilenameParserTest {
 
     private static final List<EpisodeTestData> values = new LinkedList<>();
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesThreeDigits() {
         // This should be parsed as episode 105, not episode 10
         values.add(
@@ -67,7 +67,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesBug20() {
         // See Issue #20
         values.add(
@@ -80,7 +80,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesNotThreeDigits() {
         // Make sure this is parsed as episode 14, not episode 142
         values.add(
@@ -93,7 +93,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesMultiEpisodeExplicitList() {
         // Multi-episode explicit list in a single file: S01E04E05 => select E04
         values.add(
@@ -124,7 +124,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesMultiEpisodeRanges() {
         // Multi-episode inclusive range in a single file: S02E04-E06 => select E04
         values.add(
@@ -147,7 +147,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesThreeDigitSeason() {
         values.add(
             new EpisodeTestData.Builder()
@@ -159,7 +159,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesLongThreeDigitSeason() {
         values.add(
             new EpisodeTestData.Builder()
@@ -173,7 +173,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValuesDotThreeDigitSeason() {
         values.add(
             new EpisodeTestData.Builder()
@@ -185,7 +185,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues01() {
         values.add(
             new EpisodeTestData.Builder()
@@ -197,7 +197,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues02() {
         values.add(
             new EpisodeTestData.Builder()
@@ -210,7 +210,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues02a() {
         values.add(
             new EpisodeTestData.Builder()
@@ -225,7 +225,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues03() {
         values.add(
             new EpisodeTestData.Builder()
@@ -238,7 +238,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues04() {
         values.add(
             new EpisodeTestData.Builder()
@@ -253,7 +253,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues05() {
         values.add(
             new EpisodeTestData.Builder()
@@ -266,7 +266,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues06() {
         values.add(
             new EpisodeTestData.Builder()
@@ -278,7 +278,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues07() {
         values.add(
             new EpisodeTestData.Builder()
@@ -293,7 +293,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues08() {
         values.add(
             new EpisodeTestData.Builder()
@@ -308,7 +308,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues09() {
         values.add(
             new EpisodeTestData.Builder()
@@ -320,7 +320,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues10() {
         values.add(
             new EpisodeTestData.Builder()
@@ -332,7 +332,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues11() {
         values.add(
             new EpisodeTestData.Builder()
@@ -344,7 +344,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues12() {
         values.add(
             new EpisodeTestData.Builder()
@@ -356,7 +356,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues13() {
         values.add(
             new EpisodeTestData.Builder()
@@ -371,7 +371,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues14() {
         values.add(
             new EpisodeTestData.Builder()
@@ -384,7 +384,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues15() {
         values.add(
             new EpisodeTestData.Builder()
@@ -396,7 +396,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues16() {
         values.add(
             new EpisodeTestData.Builder()
@@ -408,7 +408,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues161() {
         values.add(
             new EpisodeTestData.Builder()
@@ -420,7 +420,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues17() {
         values.add(
             new EpisodeTestData.Builder()
@@ -432,7 +432,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues18() {
         values.add(
             new EpisodeTestData.Builder()
@@ -444,7 +444,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues19() {
         values.add(
             new EpisodeTestData.Builder()
@@ -456,7 +456,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues20() {
         values.add(
             new EpisodeTestData.Builder()
@@ -468,7 +468,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues21() {
         values.add(
             new EpisodeTestData.Builder()
@@ -480,7 +480,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues22() {
         values.add(
             new EpisodeTestData.Builder()
@@ -492,7 +492,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues23() {
         values.add(
             new EpisodeTestData.Builder()
@@ -504,7 +504,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues24() {
         values.add(
             new EpisodeTestData.Builder()
@@ -516,7 +516,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues25() {
         values.add(
             new EpisodeTestData.Builder()
@@ -530,7 +530,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues26() {
         values.add(
             new EpisodeTestData.Builder()
@@ -542,7 +542,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues27() {
         values.add(
             new EpisodeTestData.Builder()
@@ -554,7 +554,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues28() {
         values.add(
             new EpisodeTestData.Builder()
@@ -566,7 +566,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues29() {
         values.add(
             new EpisodeTestData.Builder()
@@ -578,7 +578,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues30() {
         values.add(
             new EpisodeTestData.Builder()
@@ -590,7 +590,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues31() {
         values.add(
             new EpisodeTestData.Builder()
@@ -602,7 +602,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues32() {
         values.add(
             new EpisodeTestData.Builder()
@@ -614,7 +614,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues33() {
         values.add(
             new EpisodeTestData.Builder()
@@ -626,7 +626,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues34() {
         values.add(
             new EpisodeTestData.Builder()
@@ -638,7 +638,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues35() {
         values.add(
             new EpisodeTestData.Builder()
@@ -650,7 +650,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues36() {
         values.add(
             new EpisodeTestData.Builder()
@@ -664,7 +664,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues37() {
         values.add(
             new EpisodeTestData.Builder()
@@ -676,7 +676,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues38() {
         values.add(
             new EpisodeTestData.Builder()
@@ -690,7 +690,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues39() {
         values.add(
             new EpisodeTestData.Builder()
@@ -702,7 +702,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues40() {
         values.add(
             new EpisodeTestData.Builder()
@@ -714,7 +714,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues41() {
         values.add(
             new EpisodeTestData.Builder()
@@ -726,7 +726,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues42() {
         values.add(
             new EpisodeTestData.Builder()
@@ -738,7 +738,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues43() {
         values.add(
             new EpisodeTestData.Builder()
@@ -750,7 +750,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues44() {
         values.add(
             new EpisodeTestData.Builder()
@@ -762,7 +762,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues45() {
         values.add(
             new EpisodeTestData.Builder()
@@ -774,7 +774,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues46() {
         values.add(
             new EpisodeTestData.Builder()
@@ -786,7 +786,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues47() {
         values.add(
             new EpisodeTestData.Builder()
@@ -798,7 +798,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues48() {
         values.add(
             new EpisodeTestData.Builder()
@@ -810,7 +810,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues49() {
         values.add(
             new EpisodeTestData.Builder()
@@ -822,7 +822,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues50() {
         values.add(
             new EpisodeTestData.Builder()
@@ -834,7 +834,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues51() {
         values.add(
             new EpisodeTestData.Builder()
@@ -846,7 +846,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues52() {
         values.add(
             new EpisodeTestData.Builder()
@@ -858,7 +858,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues53() {
         values.add(
             new EpisodeTestData.Builder()
@@ -870,7 +870,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues54() {
         values.add(
             new EpisodeTestData.Builder()
@@ -882,7 +882,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues55() {
         values.add(
             new EpisodeTestData.Builder()
@@ -897,7 +897,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues56() {
         values.add(
             new EpisodeTestData.Builder()
@@ -909,7 +909,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues57() {
         values.add(
             new EpisodeTestData.Builder()
@@ -921,7 +921,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues58() {
         values.add(
             new EpisodeTestData.Builder()
@@ -935,7 +935,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues59() {
         values.add(
             new EpisodeTestData.Builder()
@@ -949,7 +949,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues60() {
         values.add(
             new EpisodeTestData.Builder()
@@ -962,7 +962,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues61() {
         values.add(
             new EpisodeTestData.Builder()
@@ -977,7 +977,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues62() {
         values.add(
             new EpisodeTestData.Builder()
@@ -992,7 +992,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues63() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1007,7 +1007,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues64() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1022,7 +1022,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues65() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1037,7 +1037,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues66() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1052,7 +1052,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues67() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1065,7 +1065,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues68() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1077,7 +1077,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues69() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1089,7 +1089,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues70() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1101,7 +1101,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues71() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1113,7 +1113,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues72() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1127,7 +1127,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues73() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1141,7 +1141,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues74() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1153,7 +1153,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues75() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1165,7 +1165,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues76() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1177,7 +1177,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues77() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1192,7 +1192,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues78() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1207,7 +1207,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues79() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1219,7 +1219,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues80() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1231,7 +1231,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues81() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1245,7 +1245,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues82() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1259,7 +1259,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues83() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1271,7 +1271,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues84() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1283,7 +1283,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues85() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1297,7 +1297,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues86() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1311,7 +1311,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues87() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1323,7 +1323,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues88() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1337,7 +1337,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues89() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1351,7 +1351,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues90() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1363,7 +1363,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues91() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1375,7 +1375,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues92() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1389,7 +1389,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues93() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1403,7 +1403,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues94() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1417,7 +1417,7 @@ public class FilenameParserTest {
         );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupValues95() {
         values.add(
             new EpisodeTestData.Builder()
@@ -1437,27 +1437,27 @@ public class FilenameParserTest {
             FilenameParser.parseFilename(retval);
             EpisodePlacement retPlacement = retval.getEpisodePlacement();
 
-            assertTrue("unable to parse:<[" + input + "]>", retval.wasParsed());
+            assertTrue(retval.wasParsed(), "unable to parse:<[" + input + "]>");
             assertEquals(
-                "On input:<[" + input + "]>, for filenameShow,",
                 testInput.filenameShow,
-                retval.getFilenameShow()
+                retval.getFilenameShow(),
+                "On input:<[" + input + "]>, for filenameShow,"
             );
 
             assertEquals(
-                "On input:<[" + input + "]>, for season,",
                 Integer.parseInt(testInput.seasonNumString),
-                retPlacement.season
+                retPlacement.season,
+                "On input:<[" + input + "]>, for season,"
             );
             assertEquals(
-                "On input:<[" + input + "]>, for episode,",
                 Integer.parseInt(testInput.episodeNumString),
-                retPlacement.episode
+                retPlacement.episode,
+                "On input:<[" + input + "]>, for episode,"
             );
             assertEquals(
-                "On input:<[" + input + "]>, for resolution,",
                 testInput.episodeResolution,
-                retval.getFilenameResolution()
+                retval.getFilenameResolution(),
+                "On input:<[" + input + "]>, for resolution,"
             );
         }
     }
