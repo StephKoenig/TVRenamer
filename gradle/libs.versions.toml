@@ -8,6 +8,7 @@ swt = "3.129.0"
 xstream = "1.4.21"
 commonsCodec = "1.21.0"
 okhttp = "5.3.2"
+mp4parser = "1.9.56"
 
 # Test dependencies
 junit4 = "4.13.2"
@@ -17,6 +18,7 @@ swtWin64 = { module = "org.eclipse.platform:org.eclipse.swt.win32.win32.x86_64",
 xstream = { module = "com.thoughtworks.xstream:xstream", version.ref = "xstream" }
 commonsCodec = { module = "commons-codec:commons-codec", version.ref = "commonsCodec" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+mp4parser = { module = "org.mp4parser:isoparser", version.ref = "mp4parser" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 
 [plugins]

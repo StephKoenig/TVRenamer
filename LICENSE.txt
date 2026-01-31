@@ -35,6 +35,15 @@ Website: https://square.github.io/okhttp/
 License: Apache License v2.0
 License website: https://www.apache.org/licenses/LICENSE-2.0
 
+mp4parser (isoparser)
+=========================================
+Description: A Java library to read and write MP4 container files.
+Website: https://github.com/sannies/mp4parser
+License: BSD License
+License website: https://raw.githubusercontent.com/sannies/mp4parser/master/LICENSE
+Notes:
+- Used for writing TV metadata (show, season, episode, title) to MP4 files.
+
 JUnit 4
 =========================================
 Description: Unit testing framework for Java.
@@ -57,10 +66,12 @@ Description: The build uses Gradle plugins to produce an "all-in-one" JAR and a 
 
 Shadow (fat JAR)
 -----------------------------------------
-Website: https://github.com/johnrengelman/shadow
+Website: https://github.com/GradleUp/shadow
 License: Apache License 2.0
 License website: https://www.apache.org/licenses/LICENSE-2.0
-Source license file: https://raw.githubusercontent.com/johnrengelman/shadow/master/LICENSE
+Source license file: https://raw.githubusercontent.com/GradleUp/shadow/main/LICENSE
+Notes:
+- This fork uses the GradleUp Shadow plugin (com.gradleup.shadow) v9.x.
 
 Launch4j Gradle plugin (EXE wrapper integration)
 -----------------------------------------

@@ -164,6 +164,12 @@ public class Constants {
     public static final String CLEANUP_DUPLICATES_TOOLTIP =
         "After moving a file, delete other video files that represent the same episode " +
         "(same base name or same season/episode). Only video files are deleted, not subtitles.";
+    public static final String TAG_VIDEO_METADATA_TEXT =
+        "Tag video files with episode metadata [?]";
+    public static final String TAG_VIDEO_METADATA_TOOLTIP =
+        "If checked, TVRenamer will write TV show metadata (show name, season, episode, title) " +
+        "to supported video files (MP4/M4V) after moving. This enables media players to display " +
+        "episode information.";
     public static final String RENAME_TOKEN_TEXT = "Rename Tokens [?]";
     public static final String RENAME_FORMAT_TEXT = "Rename Format [?]";
     public static final String RENAME_SELECTED_TOOLTIP =

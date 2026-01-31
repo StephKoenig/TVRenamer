@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.metadata.MetadataTaggingController;
 import org.tvrenamer.controller.util.FileUtilities;
 import org.tvrenamer.model.FileEpisode;
 import org.tvrenamer.model.MoveObserver;
@@ -276,6 +277,9 @@ public class FileMover implements Callable<Boolean> {
             );
         }
 
+        // Optional: tag video file with TV metadata (show, season, episode, title).
+        tagFileIfEnabled(actualDest);
+
         // Optional: find duplicate video files in the destination directory.
         // They'll be shown to the user for confirmation after all moves complete.
         if (userPrefs.isCleanupDuplicateVideoFiles()) {
@@ -297,6 +301,27 @@ public class FileMover implements Callable<Boolean> {
                     logger.info("Found " + dups.size() + " duplicate video file(s) for review");
                 }
             }
+        }
+    }
+
+    /**
+     * Tag the video file with TV metadata if the preference is enabled.
+     * Failures are logged but do not affect the overall move operation.
+     *
+     * @param videoFile the file to tag
+     */
+    private void tagFileIfEnabled(final Path videoFile) {
+        if (!userPrefs.isTagVideoMetadata()) {
+            return;
+        }
+        try {
+            MetadataTaggingController taggingController = new MetadataTaggingController();
+            boolean tagged = taggingController.tagIfEnabled(videoFile, episode);
+            if (!tagged) {
+                logger.warning("Failed to tag metadata for: " + videoFile);
+            }
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Exception during metadata tagging for: " + videoFile, e);
         }
     }
 
@@ -497,6 +522,8 @@ public class FileMover implements Callable<Boolean> {
             if (destPath.equals(realSrc)) {
                 logger.info("nothing to be done to " + srcPath);
                 episode.setAlreadyInPlace();
+                // Still tag metadata even if file is already correctly named
+                tagFileIfEnabled(realSrc);
                 return;
             }
             // If overwrite is enabled, allow the move to proceed; doActualMove will handle replacement.

@@ -127,17 +127,20 @@ CI (GitHub Actions) runs a Windows build and uploads artifacts:
 Current versions are managed via Gradle version catalogs (`gradle/libs.versions.toml`).
 
 Runtime dependencies:
-- SWT (Windows x64) 3.124.0
+- SWT (Windows x64) 3.129.0
 - XStream 1.4.21
-- Apache Commons Codec 1.17.0
-- OkHttp 4.12.0
+- Apache Commons Codec 1.21.0
+- OkHttp 5.3.2
+- mp4parser 1.9.56
 
 Test dependencies:
 - JUnit 4.13.2
 
 Build tooling:
-- Shadow plugin 8.1.1
-- Launch4j Gradle plugin 3.0.5
+- Gradle 9.3.1
+- Shadow plugin 9.3.1 (GradleUp)
+- Launch4j Gradle plugin 4.0.0
+- SpotBugs plugin 6.4.8
 
 ## Contributions
 If you'd like to contribute, open a pull request against the `master` branch.

@@ -206,6 +206,7 @@ class PreferencesDialog extends Dialog {
     private Button deleteRowsCheckbox;
     private Button overwriteDestinationCheckbox;
     private Button cleanupDuplicatesCheckbox;
+    private Button tagVideoMetadataCheckbox;
 
     // If checked, set moved/renamed files' modification time to "now".
     // If unchecked (default), preserve original modification time.
@@ -665,6 +666,14 @@ class PreferencesDialog extends Dialog {
             CLEANUP_DUPLICATES_TEXT,
             CLEANUP_DUPLICATES_TOOLTIP,
             prefs.isCleanupDuplicateVideoFiles(),
+            generalGroup,
+            GridData.BEGINNING,
+            3
+        );
+        tagVideoMetadataCheckbox = createCheckbox(
+            TAG_VIDEO_METADATA_TEXT,
+            TAG_VIDEO_METADATA_TOOLTIP,
+            prefs.isTagVideoMetadata(),
             generalGroup,
             GridData.BEGINNING,
             3
@@ -1608,6 +1617,9 @@ class PreferencesDialog extends Dialog {
         );
         prefs.setCleanupDuplicateVideoFiles(
             cleanupDuplicatesCheckbox.getSelection()
+        );
+        prefs.setTagVideoMetadata(
+            tagVideoMetadataCheckbox.getSelection()
         );
 
         // Default is preserve; checkbox is the inverse ("set to now").
