@@ -56,17 +56,33 @@ This section is the “living” priority order for what’s left, based on:
    - **Effort:** Small/Medium
 
 ### P2 — Medium impact / longer horizon
-5. **Headless CLI mode (automation/pipelines)**
+5. **MKV metadata tagging via mkvpropedit**
+   - **Why:** Extend metadata tagging to MKV files (currently only MP4/M4V/MOV supported).
+   - **How:** Use `mkvpropedit` CLI from mkvtoolnix (if installed) to write Matroska tags:
+     - `TITLE` - Episode title
+     - `COLLECTION` - Series/show name
+     - `PART_NUMBER` - Episode number
+     - `SEASON` - Season number
+     - `DATE_RELEASED` - Air date
+     - `CONTENT_TYPE` - "TV Show"
+   - **Where:** new `MkvMetadataTagger implements VideoMetadataTagger` in `org.tvrenamer.controller.metadata`
+   - **Notes:**
+     - Requires mkvtoolnix to be installed and `mkvpropedit` on PATH
+     - Should gracefully skip if mkvpropedit not available
+     - Alternative: pure Java EBML library (more complex, no external dependency)
+   - **Effort:** Small/Medium
+
+6. **Headless CLI mode (automation/pipelines)**
    - **Why:** Enables scripted usage without SWT/GUI.
    - **Where:** new entry point (e.g., `org.tvrenamer.controller.CliMain`) + separation of UI vs core logic.
    - **Effort:** Medium/Large
 
-6. **Show selection heuristics: verify coverage and expand carefully**
+7. **Show selection heuristics: verify coverage and expand carefully**
    - **Why:** Reduce unnecessary prompts while staying deterministic/spec-driven.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
    - **Effort:** Medium (incremental)
 
-7. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
+8. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
    - **Why:** Enables future SWT upgrades without breaking Windows startup.
    - **Where:** dependency management + docs
    - **Effort:** Small/Medium
@@ -84,6 +100,7 @@ Evaluated available updates for all dependencies and plugins.
 | XStream | 1.4.21 | 1.4.21 | ✅ Latest |
 | Commons Codec | 1.21.0 | 1.21.0 | ✅ Updated |
 | OkHttp | 5.3.2 | 5.3.2 | ✅ Updated |
+| mp4parser | 1.9.56 | 1.9.56 | ✅ New (metadata tagging) |
 | JUnit | 4.13.2 | 6.0.0 | 📋 Deferred (see below) |
 | Gradle | 9.3.1 | 9.3.1 | ✅ Updated |
 | Shadow Plugin | 9.3.1 | 9.3.1 | ✅ Updated |

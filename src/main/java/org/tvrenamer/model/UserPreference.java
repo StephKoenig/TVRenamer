@@ -25,6 +25,9 @@ public enum UserPreference {
     // After move, clean up duplicate video files (same base name, different extension).
     CLEANUP_DUPLICATES,
 
+    // Tag video files with TV metadata (show, season, episode, title) after move.
+    TAG_VIDEO_METADATA,
+
     // Since these are only meaningful at startup, they probably should not be watched
     UPDATE_CHECK,
     @SuppressWarnings("unused")

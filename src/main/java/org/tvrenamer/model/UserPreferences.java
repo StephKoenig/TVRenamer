@@ -67,6 +67,10 @@ public class UserPreferences {
     // (same base name, different extension) and move them to a duplicates folder.
     private boolean cleanupDuplicateVideoFiles = false;
 
+    // If true, after a successful move, write TV metadata (show, season, episode, title)
+    // to supported video files (MP4/M4V).
+    private boolean tagVideoMetadata = false;
+
     // Fun metric: count of files successfully processed (renamed and/or moved).
     // Persisted in prefs.xml. This should only be incremented once per successfully
     // processed TableItem to avoid double-counting rename+move operations.
@@ -332,6 +336,24 @@ public class UserPreferences {
         if (valuesAreDifferent(this.cleanupDuplicateVideoFiles, cleanup)) {
             this.cleanupDuplicateVideoFiles = cleanup;
             preferenceChanged(UserPreference.CLEANUP_DUPLICATES);
+        }
+    }
+
+    /**
+     * @return true if video files should be tagged with TV metadata (show, season,
+     *         episode, title) after move
+     */
+    public boolean isTagVideoMetadata() {
+        return tagVideoMetadata;
+    }
+
+    /**
+     * @param tag true to enable metadata tagging, false to disable
+     */
+    public void setTagVideoMetadata(boolean tag) {
+        if (valuesAreDifferent(this.tagVideoMetadata, tag)) {
+            this.tagVideoMetadata = tag;
+            preferenceChanged(UserPreference.TAG_VIDEO_METADATA);
         }
     }
 
@@ -943,6 +965,8 @@ public class UserPreferences {
             alwaysOverwriteDestination +
             ",\n  cleanupDuplicateVideoFiles=" +
             cleanupDuplicateVideoFiles +
+            ",\n  tagVideoMetadata=" +
+            tagVideoMetadata +
             ",\n  deleteRowAfterMove=" +
             deleteRowAfterMove +
             ",\n  setRecursivelyAddFolders=" +

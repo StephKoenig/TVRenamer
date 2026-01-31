@@ -1222,6 +1222,30 @@ public class FileEpisode {
     }
 
     /**
+     * Get the TV show that this file episode has been matched to.
+     *
+     * @return the matched Show, or null if not yet matched
+     */
+    public Show getActualShow() {
+        return actualShow;
+    }
+
+    /**
+     * Get the chosen episode object for this file episode.
+     *
+     * @return the chosen Episode, or null if not yet determined
+     */
+    public Episode getActualEpisode() {
+        if (actualEpisodes == null || actualEpisodes.isEmpty()) {
+            return null;
+        }
+        if (chosenEpisode >= actualEpisodes.size()) {
+            return null;
+        }
+        return actualEpisodes.get(chosenEpisode);
+    }
+
+    /**
      * Retrieves the "basename" for the proposed destination for this file.
      * <p>
      *
