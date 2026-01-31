@@ -1,6 +1,6 @@
 [versions]
 # Tooling / plugins
-shadow = "8.1.1"
+shadow = "9.3.1"
 launch4j = "4.0.0"
 
 # Runtime dependencies
@@ -20,5 +20,5 @@ okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 
 [plugins]
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 launch4j = { id = "edu.sc.seis.launch4j", version.ref = "launch4j" }
