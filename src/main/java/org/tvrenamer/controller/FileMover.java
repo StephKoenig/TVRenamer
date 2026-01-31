@@ -329,8 +329,8 @@ public class FileMover implements Callable<Boolean> {
         FileTime originalMtime = null;
         try {
             originalMtime = Files.getLastModifiedTime(srcPath);
-        } catch (Exception ignored) {
-            // best-effort
+        } catch (Exception e) {
+            logger.fine("Could not read mtime from " + srcPath + ": " + e.getMessage());
         }
 
         // Record whether this move will require copy+delete (used for overall progress reporting).

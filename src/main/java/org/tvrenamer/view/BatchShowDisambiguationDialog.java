@@ -22,6 +22,8 @@ import org.eclipse.swt.widgets.TableItem;
 import org.tvrenamer.model.ShowOption;
 import org.tvrenamer.model.ShowStore;
 
+import java.util.logging.Logger;
+
 /**
  * Modal dialog used to resolve all ambiguous show lookups in a single batch.
  *
@@ -33,6 +35,10 @@ import org.tvrenamer.model.ShowStore;
  * If the user cancels, returns null.
  */
 public final class BatchShowDisambiguationDialog extends Dialog {
+
+    private static final Logger logger = Logger.getLogger(
+        BatchShowDisambiguationDialog.class.getName()
+    );
 
     private static final int MAX_OPTIONS_PER_SHOW = 5;
 
@@ -612,8 +618,8 @@ public final class BatchShowDisambiguationDialog extends Dialog {
                 if (y != null) {
                     year = y.toString();
                 }
-            } catch (Exception ignored) {
-                // best-effort
+            } catch (Exception e) {
+                logger.fine("Could not get first aired year: " + e.getMessage());
             }
 
             String id = safe(opt.getIdString());
@@ -624,8 +630,8 @@ public final class BatchShowDisambiguationDialog extends Dialog {
                 if (aliasNames != null && !aliasNames.isEmpty()) {
                     aliases = String.join(", ", aliasNames);
                 }
-            } catch (Exception ignored) {
-                // best-effort
+            } catch (Exception e) {
+                logger.fine("Could not get alias names: " + e.getMessage());
             }
 
             item.setText(new String[] { name, year, id, aliases });

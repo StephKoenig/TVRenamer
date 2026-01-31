@@ -560,8 +560,8 @@ public final class ResultsTable
                         String msg = null;
                         try {
                             msg = failedShow.toString();
-                        } catch (Exception ignored) {
-                            // best-effort
+                        } catch (Exception e) {
+                            logger.fine("Could not get failure message: " + e.getMessage());
                         }
                         if (
                             msg != null &&
@@ -900,8 +900,8 @@ public final class ResultsTable
                             String msg = null;
                             try {
                                 msg = failedShow.toString();
-                            } catch (Exception ignored) {
-                                // best-effort
+                            } catch (Exception e) {
+                                logger.fine("Could not get failure message: " + e.getMessage());
                             }
                             if (
                                 msg != null &&
@@ -1036,8 +1036,8 @@ public final class ResultsTable
                     if (!sameDisk) {
                         totalCopyBytes += m.getFileSize();
                     }
-                } catch (Exception ignored) {
-                    // best-effort
+                } catch (Exception e) {
+                    logger.fine("Could not determine disk for progress: " + e.getMessage());
                 }
             }
             setOverallCopyTotalBytes(totalCopyBytes);
@@ -1931,8 +1931,8 @@ public final class ResultsTable
                             showBatchDisambiguationDialogIfNeeded();
                         }
                     }
-                } catch (Exception ignored) {
-                    // best-effort; do not break normal selection behavior
+                } catch (Exception e) {
+                    logger.fine("Selection event handling error: " + e.getMessage());
                 }
             }
         });
