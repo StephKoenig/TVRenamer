@@ -27,7 +27,7 @@ public class MetadataTaggingController {
     public MetadataTaggingController() {
         taggers = new ArrayList<>();
         taggers.add(new Mp4MetadataTagger());
-        // Future: taggers.add(new MkvMetadataTagger());
+        taggers.add(new MkvMetadataTagger());  // Requires mkvpropedit; skips if not found
     }
 
     /**

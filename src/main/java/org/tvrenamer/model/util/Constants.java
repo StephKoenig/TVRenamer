@@ -169,8 +169,11 @@ public class Constants {
         "Tag video files with episode metadata [?]";
     public static final String TAG_VIDEO_METADATA_TOOLTIP =
         "If checked, TVRenamer will write TV show metadata (show name, season, episode, title) " +
-        "to supported video files (MP4/M4V) after moving. This enables media players to display " +
-        "episode information.";
+        "to supported video files after moving. This enables media players to display " +
+        "episode information.\n\n" +
+        "Supported formats:\n" +
+        "• MP4/M4V/MOV - Built-in support (iTunes-style atoms)\n" +
+        "• MKV/WebM - Requires MKVToolNix installed (uses mkvpropedit)";
     public static final String RENAME_TOKEN_TEXT = "Rename Tokens [?]";
     public static final String RENAME_FORMAT_TEXT = "Rename Format [?]";
     public static final String RENAME_SELECTED_TOOLTIP =
