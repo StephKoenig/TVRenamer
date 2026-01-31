@@ -347,6 +347,51 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Opens in system default browser via `Program.launch()`
   - Temp files marked for deletion on JVM exit
 
+### 29) Extract EpisodeReplacementFormatter from FileEpisode
+- **Why:** `FileEpisode` had grown large (~1400 lines); extracting formatting logic improves maintainability and testability.
+- **Where:** `org.tvrenamer.model.EpisodeReplacementFormatter` (new), `org.tvrenamer.model.FileEpisode` (refactored)
+- **What we did:**
+  - Created `EpisodeReplacementFormatter` with extracted static formatting methods:
+    - `format()` (was `plugInInformation`) — main token replacement
+    - `substituteAirDate()` (was `plugInAirDate`) — date token handling
+    - `removeTokens()` — helper for null date cases
+  - Modernized the formatting logic:
+    - Changed `replaceAll()` to `replace()` — tokens are literals, not regex; eliminates need for `Matcher.quoteReplacement()` and reduces overhead
+    - Cached `DateTimeFormatter` instances as static finals (expensive to create)
+  - Cleaned up `FileEpisode`:
+    - Removed unused `FailureReason` enum (defined but never referenced)
+    - Removed unused `setConflict()` method (defined but never called)
+    - Simplified `checkFile()` by removing no-op method calls
+    - Cleaned up spurious blank lines in multi-line comments
+    - Simplified Integer auto-unboxing (`multiEpisodeEnd >= multiEpisodeStart`)
+  - Reduced `FileEpisode` from ~1400 to ~1210 lines
+- **Notes:**
+  - External API unchanged; `setNoFile()`, `setFileVerified()`, `setMoving()` retained as no-ops for API compatibility (called from FileMover)
+  - All tests pass after refactoring
+
+### 30) String encoding cleanup and TrickyTitlesTest
+- **Why:** Historical code mixed URL encoding, XML post-processing, and filename sanitization in confusing ways. Unused/deprecated methods cluttered `StringUtils`.
+- **Where:** `org.tvrenamer.controller.util.StringUtils` (cleaned), `TrickyTitlesTest` (new), `docs/Strings Spec.md` (new)
+- **What we did:**
+  - Created `docs/Strings Spec.md` documenting encoding responsibilities:
+    - URL encoding (query parameters)
+    - Filename sanitization (illegal Windows chars)
+    - XML handling (never mutate downloaded payloads)
+  - Removed unused/deprecated methods from `StringUtils`:
+    - `toUpper()` — unused
+    - `encodeUrlCharacters()` / `decodeUrlCharacters()` — deprecated wrappers
+    - `encodeSpecialCharacters()` / `decodeSpecialCharacters()` — confusing legacy methods
+    - Logger field (only used by removed methods)
+  - Created `TrickyTitlesTest.java` with 20 tests covering real-world edge cases:
+    - Mission: Impossible - Fallout (2018), V/H/S, ? (2021), "What" (2013)
+    - S.W.A.T. (2017), *batteries not included, Woodstock '99
+    - Unicode characters (em-dash, curly quotes, ellipsis, accented letters)
+  - Updated `StringUtilsTest.java` to remove tests for deleted methods
+- **Notes:**
+  - All encoding responsibilities are now documented in one place
+  - Test coverage for tricky titles catches regressions
+  - See `docs/Strings Spec.md` for the complete specification
+
 ---
 
 ## Related records
@@ -356,3 +401,4 @@ When you complete an item that was tracked in `docs/TODO.md`:
 - Specs:
   - `docs/Unified Evaluator Spec.md`
   - `docs/Unifying Matches Spec.md`
+  - `docs/Strings Spec.md`

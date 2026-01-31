@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 public class StringUtilsTest {
 
     @Test
-    public void testEncodeUrlCharactersRoundTripUtf8() {
+    public void testEncodeUrlQueryParamRoundTrip() {
         // Includes: spaces, ampersand, question mark, equals, slash, plus, and non-ASCII characters.
         // We want robust URL encoding/decoding round-tripping for query parameters.
         final String original = "Doctor Who (2023) & S01E01?x=1+2/3 — café";
@@ -17,49 +17,6 @@ public class StringUtilsTest {
         final String decoded = decodeUrlQueryParam(encoded);
 
         assertEquals(original, decoded);
-    }
-
-    @Test
-    public void testEncodeSpecialCharactersXmlNoop() {
-        // encodeSpecialCharacters historically attempted to "encode" payloads.
-        // For XML documents, it must not mutate the content.
-        final String xml =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Data><SeriesName>Fish & Chips</SeriesName></Data>";
-        assertEquals(xml, encodeSpecialCharacters(xml));
-    }
-
-    @Test
-    public void testEncodeSpecialCharactersDisplayNormalization() {
-        // For non-XML strings, encodeSpecialCharacters is now a conservative display normalizer.
-        // It should remove nulls and normalize whitespace rather than URL-encode.
-        final String input = "Hello\u0000\tWorld\r\n  Again";
-
-        // Behavior: nulls -> space, then [\r\n\t]+ -> single space, then trim.
-        // Note: this does NOT collapse runs of ordinary spaces.
-        final String expected = "Hello  World   Again";
-        final String actual = encodeSpecialCharacters(input);
-
-        assertEquals(
-            expected,
-            actual,
-            "Expected: [" +
-                debugWhitespace(expected) +
-                "] but got [" +
-                debugWhitespace(actual) +
-                "]"
-        );
-    }
-
-    private static String debugWhitespace(String s) {
-        if (s == null) {
-            return "<null>";
-        }
-        String out = s;
-        out = out.replace("\r", "\\r");
-        out = out.replace("\n", "\\n");
-        out = out.replace("\t", "\\t");
-        out = out.replace("\u0000", "\\0");
-        return out;
     }
 
     @Test

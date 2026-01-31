@@ -7,20 +7,17 @@
 
 package org.tvrenamer.model;
 
-import static org.tvrenamer.model.ReplacementToken.*;
 import static org.tvrenamer.model.util.Constants.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
+
 import org.tvrenamer.controller.FilenameParser;
 import org.tvrenamer.controller.util.StringUtils;
 
@@ -113,19 +110,11 @@ public class FileEpisode {
     private String extractedFilenameShow = "";
 
     // Multi-episode support (single file containing a span of episodes).
-
     // When present, we select the lowest episode (A) for lookup and append "(A-B)"
-
     // to the episode title token used for rename output.
-
-    //
-
     // Note: this is filename-derived truth; even if provider lookup for B fails, we still
-
     // append the suffix for user clarity and consistency.
-
     private Integer multiEpisodeStart = null;
-
     private Integer multiEpisodeEnd = null;
 
     private String filenameShow = "";
@@ -187,10 +176,6 @@ public class FileEpisode {
     private FilenameParser.ParseFailureReason parseFailureReason = null;
 
     private boolean currentPathMatchesTemplate = false;
-
-    public enum FailureReason {
-        ORIGINAL_MISSING,
-    }
 
     private List<String> replacementOptions = null;
     private String replacementText = ADDED_PLACEHOLDER_FILENAME;
@@ -434,25 +419,16 @@ public class FileEpisode {
 
     private void checkFile(boolean mustExist) {
         if (Files.exists(pathObj)) {
-            setFileVerified();
             try {
                 fileSize = Files.size(pathObj);
             } catch (IOException ioe) {
-                logger.log(
-                    Level.WARNING,
-                    "couldn't get size of " + pathObj,
-                    ioe
-                );
-                setNoFile();
+                logger.log(Level.WARNING, "couldn't get size of " + pathObj, ioe);
                 fileSize = NO_FILE_SIZE;
             }
         } else {
             if (mustExist) {
-                logger.warning(
-                    "creating FileEpisode for nonexistent path, " + pathObj
-                );
+                logger.warning("creating FileEpisode for nonexistent path, " + pathObj);
             }
-            setNoFile();
             fileSize = NO_FILE_SIZE;
         }
     }
@@ -643,12 +619,6 @@ public class FileEpisode {
     public void setAlreadyInPlace() {
         currentPathMatchesTemplate = true;
     }
-
-    /**
-     * Updates the status to know that there is already a file with the desired
-     * name/location where the user's template requests we move the source file.
-     */
-    public void setConflict() {}
 
     /**
      * Updates the status to know that we have successfully "moved" the file to
@@ -930,196 +900,6 @@ public class FileEpisode {
         return dest.toString();
     }
 
-    private static String formatDate(
-        final LocalDate date,
-        final String format
-    ) {
-        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern(format);
-        return dateFormat.format(date);
-    }
-
-    /**
-     * Replace the control strings in the replacement template, with the episode
-     * information.
-     *
-     * This method is static to make it obvious that it doesn't rely on any instance
-     * variables;
-     * since it also does not modify any class variables, it is a pure function, and
-     * safe to
-     * call from any context.
-     *
-     * @param replacementTemplate
-     *                            the template provided by the user via the
-     *                            preferences dialog
-     * @param actualShow
-     *                            the TV show that we have determined matches this
-     *                            FileEpisode
-     * @param actualEpisode
-     *                            the episode that we, possibly with help from the
-     *                            user, have determined matches
-     * @param placement
-     *                            the season number and episode number information
-     *                            we obtained from the filename
-     * @param resolution
-     *                            the screen resolution (e.g., "720p", etc.) we
-     *                            obtained from the filename
-     * @return the template string with the episode information replacing the
-     *         control strings
-     */
-    @SuppressWarnings("WeakerAccess")
-    static String plugInInformation(
-        final String replacementTemplate,
-        final Show actualShow,
-        final Episode actualEpisode,
-        final EpisodePlacement placement,
-        final String resolution,
-        final String episodeTitleOverride
-    ) {
-        final String showName = actualShow.getName();
-
-        String episodeTitle = (episodeTitleOverride != null)
-            ? episodeTitleOverride
-            : actualEpisode.getTitle();
-
-        int len = episodeTitle.length();
-
-        if (len > MAX_TITLE_LENGTH) {
-            logger.fine("truncating episode title to " + episodeTitle);
-
-            episodeTitle = episodeTitle.substring(0, MAX_TITLE_LENGTH);
-        }
-
-        String newFilename = replacementTemplate
-            .replaceAll(SEASON_NUM.getToken(), String.valueOf(placement.season))
-            .replaceAll(
-                SEASON_NUM_LEADING_ZERO.getToken(),
-                StringUtils.zeroPadTwoDigits(placement.season)
-            )
-            .replaceAll(
-                EPISODE_NUM.getToken(),
-                StringUtils.formatDigits(placement.episode)
-            )
-            .replaceAll(
-                EPISODE_NUM_LEADING_ZERO.getToken(),
-                StringUtils.zeroPadThreeDigits(placement.episode)
-            )
-            .replaceAll(
-                SHOW_NAME.getToken(),
-                Matcher.quoteReplacement(showName)
-            )
-            .replaceAll(
-                EPISODE_TITLE.getToken(),
-                Matcher.quoteReplacement(episodeTitle)
-            )
-            .replaceAll(
-                EPISODE_TITLE_NO_SPACES.getToken(),
-                Matcher.quoteReplacement(StringUtils.makeDotTitle(episodeTitle))
-            )
-            .replaceAll(EPISODE_RESOLUTION.getToken(), resolution);
-
-        // Date and times
-
-        final LocalDate airDate = actualEpisode.getAirDate();
-
-        if (airDate == null) {
-            logger.log(
-                Level.WARNING,
-                "Episode air date not found for " +
-                    showName +
-                    ", " +
-                    placement +
-                    ", \"" +
-                    episodeTitle +
-                    "\""
-            );
-        }
-
-        // If the airDate is null, we warn (above) but we go ahead and do the
-
-        // substitution anyway;
-
-        // if the date is null, we need to replace the control strings with the empty
-
-        // string.
-
-        newFilename = plugInAirDate(airDate, newFilename);
-
-        return StringUtils.sanitiseTitle(newFilename);
-    }
-
-    private static String removeTokens(
-        final String orig,
-        final ReplacementToken... tokens
-    ) {
-        String removed = orig;
-
-        for (ReplacementToken token : tokens) {
-            removed = removed.replaceAll(token.getToken(), "");
-        }
-        return removed;
-    }
-
-    /**
-     * Replace the date control strings in the template, with the episode air date
-     * information.
-     * May be called with null if the episode in question doesn't have air date
-     * information.
-     *
-     * This method is static to make it obvious that it doesn't rely on any instance
-     * variables;
-     * since it also does not modify any class variables, it is a pure function, and
-     * safe to
-     * call from any context.
-     *
-     * @param airDate
-     *                 the date information we obtained from the episode; may be
-     *                 null
-     * @param template
-     *                 the replacement template provided by the user via the
-     *                 preferences dialog; may be
-     *                 partially filled in already, of course.
-     * @return the template string with the air date information replacing the
-     *         control strings
-     */
-    @SuppressWarnings("WeakerAccess")
-    static String plugInAirDate(
-        final LocalDate airDate,
-        final String template
-    ) {
-        // Date and times
-        if (airDate == null) {
-            return removeTokens(
-                template,
-                DATE_DAY_NUM,
-                DATE_DAY_NUMLZ,
-                DATE_MONTH_NUM,
-                DATE_MONTH_NUMLZ,
-                DATE_YEAR_FULL,
-                DATE_YEAR_MIN
-            );
-        } else {
-            return template
-                .replaceAll(DATE_DAY_NUM.getToken(), formatDate(airDate, "d"))
-                .replaceAll(
-                    DATE_DAY_NUMLZ.getToken(),
-                    formatDate(airDate, "dd")
-                )
-                .replaceAll(DATE_MONTH_NUM.getToken(), formatDate(airDate, "M"))
-                .replaceAll(
-                    DATE_MONTH_NUMLZ.getToken(),
-                    formatDate(airDate, "MM")
-                )
-                .replaceAll(
-                    DATE_YEAR_FULL.getToken(),
-                    formatDate(airDate, "yyyy")
-                )
-                .replaceAll(
-                    DATE_YEAR_MIN.getToken(),
-                    formatDate(airDate, "yy")
-                );
-        }
-    }
-
     /**
      * Calculates the destination basename for this FileEpisode.
      * <p>
@@ -1172,36 +952,21 @@ public class FileEpisode {
         }
 
         // Multi-episode support: if this file represents episodes A..B in a single file,
-
         // append "(A-B)" to the title token used for rename output.
-
         // - Always use compact numbers (no leading zeros)
-
         // - Always append when span is present, even if provider lookup for B fails
-
         Episode ep = actualEpisodes.get(n);
 
         String episodeTitleOverride = null;
-        if (
-            ep != null &&
-            multiEpisodeStart != null &&
-            multiEpisodeEnd != null &&
-            multiEpisodeEnd.intValue() >= multiEpisodeStart.intValue()
-        ) {
-            final String baseTitle = ep.getTitle();
-
+        if (ep != null && multiEpisodeStart != null && multiEpisodeEnd != null
+                && multiEpisodeEnd >= multiEpisodeStart) {
+            String baseTitle = ep.getTitle();
             if (baseTitle != null && !baseTitle.isEmpty()) {
-                episodeTitleOverride =
-                    baseTitle +
-                    " (" +
-                    multiEpisodeStart.intValue() +
-                    "-" +
-                    multiEpisodeEnd.intValue() +
-                    ")";
+                episodeTitleOverride = baseTitle + " (" + multiEpisodeStart + "-" + multiEpisodeEnd + ")";
             }
         }
 
-        return plugInInformation(
+        return EpisodeReplacementFormatter.format(
             userPrefs.getRenameReplacementString(),
             actualShow,
             ep,

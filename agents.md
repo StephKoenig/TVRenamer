@@ -119,7 +119,7 @@ java "-Dtvrenamer.debug=true" -jar .\tvrenamer.jar
 
 ---
 
-## Working style (how we’ve been operating)
+## Working style (how we've been operating)
 
 ### Compile locally after changes
 Preferred loop:
@@ -131,6 +131,15 @@ Preferred loop:
    - `./gradlew clean build`
    - `./gradlew clean build shadowJar createExe` for full packaging parity
 4. Only then commit/push.
+
+### Clean build checkpoints
+**Always run `./gradlew clean build`** at these checkpoints:
+- **Before committing** — ensures the commit represents buildable code
+- **Before pushing** — ensures CI won't fail on obvious compile errors
+- **After completing a significant feature or refactor** — allows the user to test a known-good build
+- **Before creating a release** — ensures artifacts are clean and reproducible
+
+This catches issues early and gives the user a testable artifact after each significant milestone.
 
 ### Keep diffs focused
 - Avoid unrelated reformatting.

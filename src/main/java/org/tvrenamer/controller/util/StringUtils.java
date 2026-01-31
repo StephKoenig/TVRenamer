@@ -9,13 +9,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
 public class StringUtils {
-
-    private static final Logger logger = Logger.getLogger(
-        StringUtils.class.getName()
-    );
 
     private static final Locale THIS_LOCALE = Locale.getDefault();
 
@@ -94,26 +89,6 @@ public class StringUtils {
             return "";
         }
         return orig.toLowerCase(THIS_LOCALE);
-    }
-
-    /**
-     * Simply returns the given String rendered in all upper-case letters.<p>
-     *
-     * The differences between this and just calling <code>toUpperCase</code> are:
-     * <ul><li>this takes null and returns the empty String</li>
-     *     <li>this provides the current locale for upper-casing</li></ul>
-     *
-     * @param orig
-     *    the String to upper-case
-     * @return
-     *    the String, upper-cased in this locale
-     */
-    @SuppressWarnings("unused")
-    public static String toUpper(String orig) {
-        if (orig == null) {
-            return "";
-        }
-        return orig.toUpperCase(THIS_LOCALE);
     }
 
     /**
@@ -478,17 +453,6 @@ public class StringUtils {
     }
 
     /**
-     * Reverse the effect of encodeUrlCharacters (legacy name).
-     *
-     * @deprecated Prefer {@link #decodeUrlQueryParam(String)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unused")
-    public static String decodeUrlCharacters(String input) {
-        return decodeUrlQueryParam(input);
-    }
-
-    /**
      * Encode a URL query parameter value.
      *
      * This is the preferred API for new code. It produces application/x-www-form-urlencoded
@@ -511,16 +475,6 @@ public class StringUtils {
             rval = rval.replaceAll("&", "%25");
             return rval;
         }
-    }
-
-    /**
-     * Replaces URL metacharacters with ASCII hex codes (legacy name).
-     *
-     * @deprecated Prefer {@link #encodeUrlQueryParam(String)}.
-     */
-    @Deprecated
-    public static String encodeUrlCharacters(String input) {
-        return encodeUrlQueryParam(input);
     }
 
     /**
@@ -616,59 +570,6 @@ public class StringUtils {
 
     public static String formatDigits(int number) {
         return DIGITS.get().format(number);
-    }
-
-    /**
-     * Replaces unsafe HTML Characters with HTML Entities
-     *
-     * @param input
-     *            string to encode
-     * @return HTML safe representation of input
-     */
-    public static String encodeSpecialCharacters(String input) {
-        if (input == null || input.length() == 0) {
-            return "";
-        }
-
-        // This method historically attempted to "encode" downloaded XML and also
-        // partially URL-encode spaces. That behavior is incorrect for XML payloads
-        // and can corrupt provider responses.
-        //
-        // Kept for backward compatibility: treat it as a no-op for XML documents.
-        // For non-XML strings, return a conservative "display-safe" string.
-        logger.finest("Input before encoding: [" + input + "]");
-
-        // If this looks like XML, do not modify it.
-        String trimmed = input.trim();
-        if (trimmed.startsWith("<?xml") || trimmed.startsWith("<")) {
-            return input;
-        }
-
-        // Display-safe (NOT URL-safe): avoid control characters and normalize whitespace.
-        String out = input;
-        out = out.replace('\u0000', ' ');
-        out = out.replaceAll("[\\r\\n\\t]+", " ").trim();
-
-        logger.finest("Input after encoding: [" + out + "]");
-        return out;
-    }
-
-    /**
-     * Reverse the effect of {@link #encodeSpecialCharacters}
-     *
-     * @param input
-     *            string to decode
-     * @return human-friendly representation of input
-     */
-    @SuppressWarnings("unused")
-    public static String decodeSpecialCharacters(String input) {
-        if (input == null || input.length() == 0) {
-            return "";
-        }
-
-        // encodeSpecialCharacters is now effectively a no-op for XML and a conservative
-        // display normalizer for other strings, so decoding is also effectively a no-op.
-        return input;
     }
 
     /**

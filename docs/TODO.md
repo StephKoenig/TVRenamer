@@ -17,32 +17,21 @@ This section is the “living” priority order for what’s left, based on:
 - **Security/robustness** (reduces risk of data loss or hard-to-debug failures)
 - **Effort** (how contained the change is)
 
-### P1 — High impact, moderate effort
-1. **Help: create simple static help pages and wire Help menu to open them** — **DONE**
-   - **Completed:** see `docs/Completed.md` item #28
-   - Implemented: embedded HTML help in `src/main/resources/help/`, F1 shortcut, HelpLauncher class
-
 ### P2 — Medium impact / longer horizon
-2. **Headless CLI mode (automation/pipelines)**
+1. **Headless CLI mode (automation/pipelines)**
    - **Why:** Enables scripted usage without SWT/GUI.
    - **Where:** new entry point (e.g., `org.tvrenamer.controller.CliMain`) + separation of UI vs core logic.
    - **Effort:** Medium/Large
 
-3. **Show selection heuristics: verify coverage and expand carefully**
+2. **Show selection heuristics: verify coverage and expand carefully**
    - **Why:** Reduce unnecessary prompts while staying deterministic/spec-driven.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
    - **Effort:** Medium (incremental)
 
-4. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
+3. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
    - **Why:** Enables future SWT upgrades without breaking Windows startup.
    - **Where:** dependency management + docs
    - **Effort:** Small/Medium
-
-### P3 — Lower priority / longer-term refactoring
-5. **Extract `EpisodeReplacementFormatter` from `FileEpisode`**
-   - **Why:** `FileEpisode` has grown large; extracting formatting logic improves maintainability.
-   - **Where:** `org.tvrenamer.model.FileEpisode`
-   - **Effort:** Medium
 
 ---
 
@@ -123,32 +112,7 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 ---
 
-## 4) XML / string encoding & parsing
-
-### Expand special-character encoding rules
-**Context:** Historically, the code mixed URL encoding, XML post-processing, and “display safe” transformations in a way that could be confusing and, in some cases, unsafe.  
-**Why it matters:** Metadata from online sources (or file names) can include characters that break XML, URLs, or filesystem constraints if handled in the wrong layer.
-
-- Source:
-  - `org.tvrenamer.controller.util.StringUtils` — URL encoding and “special character” helpers
-  - `org.tvrenamer.controller.TheTVDBProvider` — provider download paths
-
-**Broader approach note (for future work):**
-- Keep responsibilities separate and explicit:
-  - URL encoding/decoding (query parameters)
-  - XML handling (do not mutate downloaded XML payloads; escape only when generating XML)
-  - display normalization (whitespace/control characters)
-  - filename sanitization (illegal filesystem characters)
-
-**Potential follow-ups:**
-- Add tests for tricky titles (ampersands, apostrophes, unicode punctuation, etc.).
-- Audit filename construction paths to ensure `sanitiseTitle(...)` is consistently applied where needed.
-
-(Completed items are tracked in `docs/Completed.md`.)
-
----
-
-## 5) Episode DB / table population & responsiveness
+## 4) Episode DB / table population & responsiveness
 
 ### Consider canonicalization when file paths refer to same file
 **Context:** EpisodeDb can detect two strings refer to the same file; it currently chooses not to update the stored key/path even if it knows they match.  
@@ -167,7 +131,7 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 ---
 
-## 6) Show matching / selection heuristics
+## 5) Show matching / selection heuristics
 
 ### Future: allow pinning a show ID by extracted show name (not just query string)
 **Context:** Today, disambiguation selections are stored as `query string -> series id`, and name overrides are stored as `extracted show -> override text`. A future enhancement would allow a direct “pin by name” rule that bypasses ambiguity even without crafting/maintaining a query string.
@@ -195,7 +159,7 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 ---
 
-## 7) Preferences model improvements
+## 6) Preferences model improvements
 
 ### Enforce / normalize destination directory path expectations
 **Context:** Destination directory is described as “must be absolute path”, but enforcement is unclear.
@@ -229,7 +193,7 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 ---
 
-## 8) Preferences dialog drag/drop UX
+## 7) Preferences dialog drag/drop UX
 
 ### Drop target appends instead of inserting at drop location
 **Context:** Drag-and-drop of rename tokens into the replacement string currently appends, ignoring the actual drop position.
@@ -245,7 +209,7 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 ---
 
-## 9) “Soft TODOs” (non-`TODO:` forward-looking commentary)
+## 8) "Soft TODOs" (non-`TODO:` forward-looking commentary)
 
 This section captures additional improvement ideas expressed in comments that are not explicitly tagged with `TODO:`.
 
@@ -300,7 +264,7 @@ This section captures additional improvement ideas expressed in comments that ar
 
 ---
 
-## 10) Test-suite notes (future improvements & reliability)
+## 9) Test-suite notes (future improvements & reliability)
 
 This section captures forward-looking notes found in `src/test/java`. These are often about making tests more reliable across platforms, clarifying historical behaviors, or improving test ergonomics.
 
