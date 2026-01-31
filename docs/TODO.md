@@ -10,14 +10,6 @@ Notes are grouped by area and summarized at a high level. Where helpful, the sou
 
 ---
 
-## Completed work
-
-Completed work is tracked in `docs/Completed.md`. Keep this file focused on future work only.
-
-
-
----
-
 ## Prioritized backlog (user impact / robustness / effort)
 
 This section is the “living” priority order for what’s left, based on:
@@ -25,52 +17,33 @@ This section is the “living” priority order for what’s left, based on:
 - **Security/robustness** (reduces risk of data loss or hard-to-debug failures)
 - **Effort** (how contained the change is)
 
-### P0 — High user impact / safety (do these first)
-1. **Improve handling of "unparsed" files** — **DONE**
-   - **Completed:** see `docs/Completed.md` item #26
-   - Implemented: ParseFailureReason enum, diagnostic logic, summary dialog after batch parsing
-
-2. **Expand conflict detection beyond exact filename matches** — **DONE**
-   - **Completed:** see `docs/Completed.md` item #21
-   - Implemented: progress tick, always-overwrite option, duplicate cleanup, fuzzy episode matching
-
-3. **Refactor and Consolidate** — **PARTIALLY DONE**
-   - **Completed:** see `docs/Completed.md` items #20, #25
-   - Narrowed overly broad `catch (Exception)` blocks to specific exception types
-   - **Items (remaining):**
-     - Consider extracting `EpisodeReplacementFormatter` from `FileEpisode` (longer-term)
-
 ### P1 — High impact, moderate effort
-4. **Help: create simple static help pages and wire Help menu to open them**
+1. **Help: create simple static help pages and wire Help menu to open them**
    - **Why:** "Help" exists but is unwired; users need guidance without digging through issues/releases.
    - **Where:** `org.tvrenamer.view.UIStarter` (Help menu actions) + new `docs/help/` published via GitHub Pages (or similar).
    - **Effort:** Small/Medium
 
-5. **Add unit tests for unified show selection (no network calls)** — **DONE**
-   - **Completed:** see `docs/Completed.md` item #24
-   - Created comprehensive test suite with 30+ tests for ShowSelectionEvaluator
-
 ### P2 — Medium impact / longer horizon
-5. **MKV metadata tagging via mkvpropedit** — **DONE**
-   - **Completed:** see `docs/Completed.md` item #27
-   - Implemented: `MkvMetadataTagger` using mkvpropedit CLI
-   - Writes Matroska tags at Collection/Season/Episode levels plus segment title
-   - Gracefully skips if mkvpropedit not installed
-
-6. **Headless CLI mode (automation/pipelines)**
+2. **Headless CLI mode (automation/pipelines)**
    - **Why:** Enables scripted usage without SWT/GUI.
    - **Where:** new entry point (e.g., `org.tvrenamer.controller.CliMain`) + separation of UI vs core logic.
    - **Effort:** Medium/Large
 
-7. **Show selection heuristics: verify coverage and expand carefully**
+3. **Show selection heuristics: verify coverage and expand carefully**
    - **Why:** Reduce unnecessary prompts while staying deterministic/spec-driven.
    - **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`
    - **Effort:** Medium (incremental)
 
-8. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
+4. **SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility**
    - **Why:** Enables future SWT upgrades without breaking Windows startup.
    - **Where:** dependency management + docs
    - **Effort:** Small/Medium
+
+### P3 — Lower priority / longer-term refactoring
+5. **Extract `EpisodeReplacementFormatter` from `FileEpisode`**
+   - **Why:** `FileEpisode` has grown large; extracting formatting logic improves maintainability.
+   - **Where:** `org.tvrenamer.model.FileEpisode`
+   - **Effort:** Medium
 
 ---
 
@@ -115,18 +88,6 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 **Staying on SWT 3.129.0** until Eclipse fixes this upstream or a workaround is found.
 
-### JUnit 5 (Jupiter) Migration — COMPLETED
-Migrated from JUnit 4.13.2 to JUnit 5.11.4 (Jupiter). Changes included:
-- Updated 8 test files with annotation and import changes
-- Annotation changes: `@BeforeClass` → `@BeforeAll`, `@Before` → `@BeforeEach`, `@After` → `@AfterEach`, `@Ignore` → `@Disabled`
-- Import changes: `org.junit.*` → `org.junit.jupiter.api.*`
-- `@Rule TemporaryFolder` → `@TempDir Path` annotation (JUnit Jupiter idiom)
-- Assertion parameter order: message argument moved from first to last position
-- Added `testRuntimeOnly("org.junit.platform:junit-platform-launcher")` for Gradle compatibility
-- Added `useJUnitPlatform()` to test tasks in build.gradle
-
-All tests pass. See `docs/Completed.md` for full details.
-
 ---
 
 ## 1) File moving / filesystem behavior
@@ -137,15 +98,7 @@ All tests pass. See `docs/Completed.md` for full details.
 
 ## 2) Move conflict detection & generalization
 
-**COMPLETED:** See `docs/Completed.md` item #21 for implementation details.
-
-Implemented features:
-1. Progress tick after completion (checkmark icon, 500ms delay)
-2. "Always overwrite" preference option
-3. Duplicate cleanup (deletes video files with same base name or same season/episode; only video, not subtitles)
-4. Fuzzy matching for episode variants (season/episode identity matching in both conflict detection and cleanup)
-
-**Remaining potential follow-ups (for future consideration):**
+**Potential follow-ups (for future consideration):**
 - Optionally hash/compare files to detect identical content
 - Expose more granular conflict policy choices in preferences
 
@@ -197,19 +150,6 @@ Implemented features:
 ---
 
 ## 5) Episode DB / table population & responsiveness
-
-### Improve handling of “unparsed” files
-**Context:** Files that fail parsing are still inserted but “not much use”.  
-**Why it matters:** Users want actionable feedback: why it failed, how to fix it, and easy filtering/removal.
-
-- Source:
-  - `org.tvrenamer.model.EpisodeDb` — add logic
-  - Note: “We’re putting the episode in the table anyway, but it’s not much use. TODO: make better use of it.”
-
-**Potential follow-ups:**
-- Show parse-failure reason in status/tooltip column
-- Provide “copy diagnostic” or “open containing folder” actions
-- Add filter “hide parse failures” or a dedicated section/list
 
 ### Consider canonicalization when file paths refer to same file
 **Context:** EpisodeDb can detect two strings refer to the same file; it currently chooses not to update the stored key/path even if it knows they match.  
@@ -338,12 +278,7 @@ This section captures additional improvement ideas expressed in comments that ar
 - When both season/episode and date patterns exist, cross-check them.
 - If provider offers absolute ordering or aired date ordering, optionally use it to break ties.
 
-#### Support multi-episode “single file” patterns (double-episodes / ranges) (DONE)
-This is implemented; see `docs/Completed.md` for the completed-work record.
-
-(We keep the historical note here only as a pointer. Do not re-add this as a future item.)
-
-### Parsing fallbacks and “should never happen” paths
+### Parsing fallbacks and "should never happen" paths
 **Context:** Parser code contains “this should never happen” style comments indicating areas where behavior could be tightened or more explicitly treated as errors.
 
 - Source:
