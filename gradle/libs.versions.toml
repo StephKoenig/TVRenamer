@@ -7,7 +7,7 @@ launch4j = "4.0.0"
 swt = "3.129.0"
 xstream = "1.4.21"
 commonsCodec = "1.21.0"
-okhttp = "4.12.0"
+okhttp = "5.3.2"
 
 # Test dependencies
 junit4 = "4.13.2"
