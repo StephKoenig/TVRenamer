@@ -75,36 +75,35 @@ This section is the “living” priority order for what’s left, based on:
 
 ## Dependency Updates (January 2026)
 
-Evaluated available updates for all dependencies and plugins. Status as of v1.0.1382:
+Evaluated available updates for all dependencies and plugins.
 
-### Current Versions
-| Dependency | Version | Latest Available |
-|------------|---------|------------------|
-| SWT | 3.129.0 | 3.131.0 (⚠️ see P2 item #7) |
-| XStream | 1.4.21 | 1.4.21 ✅ |
-| Commons Codec | 1.17.0 | 1.21.0 |
-| OkHttp | 4.12.0 | 5.3.2 |
-| JUnit | 4.13.2 | 6.0.0 |
-| Shadow Plugin | 8.1.1 | 9.3.1 (requires Gradle 9) |
-| Launch4j Plugin | 4.0.0 | 4.0.0 ✅ |
-| SpotBugs Plugin | 6.0.26 | 6.4.8 |
+### Current Versions (after updates)
+| Dependency | Version | Latest Available | Status |
+|------------|---------|------------------|--------|
+| SWT | 3.129.0 | 3.131.0 | ❌ Blocked (see below) |
+| XStream | 1.4.21 | 1.4.21 | ✅ Latest |
+| Commons Codec | 1.21.0 | 1.21.0 | ✅ Updated |
+| OkHttp | 5.3.2 | 5.3.2 | ✅ Updated |
+| JUnit | 4.13.2 | 6.0.0 | 📋 Deferred (see below) |
+| Gradle | 9.3.1 | 9.3.1 | ✅ Updated |
+| Shadow Plugin | 9.3.1 | 9.3.1 | ✅ Updated |
+| Launch4j Plugin | 4.0.0 | 4.0.0 | ✅ Latest |
+| SpotBugs Plugin | 6.4.8 | 6.4.8 | ✅ Updated |
 
-### Update Plan
-1. **Safe updates (no breaking changes expected):**
-   - Commons Codec 1.17.0 → 1.21.0
-   - SpotBugs Plugin 6.0.26 → 6.4.8
+### SWT 3.130+ Investigation Results
+Tested SWT 3.131.0 with Gradle 9.3.1 and Shadow 9.3.1. The native-load issue persists:
+```
+Libraries for platform win32 cannot be loaded because of incompatible environment
+```
+This is NOT related to Gradle/Shadow versions. The issue appears to be in how SWT 3.130+ handles native library loading on Windows. Staying on SWT 3.129.0 until Eclipse fixes this upstream or a workaround is found.
 
-2. **Gradle/Shadow upgrade:**
-   - Gradle 8.x → 9.x
-   - Shadow Plugin 8.1.1 → 9.3.1 (new plugin ID: `com.gradleup.shadow`)
-   - May resolve SWT 3.130+ native-load issues
+### JUnit 6 Migration (Deferred)
+JUnit 6 was released September 2025. Migration would require:
+- Updating 10 test files with ~19 import changes
+- Annotation changes: `@BeforeClass` → `@BeforeAll`, `@Before` → `@BeforeEach`, etc.
+- Import changes: `org.junit.*` → `org.junit.jupiter.api.*`
 
-3. **Major version evaluations:**
-   - OkHttp 4.12.0 → 5.3.2 (API changes, Kotlin rewrite)
-   - JUnit 4.13.2 → 6.0.0 (test migration required)
-
-4. **Deferred:**
-   - SWT 3.129.0 → 3.131.0 (blocked by native-load investigation)
+This is moderate effort with no functional benefit for the current test suite. Deferred until a larger test refactoring effort or when JUnit 4 support is deprecated.
 
 ---
 
