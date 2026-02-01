@@ -178,18 +178,8 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 - Consider expanding path validation to support environment variables or `~` expansion (if desired)
 
 ### Improve ignore-keywords parsing
-**Context:** Ignore keywords are stored/parsed with a note about converting commas into pipes for regex and removing periods.
 
-- Source:
-  - `org.tvrenamer.model.UserPreferences` — ignore keywords parsing
-  - Note: “Convert commas into pipes for proper regex, remove periods”
-
-**Potential follow-ups:**
-- Decide whether ignore keywords are:
-  - literal tokens, or
-  - regex fragments
-- If regex-based, ensure proper escaping and UI guidance
-- Add UI help text + tests for typical inputs (comma separated, spaces, punctuation)
+(Completed — see `docs/Completed.md`)
 
 ---
 

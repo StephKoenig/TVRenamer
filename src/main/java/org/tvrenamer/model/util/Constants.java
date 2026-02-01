@@ -206,8 +206,9 @@ public class Constants {
     public static final String SEASON_PREFIX_ZERO_TOOLTIP =
         "Whether to have a leading zero " + "in the season prefix";
     public static final String IGNORE_LABEL_TOOLTIP =
-        "Provide comma separated list of words that will cause a file\n" +
-        "to be ignored if they appear in the file's path or name.";
+        "Comma-separated list of keywords. Files containing any of these\n" +
+        "words (case-insensitive) will be skipped and not renamed.\n" +
+        "Example: sample,RARBG";
     public static final String RENAME_TOKEN_TOOLTIP =
         " - These are the possible tokens to make up the\n" +
         "   'Rename Format' below.\n" +

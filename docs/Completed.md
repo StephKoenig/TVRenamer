@@ -416,6 +416,18 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Caret position estimation uses font metrics with GC for reasonably accurate character offset calculation.
   - Sample data uses fictional show to avoid trademark concerns.
 
+### 32) Clarify ignore-keywords semantics and make case-insensitive
+- **Why:** Historical code comments mentioned regex but actual implementation uses literal `String.contains()`. Help text incorrectly said "strip from filenames" when files are actually skipped. Case-sensitive matching was confusing (e.g., "Sample" ≠ "sample").
+- **Where:** `org.tvrenamer.model.EpisodeDb` (matching), `org.tvrenamer.model.util.Constants` (tooltip), `src/main/resources/help/preferences.html`
+- **What we did:**
+  - **Case-insensitive matching:** Changed `ignorableReason()` to compare using `toLowerCase(Locale.ROOT)` on both filename and keyword.
+  - **Fixed tooltip:** Updated `IGNORE_LABEL_TOOLTIP` to clarify: comma-separated, case-insensitive, files are skipped (not stripped).
+  - **Fixed help text:** Rewrote help page section to accurately describe behavior with examples.
+  - **Confirmed literals:** Keywords are literal substrings, not regex — left as-is since regex would confuse most users.
+- **Notes:**
+  - Default keyword remains `sample` (filters preview/sample files).
+  - Files containing any keyword show "Ignoring file due to ..." in the Proposed File Path column.
+
 ---
 
 ## Related records

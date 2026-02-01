@@ -32,8 +32,9 @@ public class EpisodeDb implements java.beans.PropertyChangeListener {
     }
 
     private String ignorableReason(String fileName) {
+        String fileNameLower = fileName.toLowerCase(java.util.Locale.ROOT);
         for (String ignoreKeyword : ignoreKeywords) {
-            if (fileName.contains(ignoreKeyword)) {
+            if (fileNameLower.contains(ignoreKeyword.toLowerCase(java.util.Locale.ROOT))) {
                 return ignoreKeyword;
             }
         }

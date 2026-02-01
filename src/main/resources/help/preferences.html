@@ -123,7 +123,11 @@
     </div>
 
     <h2>Ignore Keywords</h2>
-    <p>Words to strip from filenames before parsing. Useful for removing release group tags, quality markers, etc.</p>
+    <p>Comma-separated list of keywords. Files whose path or name contains any of these words will be
+    skipped entirely and not renamed. Matching is case-insensitive.</p>
+    <p>Example: <code>sample,RARBG,YTS</code> would skip files like "show.s01e01.sample.mkv" or
+    "Movie.2024.RARBG.mp4".</p>
+    <p>The default value is <code>sample</code>, which filters out sample/preview files.</p>
 
     <hr>
     <p><a href="index.html">&larr; Back to Help Index</a></p>
