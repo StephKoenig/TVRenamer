@@ -392,6 +392,30 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Test coverage for tricky titles catches regressions
   - See `docs/Strings Spec.md` for the complete specification
 
+### 31) Preferences dialog drag/drop UX enhancements
+- **Why:** Original token list lacked visual affordance; caret didn't track during drag; no click-to-insert option; no preview of format result.
+- **Where:** `org.tvrenamer.view.PreferencesDialog` (refactored), `org.tvrenamer.model.util.Constants` (tooltips)
+- **What we did:**
+  - **Visual feedback during drag:** Added `dragOver()` handler that moves caret to track mouse position, showing the insertion point before drop.
+  - **Pill-styled tokens using Canvas:** Replaced plain list items with custom-painted Canvas widgets:
+    - Light blue rounded background (RGB 200, 220, 255, 3px corner radius)
+    - Darker blue border during drag (RGB 100, 150, 220) for visual feedback
+    - Hand cursor indicates interactivity
+    - Each token is individually draggable
+    - Uses Canvas+PaintListener for reliable background color on Windows (Label.setBackground unreliable)
+  - **Vertical layout:** One pill per line using `RowLayout(SWT.VERTICAL)` for narrower dialog.
+  - **Click-to-insert:** Added mouse listener so clicking a token inserts it at caret without dragging.
+  - **Live preview:** Added preview label below format text field showing real-time result with sample data:
+    - Show: "Rover", Season 2, Episode 5, Title: "The Squirrels Episode"
+    - Resolution: "720p", Air date: April 26, 2009
+    - Updates on every keystroke/drop via ModifyListener
+  - **Layout restructure:** Moved "Rename Tokens" title above the token row (was inline) for clearer visual hierarchy.
+  - **Tooltip formatting:** Added line breaks to long tooltips for ~70-char max width including bullet points.
+  - **Code cleanup:** Removed unused `PreferencesDragSourceListener` class and `addStringsToList()` method; removed unused imports.
+- **Notes:**
+  - Caret position estimation uses font metrics with GC for reasonably accurate character offset calculation.
+  - Sample data uses fictional show to avoid trademark concerns.
+
 ---
 
 ## Related records

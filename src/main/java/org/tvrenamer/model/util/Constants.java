@@ -134,42 +134,45 @@ public class Constants {
     public static final String REMOVE_EMPTIED_TEXT =
         "Remove emptied directories [?]";
     public static final String REMOVE_EMPTIED_TOOLTIP =
-        "When selected, directories which become empty " +
-        "due to file movement will be deleted.";
+        "When selected, directories which become empty due to file\n" +
+        "movement will be deleted.";
     public static final String CHECK_UPDATES_TEXT =
         "Check for Updates at startup [?]";
     public static final String CHECK_UPDATES_TOOLTIP =
-        "If checked, will automatically check " +
-        APPLICATION_NAME +
-        " website for new versions at startup, and offer to update if found";
+        "If checked, will automatically check " + APPLICATION_NAME + "\n" +
+        "website for new versions at startup, and offer to update if found.";
     public static final String THEME_MODE_TEXT = "Theme [?]";
     public static final String THEME_MODE_TOOLTIP =
-        "Choose Light, Dark, or Auto (uses the operating system theme). Changes take effect after restart.";
+        "Choose Light, Dark, or Auto (uses the operating system theme).\n" +
+        "Changes take effect after restart.";
     public static final String THEME_MODE_RESTART_NOTE =
         "Theme changes apply next time TVRenamer starts.";
     public static final String PREFER_DVD_ORDER_TEXT =
         "Prefer DVD episode order if present [?]";
     public static final String PREFER_DVD_ORDER_TOOLTIP =
-        "If checked, TVRenamer will prefer DVD ordering/titles when available. " +
-        "If DVD ordering is not present for a show, TVRenamer will fall back to aired order.";
+        "If checked, TVRenamer will prefer DVD ordering/titles\n" +
+        "when available. If DVD ordering is not present for a show,\n" +
+        "TVRenamer will fall back to aired order.";
     public static final String DELETE_ROWS_TEXT = "Clear completed rows [?]";
     public static final String DELETE_ROWS_TOOLTIP =
-        "If checked, after a file has been successfully " +
-        "moved/renamed, clear the completed row from the table.";
+        "If checked, after a file has been successfully moved/renamed,\n" +
+        "clear the completed row from the table.";
     public static final String OVERWRITE_DEST_TEXT = "Always overwrite destination [?]";
     public static final String OVERWRITE_DEST_TOOLTIP =
-        "If checked, overwrite existing destination files instead of " +
+        "If checked, overwrite existing destination files instead of\n" +
         "creating versioned filenames like (1), (2). Use with caution.";
     public static final String CLEANUP_DUPLICATES_TEXT =
         "Delete duplicate video files [?]";
     public static final String CLEANUP_DUPLICATES_TOOLTIP =
-        "After moving a file, delete other video files that represent the same episode " +
-        "(same base name or same season/episode). Only video files are deleted, not subtitles.";
+        "After moving a file, delete other video files that\n" +
+        "represent the same episode (same base name or same\n" +
+        "season/episode). Only video files are deleted, not subtitles.";
     public static final String TAG_VIDEO_METADATA_TEXT =
         "Tag video files with episode metadata [?]";
     public static final String TAG_VIDEO_METADATA_TOOLTIP =
-        "If checked, TVRenamer will write TV show metadata (show name, season, episode, title) " +
-        "to supported video files after moving. This enables media players to display " +
+        "If checked, TVRenamer will write TV show metadata\n" +
+        "(show name, season, episode, title) to supported video\n" +
+        "files after moving. This enables media players to display\n" +
         "episode information.\n\n" +
         "Supported formats:\n" +
         "• MP4/M4V/MOV - Built-in support (iTunes-style atoms)\n" +
@@ -183,38 +186,44 @@ public class Constants {
     public static final String HELP_TOOLTIP =
         "Hover mouse over [?] to get help";
     public static final String GENERAL_TOOLTIP =
-        " - TVRenamer will automatically move the files " +
-        "to your 'TV' folder if you want it to.  \n" +
-        " - It will move the file to <tv directory>/<series name>/<season prefix> #/ \n" +
+        " - TVRenamer will automatically move the files to your\n" +
+        "   'TV' folder if you want it to.\n" +
+        " - It will move the file to:\n" +
+        "   <tv directory>/<series name>/<season prefix> #/\n" +
         " - Once enabled, set the location below.";
     public static final String MOVE_SELECTED_TOOLTIP =
         "Whether the " + "'move to TV location' functionality is enabled";
     public static final String DEST_DIR_TOOLTIP =
         "The location of your 'TV' folder";
     public static final String PREFIX_TOOLTIP =
-        " - The prefix of the season when renaming and " +
-        "moving the file.  It is usually \"Season \" or \"s'\".\n - If no value is entered " +
-        "(or \"\"), the season folder will not be created, putting all files in the series name " +
-        "folder\n - The \" will not be included, just displayed here to show whitespace";
+        " - The prefix of the season when renaming and moving\n" +
+        "   the file. It is usually \"Season \" or \"s\".\n" +
+        " - If no value is entered (or \"\"), the season folder\n" +
+        "   will not be created, putting all files in the series\n" +
+        "   name folder.\n" +
+        " - The \" will not be included, just displayed here to\n" +
+        "   show whitespace.";
     public static final String SEASON_PREFIX_ZERO_TOOLTIP =
         "Whether to have a leading zero " + "in the season prefix";
     public static final String IGNORE_LABEL_TOOLTIP =
-        "Provide comma separated list of words " +
-        "that will cause a file to be ignored if they appear in the file's path or name.";
+        "Provide comma separated list of words that will cause a file\n" +
+        "to be ignored if they appear in the file's path or name.";
     public static final String RENAME_TOKEN_TOOLTIP =
-        " - These are the possible tokens to " +
-        " make up the 'Rename Format' below.\n" +
-        " - You can drag and drop tokens to the 'Rename Format' text box below";
+        " - These are the possible tokens to make up the\n" +
+        "   'Rename Format' below.\n" +
+        " - You can drag and drop tokens to the 'Rename Format'\n" +
+        "   text box below.";
     public static final String RENAME_FORMAT_TOOLTIP =
         "The result of the rename, with the " +
         "tokens being replaced by the meaning above";
     public static final String CANT_CREATE_DEST =
         "Unable to create the destination directory";
     public static final String MOVE_NOT_POSSIBLE =
-        "You will not be able to actually move files " +
-        "until this is corrected.  Open the Preferences dialog to correct it. " +
-        "Hint: verify the path exists (or can be created) and that you have write permission; " +
-        "for network shares, confirm the share is online and accessible.";
+        "You will not be able to actually move files until this is\n" +
+        "corrected. Open the Preferences dialog to correct it.\n\n" +
+        "Hint: verify the path exists (or can be created) and that\n" +
+        "you have write permission; for network shares, confirm the\n" +
+        "share is online and accessible.";
     public static final String MOVE_FAILURE_MSG_1 = "Some files were not moved";
     public static final String MOVE_FAILURE_PARTIAL_MSG = ".  These include";
     public static final String NEWLINE_BULLET = "\n\u2022 ";
@@ -228,10 +237,10 @@ public class Constants {
         "Clicking this button will rename the checked " +
         "files but leave them where they are.";
     public static final String NO_ACTION_TOOLTIP =
-        "You have selected not to move files, " +
-        "and not to rename them, either.  Therefore, there's no action to be taken.  " +
-        "Open the Preferences dialog and enable \"Move\", \"Rename\", or both, in order " +
-        "to take some action.";
+        "You have selected not to move files, and not to rename\n" +
+        "them, either. Therefore, there's no action to be taken.\n\n" +
+        "Open the Preferences dialog and enable \"Move\", \"Rename\",\n" +
+        "or both, in order to take some action.";
     public static final String UNKNOWN_EXCEPTION =
         "An error occurred, please check " +
         "the console output to see any errors:";

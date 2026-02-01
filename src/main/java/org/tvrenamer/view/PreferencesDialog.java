@@ -9,8 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -35,7 +33,6 @@ import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TabFolder;
@@ -63,46 +60,6 @@ class PreferencesDialog extends Dialog {
 
     private static final int DND_OPERATIONS = DND.DROP_MOVE;
     private static final char DOUBLE_QUOTE = '"';
-
-    private static class PreferencesDragSourceListener
-        implements DragSourceListener
-    {
-
-        private final List sourceList;
-
-        public PreferencesDragSourceListener(List sourceList) {
-            this.sourceList = sourceList;
-        }
-
-        @Override
-        public void dragStart(DragSourceEvent event) {
-            if (sourceList.getSelectionIndex() != 0) {
-                event.doit = true;
-            }
-        }
-
-        @Override
-        public void dragSetData(DragSourceEvent event) {
-            String listEntry = sourceList.getItem(
-                sourceList.getSelectionIndex()
-            );
-            String token;
-
-            Pattern patt = Pattern.compile(
-                REPLACEMENT_OPTIONS_LIST_ENTRY_REGEX
-            );
-            Matcher tokenMatcher = patt.matcher(listEntry);
-            if (tokenMatcher.matches()) {
-                token = tokenMatcher.group(1);
-                event.data = token;
-            }
-        }
-
-        @Override
-        public void dragFinished(DragSourceEvent event) {
-            // no-op
-        }
-    }
 
     private static class PreferencesDropTargetListener
         implements DropTargetListener
@@ -182,7 +139,63 @@ class PreferencesDialog extends Dialog {
 
         @Override
         public void dragOver(DropTargetEvent event) {
-            // no-op
+            // Move caret to track mouse position during drag, showing where drop will occur.
+            // Convert display coordinates to widget-relative coordinates.
+            org.eclipse.swt.graphics.Point displayPoint =
+                new org.eclipse.swt.graphics.Point(event.x, event.y);
+            org.eclipse.swt.graphics.Point widgetPoint =
+                targetText.toControl(displayPoint);
+
+            // Use getCaretOffsetAtLocation to find text position under mouse.
+            // If the point is outside the text bounds, this may throw or return -1.
+            try {
+                int offset = getTextOffsetAtLocation(targetText, widgetPoint);
+                if (offset >= 0) {
+                    targetText.setFocus();
+                    targetText.setSelection(offset);
+                }
+            } catch (Exception ignored) {
+                // Best-effort: if we can't determine position, don't update caret
+            }
+        }
+
+        /**
+         * Calculate text offset at a given widget-relative point.
+         * SWT Text doesn't have getCaretOffsetAtLocation, so we approximate.
+         */
+        private int getTextOffsetAtLocation(Text text, org.eclipse.swt.graphics.Point point) {
+            String content = text.getText();
+            if (content == null || content.isEmpty()) {
+                return 0;
+            }
+
+            // Use text extent to estimate character position.
+            // This is an approximation assuming monospace-ish font.
+            org.eclipse.swt.graphics.GC gc = new org.eclipse.swt.graphics.GC(text);
+            try {
+                int avgCharWidth = (int) gc.getFontMetrics().getAverageCharacterWidth();
+                if (avgCharWidth <= 0) {
+                    avgCharWidth = 8; // fallback
+                }
+
+                // Account for text widget internal padding (approximately 4 pixels on each side)
+                int adjustedX = point.x - 4;
+                if (adjustedX < 0) {
+                    adjustedX = 0;
+                }
+
+                int estimatedOffset = adjustedX / avgCharWidth;
+                // Clamp to valid range
+                if (estimatedOffset < 0) {
+                    estimatedOffset = 0;
+                }
+                if (estimatedOffset > content.length()) {
+                    estimatedOffset = content.length();
+                }
+                return estimatedOffset;
+            } finally {
+                gc.dispose();
+            }
         }
 
         @Override
@@ -190,6 +203,9 @@ class PreferencesDialog extends Dialog {
             // no-op
         }
     }
+
+    // Preview label for rename format
+    private Label renameFormatPreviewLabel;
 
     // The controls to save
     private Button moveSelectedCheckbox;
@@ -783,14 +799,15 @@ class PreferencesDialog extends Dialog {
         item.setControl(generalGroup);
     }
 
-    private void addStringsToList(
-        final List guiList,
-        final ReplacementToken... tokens
-    ) {
-        for (ReplacementToken token : tokens) {
-            guiList.add(token.toString());
-        }
-    }
+    // Light blue color for token pills (works in both light and dark modes)
+    private static final int PILL_BG_RED = 200;
+    private static final int PILL_BG_GREEN = 220;
+    private static final int PILL_BG_BLUE = 255;
+
+    // Darker blue for active/dragging border
+    private static final int PILL_ACTIVE_RED = 100;
+    private static final int PILL_ACTIVE_GREEN = 150;
+    private static final int PILL_ACTIVE_BLUE = 220;
 
     private void createRenameTab() {
         TabItem item = new TabItem(tabFolder, SWT.NULL);
@@ -798,23 +815,33 @@ class PreferencesDialog extends Dialog {
 
         Composite replacementGroup = new Composite(tabFolder, SWT.NONE);
 
-        replacementGroup.setLayout(new GridLayout(3, false));
+        // Use 1-column layout so title is above tokens, format row below
+        replacementGroup.setLayout(new GridLayout(1, false));
 
         replacementGroup.setLayoutData(
-            new GridData(SWT.FILL, SWT.CENTER, true, true, 3, 1)
+            new GridData(SWT.FILL, SWT.CENTER, true, true, 1, 1)
         );
         ThemeManager.applyPalette(replacementGroup, themePalette);
 
+        // Title label above tokens
         Label renameTokensLabel = new Label(replacementGroup, SWT.NONE);
         renameTokensLabel.setText(RENAME_TOKEN_TEXT);
         renameTokensLabel.setToolTipText(RENAME_TOKEN_TOOLTIP);
+        ThemeManager.applyPalette(renameTokensLabel, themePalette);
 
-        List renameTokensList = new List(replacementGroup, SWT.SINGLE);
-        renameTokensList.setLayoutData(
-            new GridData(GridData.BEGINNING, GridData.CENTER, true, true, 2, 1)
-        );
-        addStringsToList(
-            renameTokensList,
+        // Container for pill-styled tokens (vertical stack, one per line)
+        Composite tokensContainer = new Composite(replacementGroup, SWT.NONE);
+        org.eclipse.swt.layout.RowLayout tokenLayout =
+            new org.eclipse.swt.layout.RowLayout(SWT.VERTICAL);
+        tokenLayout.spacing = 4;
+        tokenLayout.marginTop = 4;
+        tokenLayout.marginBottom = 8;
+        tokensContainer.setLayout(tokenLayout);
+        tokensContainer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        ThemeManager.applyPalette(tokensContainer, themePalette);
+
+        // Create pill-styled draggable token labels
+        ReplacementToken[] tokens = {
             SHOW_NAME,
             SEASON_NUM,
             SEASON_NUM_LEADING_ZERO,
@@ -829,22 +856,252 @@ class PreferencesDialog extends Dialog {
             DATE_MONTH_NUMLZ,
             DATE_YEAR_MIN,
             DATE_YEAR_FULL
-        );
+        };
 
-        Label episodeTitleLabel = new Label(replacementGroup, SWT.NONE);
+        for (ReplacementToken token : tokens) {
+            createTokenPill(tokensContainer, token);
+        }
+
+        // Rename Format row (label + text field side by side)
+        Composite formatRow = new Composite(replacementGroup, SWT.NONE);
+        formatRow.setLayout(new GridLayout(2, false));
+        formatRow.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        ThemeManager.applyPalette(formatRow, themePalette);
+
+        Label episodeTitleLabel = new Label(formatRow, SWT.NONE);
         episodeTitleLabel.setText(RENAME_FORMAT_TEXT);
         episodeTitleLabel.setToolTipText(RENAME_FORMAT_TOOLTIP);
+        ThemeManager.applyPalette(episodeTitleLabel, themePalette);
 
         replacementStringText = createText(
             prefs.getRenameReplacementString(),
-            replacementGroup,
+            formatRow,
             true
         );
 
-        createDragSource(renameTokensList);
         createDropTarget(replacementStringText);
 
+        // Preview row (label + preview text side by side)
+        Composite previewRow = new Composite(replacementGroup, SWT.NONE);
+        previewRow.setLayout(new GridLayout(2, false));
+        previewRow.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        ThemeManager.applyPalette(previewRow, themePalette);
+
+        Label previewLabel = new Label(previewRow, SWT.NONE);
+        previewLabel.setText("Preview:");
+        ThemeManager.applyPalette(previewLabel, themePalette);
+
+        renameFormatPreviewLabel = new Label(previewRow, SWT.NONE);
+        renameFormatPreviewLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        ThemeManager.applyPalette(renameFormatPreviewLabel, themePalette);
+
+        // Update preview when format changes
+        replacementStringText.addModifyListener(e -> updateRenameFormatPreview());
+
+        // Initial preview
+        updateRenameFormatPreview();
+
         item.setControl(replacementGroup);
+    }
+
+    // Rounded corner radius for token pills
+    private static final int PILL_CORNER_RADIUS = 6; // 3px radius = 6px arc diameter
+    private static final int PILL_PADDING_X = 8;
+    private static final int PILL_PADDING_Y = 4;
+
+    // Key for storing dragging state in widget data
+    private static final String DRAGGING_KEY = "dragging";
+
+    // Sample data for rename format preview
+    private static final String PREVIEW_SHOW_NAME = "Rover";
+    private static final int PREVIEW_SEASON = 2;
+    private static final int PREVIEW_EPISODE = 5;
+    private static final String PREVIEW_EPISODE_TITLE = "The Squirrels Episode";
+    private static final String PREVIEW_RESOLUTION = "720p";
+    private static final int PREVIEW_YEAR = 2009;
+    private static final int PREVIEW_MONTH = 4;
+    private static final int PREVIEW_DAY = 26;
+
+    /**
+     * Update the rename format preview label with sample data.
+     */
+    private void updateRenameFormatPreview() {
+        if (renameFormatPreviewLabel == null || renameFormatPreviewLabel.isDisposed()) {
+            return;
+        }
+        if (replacementStringText == null || replacementStringText.isDisposed()) {
+            return;
+        }
+
+        String template = replacementStringText.getText();
+        if (template == null) {
+            template = "";
+        }
+
+        // Replace tokens with sample data (same order as EpisodeReplacementFormatter)
+        String preview = template
+            .replace(SEASON_NUM.getToken(), String.valueOf(PREVIEW_SEASON))
+            .replace(SEASON_NUM_LEADING_ZERO.getToken(), String.format("%02d", PREVIEW_SEASON))
+            .replace(EPISODE_NUM.getToken(), String.valueOf(PREVIEW_EPISODE))
+            .replace(EPISODE_NUM_LEADING_ZERO.getToken(), String.format("%02d", PREVIEW_EPISODE))
+            .replace(SHOW_NAME.getToken(), PREVIEW_SHOW_NAME)
+            .replace(EPISODE_TITLE.getToken(), PREVIEW_EPISODE_TITLE)
+            .replace(EPISODE_TITLE_NO_SPACES.getToken(), PREVIEW_EPISODE_TITLE.replace(' ', '.'))
+            .replace(EPISODE_RESOLUTION.getToken(), PREVIEW_RESOLUTION)
+            .replace(DATE_DAY_NUM.getToken(), String.valueOf(PREVIEW_DAY))
+            .replace(DATE_DAY_NUMLZ.getToken(), String.format("%02d", PREVIEW_DAY))
+            .replace(DATE_MONTH_NUM.getToken(), String.valueOf(PREVIEW_MONTH))
+            .replace(DATE_MONTH_NUMLZ.getToken(), String.format("%02d", PREVIEW_MONTH))
+            .replace(DATE_YEAR_FULL.getToken(), String.valueOf(PREVIEW_YEAR))
+            .replace(DATE_YEAR_MIN.getToken(), String.valueOf(PREVIEW_YEAR % 100));
+
+        // Sanitize for display (same as EpisodeReplacementFormatter does)
+        preview = StringUtils.sanitiseTitle(preview);
+
+        renameFormatPreviewLabel.setText(preview);
+
+        // Request layout to accommodate changed text width
+        Composite parent = renameFormatPreviewLabel.getParent();
+        if (parent != null && !parent.isDisposed()) {
+            parent.layout(true);
+        }
+    }
+
+    /**
+     * Create a pill-styled token label that can be dragged or clicked to insert.
+     * Uses Canvas with custom painting for reliable background color on Windows.
+     */
+    private void createTokenPill(Composite parent, ReplacementToken token) {
+        String text = token.toString();
+        String tokenString = token.getToken();
+
+        // Use Canvas for complete control over painting
+        org.eclipse.swt.widgets.Canvas pill =
+            new org.eclipse.swt.widgets.Canvas(parent, SWT.DOUBLE_BUFFERED);
+
+        // Light blue color for background
+        org.eclipse.swt.graphics.Color pillBg = new org.eclipse.swt.graphics.Color(
+            parent.getDisplay(), PILL_BG_RED, PILL_BG_GREEN, PILL_BG_BLUE
+        );
+        // Darker blue for active/dragging border
+        org.eclipse.swt.graphics.Color pillActive = new org.eclipse.swt.graphics.Color(
+            parent.getDisplay(), PILL_ACTIVE_RED, PILL_ACTIVE_GREEN, PILL_ACTIVE_BLUE
+        );
+        pill.addDisposeListener(e -> {
+            pillBg.dispose();
+            pillActive.dispose();
+        });
+
+        // Initialize dragging state
+        pill.setData(DRAGGING_KEY, Boolean.FALSE);
+
+        // Calculate size based on text extent
+        org.eclipse.swt.graphics.GC gc = new org.eclipse.swt.graphics.GC(pill);
+        org.eclipse.swt.graphics.Point textSize = gc.textExtent(text);
+        gc.dispose();
+
+        int width = textSize.x + (PILL_PADDING_X * 2);
+        int height = textSize.y + (PILL_PADDING_Y * 2);
+
+        // Set size via RowData for RowLayout
+        pill.setLayoutData(new org.eclipse.swt.layout.RowData(width, height));
+
+        // Custom paint: rounded rectangle background + text
+        pill.addPaintListener(e -> {
+            org.eclipse.swt.graphics.Rectangle bounds = pill.getClientArea();
+            e.gc.setAntialias(SWT.ON);
+
+            boolean isDragging = Boolean.TRUE.equals(pill.getData(DRAGGING_KEY));
+
+            // Fill rounded rectangle with light blue
+            e.gc.setBackground(pillBg);
+            e.gc.fillRoundRectangle(0, 0, bounds.width, bounds.height,
+                PILL_CORNER_RADIUS, PILL_CORNER_RADIUS);
+
+            // Draw border - darker blue when dragging, same as bg otherwise
+            e.gc.setForeground(isDragging ? pillActive : pillBg);
+            e.gc.drawRoundRectangle(0, 0, bounds.width - 1, bounds.height - 1,
+                PILL_CORNER_RADIUS, PILL_CORNER_RADIUS);
+            if (isDragging) {
+                // Draw a second border for thickness
+                e.gc.drawRoundRectangle(1, 1, bounds.width - 3, bounds.height - 3,
+                    PILL_CORNER_RADIUS, PILL_CORNER_RADIUS);
+            }
+
+            // Draw text centered
+            e.gc.setForeground(parent.getDisplay().getSystemColor(SWT.COLOR_BLACK));
+            org.eclipse.swt.graphics.Point ts = e.gc.textExtent(text);
+            int tx = (bounds.width - ts.x) / 2;
+            int ty = (bounds.height - ts.y) / 2;
+            e.gc.drawText(text, tx, ty, true);
+        });
+
+        pill.setCursor(parent.getDisplay().getSystemCursor(SWT.CURSOR_HAND));
+
+        // Click to insert at caret position
+        pill.addListener(SWT.MouseUp, event -> {
+            if (replacementStringText != null && !replacementStringText.isDisposed()) {
+                insertTokenAtCaret(tokenString);
+            }
+        });
+
+        // Set up drag source for this pill with visual feedback
+        createTokenDragSource(pill, tokenString);
+    }
+
+    /**
+     * Insert token text at current caret position in replacementStringText.
+     */
+    private void insertTokenAtCaret(String tokenText) {
+        replacementStringText.setFocus();
+        org.eclipse.swt.graphics.Point sel = replacementStringText.getSelection();
+        String current = replacementStringText.getText();
+        if (current == null) {
+            current = "";
+        }
+
+        int start = sel.x;
+        int end = sel.y;
+        if (start < 0) start = 0;
+        if (end < start) end = start;
+        if (start > current.length()) start = current.length();
+        if (end > current.length()) end = current.length();
+
+        String newValue = current.substring(0, start) + tokenText + current.substring(end);
+        replacementStringText.setText(newValue);
+        replacementStringText.setSelection(start + tokenText.length());
+    }
+
+    /**
+     * Create a drag source for a single token pill/label with visual feedback.
+     */
+    private void createTokenDragSource(Control control, String tokenText) {
+        Transfer[] types = new Transfer[] { TextTransfer.getInstance() };
+        DragSource dragSource = new DragSource(control, DND_OPERATIONS);
+        dragSource.setTransfer(types);
+        dragSource.addDragListener(new DragSourceListener() {
+            @Override
+            public void dragStart(DragSourceEvent event) {
+                event.doit = true;
+                // Set dragging state and redraw for visual feedback
+                control.setData(DRAGGING_KEY, Boolean.TRUE);
+                control.redraw();
+            }
+
+            @Override
+            public void dragSetData(DragSourceEvent event) {
+                if (TextTransfer.getInstance().isSupportedType(event.dataType)) {
+                    event.data = tokenText;
+                }
+            }
+
+            @Override
+            public void dragFinished(DragSourceEvent event) {
+                // Clear dragging state and redraw
+                control.setData(DRAGGING_KEY, Boolean.FALSE);
+                control.redraw();
+            }
+        });
     }
 
     private void createOverridesTab() {
@@ -1457,15 +1714,6 @@ class PreferencesDialog extends Dialog {
             // Column 0 is the status icon column; values are columns 1 and 2.
             ti.setText(new String[] { "", queryString, seriesId });
         }
-    }
-
-    private void createDragSource(final List sourceList) {
-        Transfer[] types = new Transfer[] { TextTransfer.getInstance() };
-        DragSource dragSource = new DragSource(sourceList, DND_OPERATIONS);
-        dragSource.setTransfer(types);
-        dragSource.addDragListener(
-            new PreferencesDragSourceListener(sourceList)
-        );
     }
 
     private void createDropTarget(final Text targetText) {

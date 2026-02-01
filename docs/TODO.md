@@ -195,17 +195,7 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 ## 7) Preferences dialog drag/drop UX
 
-### Drop target appends instead of inserting at drop location
-**Context:** Drag-and-drop of rename tokens into the replacement string currently appends, ignoring the actual drop position.
-
-- Source:
-  - `org.tvrenamer.view.PreferencesDialog` — `PreferencesDropTargetListener.drop(...)`
-  - Note: “This currently adds the dropped text onto the end, not where we dropped it”
-
-**Potential follow-ups:**
-- Use caret position / mouse drop location to insert text
-- If dropping into `Text`, use selection/caret APIs to insert at caret
-- Provide visual feedback for insertion position
+(Completed — see `docs/Completed.md`)
 
 ---
 

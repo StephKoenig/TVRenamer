@@ -136,7 +136,7 @@ Preferred loop:
 **Always run `./gradlew clean build`** at these checkpoints:
 - **Before committing** — ensures the commit represents buildable code
 - **Before pushing** — ensures CI won't fail on obvious compile errors
-- **After completing a significant feature or refactor** — allows the user to test a known-good build
+- **After finishing a body of work** — allows the user to test a known-good build before moving on
 - **Before creating a release** — ensures artifacts are clean and reproducible
 
 This catches issues early and gives the user a testable artifact after each significant milestone.
