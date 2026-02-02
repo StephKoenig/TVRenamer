@@ -418,8 +418,8 @@ public class FileUtilities {
             InputStream fis = Files.newInputStream(source)
         ) {
             // Use a larger buffer to improve throughput on fast disks / networks (e.g., SMB).
-            // 4 MiB (0x400000) buffer.
-            final int bufferSize = 0x400000;
+            // 8 MiB (0x800000) buffer.
+            final int bufferSize = 0x800000;
             byte[] buffer = new byte[bufferSize];
 
             int n;
