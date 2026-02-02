@@ -1,0 +1,16 @@
+/.gradle/
+/out/
+/dist/
+/lib/
+/build/
+/docs/
+
+launch4j.properties
+/package/macosx/
+
+/tvrenamer.iml
+/.idea/
+
+/src/test/java/org/tvrenamer/controller/TestMain.java
+/commit.log
+/diff.diff
