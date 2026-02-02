@@ -951,20 +951,7 @@ public class FileEpisode {
             return originalBasename;
         }
 
-        // Multi-episode support: if this file represents episodes A..B in a single file,
-        // append "(A-B)" to the title token used for rename output.
-        // - Always use compact numbers (no leading zeros)
-        // - Always append when span is present, even if provider lookup for B fails
         Episode ep = actualEpisodes.get(n);
-
-        String episodeTitleOverride = null;
-        if (ep != null && multiEpisodeStart != null && multiEpisodeEnd != null
-                && multiEpisodeEnd >= multiEpisodeStart) {
-            String baseTitle = ep.getTitle();
-            if (baseTitle != null && !baseTitle.isEmpty()) {
-                episodeTitleOverride = baseTitle + " (" + multiEpisodeStart + "-" + multiEpisodeEnd + ")";
-            }
-        }
 
         return EpisodeReplacementFormatter.format(
             userPrefs.getRenameReplacementString(),
@@ -972,7 +959,8 @@ public class FileEpisode {
             ep,
             placement,
             filenameResolution,
-            episodeTitleOverride
+            multiEpisodeStart,
+            multiEpisodeEnd
         );
     }
 

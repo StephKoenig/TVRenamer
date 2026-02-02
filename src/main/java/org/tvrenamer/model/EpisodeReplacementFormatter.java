@@ -39,6 +39,44 @@ public final class EpisodeReplacementFormatter {
     }
 
     /**
+     * Format episode number, handling multi-episode spans.
+     *
+     * <p>For multi-episode files, the format depends on the span:
+     * <ul>
+     *   <li>2 episodes (span=1): with e separator, e.g., "04e05" (avoids ambiguity with ep 405)</li>
+     *   <li>3+ episodes (span≥2): dash-separated range, e.g., "01-e04"</li>
+     * </ul>
+     *
+     * <p>Combined with template "E%0e", produces Plex-compatible names like "E04e05" or "E01-e04".
+     *
+     * @param startEp the starting episode number
+     * @param endEp the ending episode number (null for single episode)
+     * @param zeroPad true to zero-pad numbers (for %0e token)
+     * @return formatted episode number string
+     */
+    private static String formatEpisodeNumber(int startEp, Integer endEp, boolean zeroPad) {
+        if (endEp == null || endEp <= startEp) {
+            // Single episode
+            return zeroPad
+                ? StringUtils.zeroPadThreeDigits(startEp)
+                : StringUtils.formatDigits(startEp);
+        }
+
+        int span = endEp - startEp;
+        if (span == 1) {
+            // Two consecutive episodes: 04e05 (with e separator to avoid ambiguity with ep 405)
+            return zeroPad
+                ? StringUtils.zeroPadThreeDigits(startEp) + "e" + StringUtils.zeroPadThreeDigits(endEp)
+                : StringUtils.formatDigits(startEp) + "e" + StringUtils.formatDigits(endEp);
+        } else {
+            // 3+ episodes: 01-e04 (dash-separated range with e prefix on end)
+            return zeroPad
+                ? StringUtils.zeroPadThreeDigits(startEp) + "-e" + StringUtils.zeroPadThreeDigits(endEp)
+                : StringUtils.formatDigits(startEp) + "-e" + StringUtils.formatDigits(endEp);
+        }
+    }
+
+    /**
      * Replace the control strings in the replacement template with episode information.
      *
      * @param replacementTemplate the template provided by the user via preferences
@@ -46,7 +84,8 @@ public final class EpisodeReplacementFormatter {
      * @param episode the episode that matches this file
      * @param placement the season/episode numbers from the filename
      * @param resolution the screen resolution (e.g., "720p") from the filename
-     * @param episodeTitleOverride optional override for episode title (for multi-episode files)
+     * @param multiEpisodeStart start episode number for multi-episode files (null for single)
+     * @param multiEpisodeEnd end episode number for multi-episode files (null for single)
      * @return the template string with episode information substituted
      */
     public static String format(
@@ -55,13 +94,11 @@ public final class EpisodeReplacementFormatter {
             final Episode episode,
             final EpisodePlacement placement,
             final String resolution,
-            final String episodeTitleOverride) {
+            final Integer multiEpisodeStart,
+            final Integer multiEpisodeEnd) {
 
         final String showName = show.getName();
-
-        String episodeTitle = (episodeTitleOverride != null)
-            ? episodeTitleOverride
-            : episode.getTitle();
+        String episodeTitle = episode.getTitle();
 
         if (episodeTitle.length() > MAX_TITLE_LENGTH) {
             logger.fine("truncating episode title: " + episodeTitle);
@@ -73,8 +110,10 @@ public final class EpisodeReplacementFormatter {
         String result = replacementTemplate
             .replace(SEASON_NUM.getToken(), String.valueOf(placement.season))
             .replace(SEASON_NUM_LEADING_ZERO.getToken(), StringUtils.zeroPadTwoDigits(placement.season))
-            .replace(EPISODE_NUM.getToken(), StringUtils.formatDigits(placement.episode))
-            .replace(EPISODE_NUM_LEADING_ZERO.getToken(), StringUtils.zeroPadThreeDigits(placement.episode))
+            .replace(EPISODE_NUM.getToken(),
+                formatEpisodeNumber(placement.episode, multiEpisodeEnd, false))
+            .replace(EPISODE_NUM_LEADING_ZERO.getToken(),
+                formatEpisodeNumber(placement.episode, multiEpisodeEnd, true))
             .replace(SHOW_NAME.getToken(), showName)
             .replace(EPISODE_TITLE.getToken(), episodeTitle)
             .replace(EPISODE_TITLE_NO_SPACES.getToken(), StringUtils.makeDotTitle(episodeTitle))
