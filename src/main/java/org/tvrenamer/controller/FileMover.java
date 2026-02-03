@@ -38,6 +38,9 @@ public class FileMover implements Callable<Boolean> {
     // Duplicate video files found after the move (if cleanup preference is enabled).
     private final List<Path> foundDuplicates = new ArrayList<>();
 
+    // When true, skip the writability probe in call() because MoveRunner already verified this directory.
+    private boolean directoryPreVerified = false;
+
     /**
      * Constructs a FileMover to move the given episode.
      *
@@ -60,6 +63,16 @@ public class FileMover implements Callable<Boolean> {
      */
     public void addObserver(MoveObserver observer) {
         this.observer = observer;
+    }
+
+    /**
+     * Marks this FileMover's destination directory as already verified writable.
+     * When set, call() will skip the writability probe for efficiency.
+     *
+     * @param verified true if the directory has been pre-verified by the caller
+     */
+    public void setDirectoryPreVerified(boolean verified) {
+        this.directoryPreVerified = verified;
     }
 
     /**
@@ -483,21 +496,27 @@ public class FileMover implements Callable<Boolean> {
 
         Path destDir = destRoot;
         String filename = destBasename + destSuffix;
+        boolean usingDuplicatesDir = false;
         if (destIndex != null) {
             if (userPrefs.isMoveEnabled()) {
                 destDir = destRoot.resolve(DUPLICATES_DIRECTORY);
+                usingDuplicatesDir = true;
             }
             filename = destBasename + versionString() + destSuffix;
         }
 
-        if (!FileUtilities.ensureWritableDirectory(destDir)) {
-            setFailureAndLog(
-                srcPath,
-                destDir,
-                "not attempting to move; destination directory not writable",
-                null
-            );
-            return;
+        // Skip writability probe if MoveRunner already verified this directory.
+        // Always verify duplicates directories since they may not have been pre-checked.
+        if (!directoryPreVerified || usingDuplicatesDir) {
+            if (!FileUtilities.ensureWritableDirectory(destDir)) {
+                setFailureAndLog(
+                    srcPath,
+                    destDir,
+                    "not attempting to move; destination directory not writable",
+                    null
+                );
+                return;
+            }
         }
 
         // Some UNC/SMB paths can fail real-path resolution even when the location is valid and writable.

@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.util.FileUtilities;
 import org.tvrenamer.model.ProgressUpdater;
 import org.tvrenamer.model.UserPreferences;
 
@@ -446,9 +447,25 @@ public class MoveRunner implements Runnable {
             }
         }
 
+        // Pre-verify each unique destination directory once to avoid redundant probe files.
+        // This is an optimization: instead of each FileMover creating a temp probe file,
+        // we verify each directory once here and tell FileMover instances to skip the check.
+        final Set<Path> verifiedDirectories = new HashSet<>();
+        for (String dirName : mappings.keySet()) {
+            Path destDir = Paths.get(dirName);
+            if (FileUtilities.ensureWritableDirectory(destDir)) {
+                verifiedDirectories.add(destDir);
+            }
+        }
+
         // Submit moves in original list order (table display order, top to bottom).
         // Conflict resolution has already modified the FileMover objects in-place.
         for (FileMover move : episodes) {
+            // Mark as pre-verified if we already checked this directory.
+            Path moveDestDir = move.getMoveToDirectory();
+            if (verifiedDirectories.contains(moveDestDir)) {
+                move.setDirectoryPreVerified(true);
+            }
             movers.add(move);
             futures.add(EXECUTOR.submit(move));
         }
