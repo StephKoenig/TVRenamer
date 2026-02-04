@@ -38,23 +38,6 @@ This document consolidates "future work" notes from the codebase. Notes are grou
 - Likely UI location:
   - unified "Show Matching Rules" editor alongside Overrides and Disambiguations
 
-### Ambiguity handling in show mapping / query results
-**Context:** The show-name mapping pipeline normalizes "query strings" and attempts to map them to series. There are explicit notes that ambiguity exists (and may remain) and that better UI/flows could help users resolve it.
-
-- Source:
-  - `org.tvrenamer.model.ShowStore` — class/Javadoc commentary around "query strings", "actual show name", and ambiguity notes.
-  - Notes include:
-    - The "actual show name" is expected to be unique, but true show names may not be.
-    - TVDB sometimes appends years to disambiguate (e.g., `Archer (2009)`).
-    - In the future it might be better to model mapping as many-to-many and disambiguate later using more information.
-    - UI could notify the user of ambiguity, make a best guess, and allow user correction.
-
-**Potential follow-ups:**
-- Add explicit "ambiguous match" UI with a selection dialog (and caching).
-- Track uncertainty in the model (e.g., multiple candidate series until episode lookup resolves).
-- Add better tie-breakers (year, network, language) and expose them in UI.
-- Persist user overrides for ambiguous cases (beyond show-name overrides).
-
 ### More robust filename → episode inference
 **Context:** Current inference is primarily based on placement (season/episode numbering in the chosen ordering). Comments note that richer metadata could improve inference.
 
