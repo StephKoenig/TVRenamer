@@ -84,6 +84,16 @@ public class FileMover implements Callable<Boolean> {
         return Collections.unmodifiableList(foundDuplicates);
     }
 
+    /**
+     * Returns the actual destination path if the move was successful, or null otherwise.
+     * Used by MoveRunner to filter duplicates that match successfully moved files.
+     *
+     * @return the destination path if move succeeded, null otherwise
+     */
+    public Path getActualDestinationIfSuccess() {
+        return episode.isSuccess() ? episode.getPath() : null;
+    }
+
     private void setFailureAndLog(
         Path source,
         Path dest,

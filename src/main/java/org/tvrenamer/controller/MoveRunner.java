@@ -517,15 +517,35 @@ public class MoveRunner implements Runnable {
     /**
      * Collects duplicate files found by all FileMover instances after moves complete.
      * Called internally before finish() to aggregate results for the UI.
+     *
+     * Important: filters out any files that were successfully moved in this batch,
+     * since those should not be offered for deletion.
      */
     private void aggregateDuplicates() {
         aggregatedDuplicates.clear();
+
+        // First, collect all destination paths of successfully moved files.
+        // These must be excluded from the duplicate list.
+        Set<Path> successfullyMovedFiles = new HashSet<>();
+        for (FileMover mover : movers) {
+            Path dest = mover.getActualDestinationIfSuccess();
+            if (dest != null) {
+                successfullyMovedFiles.add(dest);
+            }
+        }
+
+        // Now collect duplicates, excluding any that match successfully moved files.
         for (FileMover mover : movers) {
             List<Path> dups = mover.getFoundDuplicates();
             if (dups != null && !dups.isEmpty()) {
-                aggregatedDuplicates.addAll(dups);
+                for (Path dup : dups) {
+                    if (!successfullyMovedFiles.contains(dup)) {
+                        aggregatedDuplicates.add(dup);
+                    }
+                }
             }
         }
+
         if (!aggregatedDuplicates.isEmpty()) {
             logger.info("Aggregated " + aggregatedDuplicates.size() +
                 " duplicate video file(s) for review");
