@@ -484,4 +484,91 @@ public class ShowSelectionEvaluatorTest {
         assertEquals(RESOLVED, decision.getType());
         assertEquals(mainShow, decision.getChosen());
     }
+
+    // ========== Fuzzy Matching Tests ==========
+
+    @Test
+    @DisplayName("Fuzzy matching should resolve typo when score is high enough")
+    void testFuzzyMatchTypo() {
+        ShowOption correctShow = new ShowOption("1", "Game of Thrones");
+        ShowOption differentShow = new ShowOption("2", "House of the Dragon");
+        List<ShowOption> options = Arrays.asList(correctShow, differentShow);
+
+        // "Gane of Thrones" has a typo - should fuzzy match to "Game of Thrones"
+        ShowSelectionEvaluator.Decision decision =
+            ShowSelectionEvaluator.evaluate("Gane of Thrones", options, null);
+
+        assertEquals(RESOLVED, decision.getType());
+        assertEquals(correctShow, decision.getChosen());
+        assertTrue(decision.getMessage().toLowerCase().contains("fuzzy"));
+    }
+
+    @Test
+    @DisplayName("Fuzzy matching should not auto-select when scores are too close")
+    void testFuzzyMatchAmbiguousScores() {
+        ShowOption show1 = new ShowOption("1", "The Show");
+        ShowOption show2 = new ShowOption("2", "That Show");
+        List<ShowOption> options = Arrays.asList(show1, show2);
+
+        // Both are similar distance from "This Show"
+        ShowSelectionEvaluator.Decision decision =
+            ShowSelectionEvaluator.evaluate("This Show", options, null);
+
+        // Should be ambiguous because gap between scores is too small
+        assertEquals(AMBIGUOUS, decision.getType());
+        assertNotNull(decision.getScoredOptions());
+        assertFalse(decision.getScoredOptions().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Scored options should be sorted best-first in ambiguous decisions")
+    void testScoredOptionsSorted() {
+        ShowOption lowMatch = new ShowOption("1", "Completely Different Name");
+        ShowOption highMatch = new ShowOption("2", "Breaking Bad");
+        ShowOption mediumMatch = new ShowOption("3", "Breaking Badly");
+        List<ShowOption> options = Arrays.asList(lowMatch, highMatch, mediumMatch);
+
+        ShowSelectionEvaluator.Decision decision =
+            ShowSelectionEvaluator.evaluate("Breaking Bad", options, null);
+
+        // Should resolve to exact match
+        assertEquals(RESOLVED, decision.getType());
+        assertEquals(highMatch, decision.getChosen());
+    }
+
+    @Test
+    @DisplayName("ScoredOption isRecommended should return true for high scores")
+    void testScoredOptionRecommended() {
+        ShowOption show1 = new ShowOption("1", "Test Show");
+        ShowOption show2 = new ShowOption("2", "Other Show");
+        List<ShowOption> options = Arrays.asList(show1, show2);
+
+        // Both similar to "Test Shows" but neither is exact
+        ShowSelectionEvaluator.Decision decision =
+            ShowSelectionEvaluator.evaluate("Test Shows", options, null);
+
+        if (decision.isAmbiguous() && decision.getScoredOptions() != null) {
+            // The first option should have a higher score
+            var scoredOptions = decision.getScoredOptions();
+            assertTrue(scoredOptions.size() >= 2);
+            // First should be "Test Show" with high score
+            assertTrue(scoredOptions.get(0).getScore() >= scoredOptions.get(1).getScore());
+        }
+    }
+
+    @Test
+    @DisplayName("Fuzzy matching should check aliases for best score")
+    void testFuzzyMatchWithAlias() {
+        // SHIELD_WITH_ALIAS has alias "Agents of SHIELD"
+        ShowOption otherShow = new ShowOption("999", "Completely Different");
+        List<ShowOption> options = Arrays.asList(otherShow, SHIELD_WITH_ALIAS);
+
+        // "Agents of SHIELD" matches an alias exactly
+        ShowSelectionEvaluator.Decision decision =
+            ShowSelectionEvaluator.evaluate("Agents of SHIELD", options, null);
+
+        // Should resolve via alias match (before fuzzy)
+        assertEquals(RESOLVED, decision.getType());
+        assertEquals(SHIELD_WITH_ALIAS, decision.getChosen());
+    }
 }

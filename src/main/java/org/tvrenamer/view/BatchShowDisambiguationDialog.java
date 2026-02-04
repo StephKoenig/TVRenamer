@@ -20,6 +20,7 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.tvrenamer.model.ShowOption;
+import org.tvrenamer.model.ShowSelectionEvaluator;
 import org.tvrenamer.model.ShowStore;
 
 import java.util.logging.Logger;
@@ -569,7 +570,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         exampleFileValueLabel.setText(exampleFile);
         exampleFileValueLabel.setToolTipText(exampleFile);
 
-        populateCandidates(pd.options);
+        populateCandidates(pd.options, pd.scoredOptions);
 
         // If already selected for this query, check it in candidate table.
         // Otherwise leave everything unchecked.
@@ -593,17 +594,36 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         rightCandidatesTable.removeAll();
     }
 
-    private void populateCandidates(final List<ShowOption> options) {
+    private void populateCandidates(
+            final List<ShowOption> options,
+            final List<ShowSelectionEvaluator.ScoredOption> scoredOptions) {
         rightCandidatesTable.removeAll();
 
-        List<ShowOption> safeOptions = (options == null)
-            ? new ArrayList<>()
-            : new ArrayList<>(options);
-        if (safeOptions.size() > MAX_OPTIONS_PER_SHOW) {
-            safeOptions = safeOptions.subList(0, MAX_OPTIONS_PER_SHOW);
+        // Build display list: use scored options if available (already sorted best-first),
+        // otherwise fall back to original options order.
+        List<ShowOption> displayOptions = new ArrayList<>();
+        java.util.Map<String, Double> scoreMap = new java.util.HashMap<>();
+
+        if (scoredOptions != null && !scoredOptions.isEmpty()) {
+            for (ShowSelectionEvaluator.ScoredOption so : scoredOptions) {
+                if (so != null && so.getOption() != null) {
+                    displayOptions.add(so.getOption());
+                    String id = so.getOption().getIdString();
+                    if (id != null) {
+                        scoreMap.put(id, so.getScore());
+                    }
+                }
+            }
+        } else if (options != null) {
+            displayOptions.addAll(options);
         }
 
-        for (ShowOption opt : safeOptions) {
+        if (displayOptions.size() > MAX_OPTIONS_PER_SHOW) {
+            displayOptions = displayOptions.subList(0, MAX_OPTIONS_PER_SHOW);
+        }
+
+        boolean firstRow = true;
+        for (ShowOption opt : displayOptions) {
             if (opt == null) {
                 continue;
             }
@@ -634,7 +654,16 @@ public final class BatchShowDisambiguationDialog extends Dialog {
                 logger.fine("Could not get alias names: " + e.getMessage());
             }
 
+            // Show score and "Recommended" for top match if score is available
+            Double score = scoreMap.get(opt.getIdString());
+            if (score != null && firstRow && score >= 0.70) {
+                name = name + " \u2605 Recommended (" + String.format("%.0f%%", score * 100) + ")";
+            } else if (score != null && score >= 0.50) {
+                name = name + " (" + String.format("%.0f%%", score * 100) + ")";
+            }
+
             item.setText(new String[] { name, year, id, aliases });
+            firstRow = false;
         }
 
         for (TableColumn c : rightCandidatesTable.getColumns()) {

@@ -50,15 +50,18 @@ public final class ShowSelectionEvaluator {
         private final OutcomeType type;
         private final ShowOption chosen;
         private final String message;
+        private final List<ScoredOption> scoredOptions;
 
         private Decision(
             final OutcomeType type,
             final ShowOption chosen,
-            final String message
+            final String message,
+            final List<ScoredOption> scoredOptions
         ) {
             this.type = Objects.requireNonNull(type, "type");
             this.chosen = chosen;
             this.message = (message == null) ? "" : message;
+            this.scoredOptions = scoredOptions;
         }
 
         public OutcomeType getType() {
@@ -79,6 +82,14 @@ public final class ShowSelectionEvaluator {
             return message;
         }
 
+        /**
+         * @return sorted list of options with similarity scores (best first), or null if not computed.
+         *         Useful for disambiguation dialogs to show ranked options.
+         */
+        public List<ScoredOption> getScoredOptions() {
+            return scoredOptions;
+        }
+
         public boolean isResolved() {
             return type == OutcomeType.RESOLVED;
         }
@@ -92,21 +103,122 @@ public final class ShowSelectionEvaluator {
         }
 
         static Decision resolved(final ShowOption chosen, final String msg) {
-            return new Decision(OutcomeType.RESOLVED, chosen, msg);
+            return new Decision(OutcomeType.RESOLVED, chosen, msg, null);
         }
 
-        static Decision ambiguous(final String msg) {
-            return new Decision(OutcomeType.AMBIGUOUS, null, msg);
+        static Decision ambiguous(final String msg, final List<ScoredOption> scoredOptions) {
+            return new Decision(OutcomeType.AMBIGUOUS, null, msg, scoredOptions);
         }
 
         static Decision notFound(final String msg) {
-            return new Decision(OutcomeType.NOT_FOUND, null, msg);
+            return new Decision(OutcomeType.NOT_FOUND, null, msg, null);
         }
     }
 
     private static final Pattern YEAR_TOKEN = Pattern.compile(
         "(^|\\s|\\()(?<year>19\\d{2}|20\\d{2})(\\s|\\)|$)"
     );
+
+    // Fuzzy matching thresholds
+    private static final double FUZZY_AUTO_SELECT_MIN_SCORE = 0.80;
+    private static final double FUZZY_AUTO_SELECT_MIN_GAP = 0.10;
+    private static final double FUZZY_RECOMMENDED_MIN_SCORE = 0.70;
+
+    /**
+     * Holds a ShowOption together with its similarity score for ranking.
+     */
+    public static final class ScoredOption implements Comparable<ScoredOption> {
+        private final ShowOption option;
+        private final double score;
+
+        public ScoredOption(ShowOption option, double score) {
+            this.option = option;
+            this.score = score;
+        }
+
+        public ShowOption getOption() {
+            return option;
+        }
+
+        public double getScore() {
+            return score;
+        }
+
+        /**
+         * @return true if this option's score is high enough to be marked as recommended
+         */
+        public boolean isRecommended() {
+            return score >= FUZZY_RECOMMENDED_MIN_SCORE;
+        }
+
+        @Override
+        public int compareTo(ScoredOption other) {
+            // Higher scores first
+            return Double.compare(other.score, this.score);
+        }
+    }
+
+    /**
+     * Calculate Levenshtein (edit) distance between two strings.
+     * This is the minimum number of single-character edits (insertions, deletions, substitutions)
+     * required to change one string into the other.
+     */
+    private static int levenshteinDistance(String s1, String s2) {
+        if (s1 == null || s2 == null) {
+            return (s1 == null && s2 == null) ? 0 : Integer.MAX_VALUE;
+        }
+        int len1 = s1.length();
+        int len2 = s2.length();
+
+        if (len1 == 0) return len2;
+        if (len2 == 0) return len1;
+
+        // Use two rows instead of full matrix for space efficiency
+        int[] prev = new int[len2 + 1];
+        int[] curr = new int[len2 + 1];
+
+        for (int j = 0; j <= len2; j++) {
+            prev[j] = j;
+        }
+
+        for (int i = 1; i <= len1; i++) {
+            curr[0] = i;
+            for (int j = 1; j <= len2; j++) {
+                int cost = (s1.charAt(i - 1) == s2.charAt(j - 1)) ? 0 : 1;
+                curr[j] = Math.min(
+                    Math.min(prev[j] + 1, curr[j - 1] + 1),
+                    prev[j - 1] + cost
+                );
+            }
+            int[] temp = prev;
+            prev = curr;
+            curr = temp;
+        }
+        return prev[len2];
+    }
+
+    /**
+     * Calculate normalized similarity score (0.0 to 1.0) between two strings.
+     * Uses Levenshtein distance normalized by max length.
+     *
+     * @return 1.0 for identical strings, 0.0 for completely different strings
+     */
+    private static double similarity(String s1, String s2) {
+        if (s1 == null || s2 == null) {
+            return 0.0;
+        }
+        String a = s1.toLowerCase(Locale.ROOT);
+        String b = s2.toLowerCase(Locale.ROOT);
+        if (a.equals(b)) {
+            return 1.0;
+        }
+        int maxLen = Math.max(a.length(), b.length());
+        if (maxLen == 0) {
+            return 1.0;
+        }
+        int distance = levenshteinDistance(a, b);
+        return 1.0 - ((double) distance / maxLen);
+    }
 
     /**
      * Evaluate whether a set of provider candidates can be auto-resolved without prompting,
@@ -387,8 +499,56 @@ public final class ShowSelectionEvaluator {
             }
         }
 
-        // 5) Still ambiguous.
-        return Decision.ambiguous("Still ambiguous (would prompt)");
+        // TB7: Fuzzy string matching
+        // Score all candidates by similarity to extracted name, sorted best-first.
+        // Auto-select if best score >= threshold AND gap to second-best >= min gap.
+        final String compareText = (extracted != null && !extracted.isBlank())
+            ? extracted
+            : extractedNormalizedFinal;
+
+        List<ScoredOption> scored = new java.util.ArrayList<>();
+        for (ShowOption opt : options) {
+            if (opt == null) {
+                continue;
+            }
+            String name = opt.getName();
+            double score = similarity(compareText, name);
+
+            // Also check aliases and use best score
+            List<String> aliases = null;
+            try {
+                aliases = opt.getAliasNames();
+            } catch (Exception ignored) {
+                aliases = null;
+            }
+            if (aliases != null) {
+                for (String alias : aliases) {
+                    double aliasScore = similarity(compareText, alias);
+                    if (aliasScore > score) {
+                        score = aliasScore;
+                    }
+                }
+            }
+            scored.add(new ScoredOption(opt, score));
+        }
+        java.util.Collections.sort(scored);
+
+        if (scored.size() >= 1) {
+            double bestScore = scored.get(0).getScore();
+            double secondScore = scored.size() > 1 ? scored.get(1).getScore() : 0.0;
+
+            if (bestScore >= FUZZY_AUTO_SELECT_MIN_SCORE
+                    && (bestScore - secondScore) >= FUZZY_AUTO_SELECT_MIN_GAP) {
+                return Decision.resolved(
+                    scored.get(0).getOption(),
+                    String.format("Fuzzy match: %.0f%% (gap: %.0f%%)",
+                        bestScore * 100, (bestScore - secondScore) * 100)
+                );
+            }
+        }
+
+        // 5) Still ambiguous - return with scored options for UI ranking.
+        return Decision.ambiguous("Still ambiguous (would prompt)", scored);
     }
 
     private static Integer parseYearFromText(final String s) {

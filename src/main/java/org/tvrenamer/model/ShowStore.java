@@ -187,6 +187,7 @@ public class ShowStore {
      * - extractedShowName: user-facing extracted name (display in batch dialog)
      * - exampleFileName: FileEpisode.getFileName() (display in batch dialog)
      * - options: provider candidates (can be truncated to first 5 in UI)
+     * - scoredOptions: options with similarity scores, sorted best-first (for UI ranking)
      */
     public static final class PendingDisambiguation {
 
@@ -194,17 +195,20 @@ public class ShowStore {
         public final String extractedShowName;
         public final String exampleFileName;
         public final List<ShowOption> options;
+        public final List<ShowSelectionEvaluator.ScoredOption> scoredOptions;
 
         public PendingDisambiguation(
             final String queryString,
             final String extractedShowName,
             final String exampleFileName,
-            final List<ShowOption> options
+            final List<ShowOption> options,
+            final List<ShowSelectionEvaluator.ScoredOption> scoredOptions
         ) {
             this.queryString = queryString;
             this.extractedShowName = extractedShowName;
             this.exampleFileName = exampleFileName;
             this.options = options;
+            this.scoredOptions = scoredOptions;
         }
     }
 
@@ -487,7 +491,7 @@ public class ShowStore {
                             options.size() +
                             ")"
                     );
-                    queuePendingDisambiguation(showName, options);
+                    queuePendingDisambiguation(showName, options, decision.getScoredOptions());
                     showOption = showName.getNonCachingFailedShow(
                         new TVRenamerIOException("show selection required")
                     );
@@ -520,10 +524,15 @@ public class ShowStore {
      *
      * Note: This does not block or show UI. The UI is expected to call
      * {@link #getPendingDisambiguations()} and present a single batch dialog to resolve.
+     *
+     * @param showName the ShowName being disambiguated
+     * @param options the provider candidates
+     * @param scoredOptions options with similarity scores (sorted best-first), or null
      */
     private static synchronized void queuePendingDisambiguation(
         final ShowName showName,
-        final List<ShowOption> options
+        final List<ShowOption> options,
+        final List<ShowSelectionEvaluator.ScoredOption> scoredOptions
     ) {
         if (showName == null) {
             logger.warning(
@@ -559,7 +568,8 @@ public class ShowStore {
                 queryString,
                 showName.getExampleFilename(),
                 "",
-                options
+                options,
+                scoredOptions
             )
         );
         logger.info(

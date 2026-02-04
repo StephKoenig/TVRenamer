@@ -820,7 +820,8 @@ public final class ResultsTable
                     pd.queryString,
                     pd.extractedShowName,
                     (exampleFileName == null) ? "" : exampleFileName,
-                    pd.options
+                    pd.options,
+                    pd.scoredOptions
                 )
             );
         }
