@@ -22,5 +22,5 @@
 
 **Artifacts:**
 - `TVRenamer.exe` — Windows executable (recommended)
-- `tvrenamer-220.jar` — Cross-platform fat JAR
+- `tvrenamer-221.jar` — Cross-platform fat JAR
 - `tvrenamer.jar` — Stable-named fat JAR (same content as versioned)
