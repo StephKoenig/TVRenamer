@@ -1041,6 +1041,14 @@ public final class ResultsTable
                     );
                     continue;
                 }
+                // Skip rows that have already been successfully processed (moved/renamed)
+                Object moveCompleted = item.getData("tvrenamer.moveCompleted");
+                if (Boolean.TRUE.equals(moveCompleted)) {
+                    logger.fine(
+                        "checked but already completed: " + episode.getFilepath()
+                    );
+                    continue;
+                }
                 // Track whether this row has been successfully processed so "Clear Completed"
                 // can remove it later when auto-clear is disabled.
                 item.setData("tvrenamer.moveCompleted", Boolean.FALSE);
