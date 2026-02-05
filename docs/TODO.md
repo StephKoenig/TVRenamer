@@ -13,22 +13,6 @@ This document consolidates "future work" notes from the codebase. Notes are grou
 **Where:** New entry point (e.g., `org.tvrenamer.controller.CliMain`) + separation of UI vs core logic.
 **Effort:** Medium/Large
 
-### Show matching heuristics: improve selection when multiple matches exist
-**Context:** When there are multiple exact hits, the code "chooses first one" and notes potential better criteria. When no exact match, it suggests better selection methods like Levenshtein distance.
-
-- Source:
-  - `org.tvrenamer.model.ShowName` — `selectShowOption()`
-  - `org.tvrenamer.model.ShowSelectionEvaluator`
-  - Notes:
-    - "could check language? other criteria? case sensitive?"
-    - "still might be better ways to choose if we don't have an exact match. Levenshtein distance?"
-
-**Potential follow-ups:**
-- Include language and/or year as tie-breakers
-- Provide a "choose show" prompt when ambiguity exists (possibly cached)
-- Implement fuzzy matching (Levenshtein/Jaro-Winkler), but avoid surprising auto-selections
-- Add tests for common ambiguous show names
-
 ### Allow pinning a show ID by extracted show name
 **Context:** Today, disambiguation selections are stored as `query string -> series id`, and name overrides are stored as `extracted show -> override text`. A future enhancement would allow a direct "pin by name" rule that bypasses ambiguity even without crafting/maintaining a query string.
 **Why it matters:** Provides a simpler, more robust advanced option for users who know the correct show and want to avoid repeated prompts even if normalization rules change.

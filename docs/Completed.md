@@ -428,6 +428,50 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Default keyword remains `sample` (filters preview/sample files).
   - Files containing any keyword show "Ignoring file due to ..." in the Proposed File Path column.
 
+### 33) Optimize writability probes (one per directory instead of per file)
+- **Why:** Moving many files to the same destination directory was creating redundant temporary probe files — one per file — causing unnecessary I/O.
+- **Where:** `org.tvrenamer.controller.MoveRunner`, `org.tvrenamer.controller.FileMover`
+- **What we did:**
+  - Added pre-verification in `MoveRunner.setupQueue()`: each unique destination directory is verified once using `FileUtilities.ensureWritableDirectory()`.
+  - Added `directoryPreVerified` flag to `FileMover`: when set, `FileMover` skips its own probe check.
+  - Verified directories are tracked in a `Set<Path>` and FileMover instances are marked accordingly before submission.
+- **Notes:**
+  - Reduces I/O overhead for batch moves to the same destination.
+  - No behavior change when moving to multiple different directories.
+
+### 34) Fix duplicate cleanup dialog listing just-moved files
+- **Why:** After moving files with overwrite enabled, the duplicate cleanup dialog was incorrectly listing the just-moved files as deletion candidates.
+- **Where:** `org.tvrenamer.controller.MoveRunner`, `org.tvrenamer.controller.FileMover`
+- **What we did:**
+  - Added `getActualDestinationIfSuccess()` method to `FileMover` to retrieve the final destination path after a successful move.
+  - In `MoveRunner.aggregateDuplicates()`, collect all successfully moved destination paths and filter them out of the duplicate list.
+- **Notes:**
+  - Duplicates are now correctly limited to files that existed before the move operation.
+
+### 35) Fuzzy matching heuristics for show selection
+- **Why:** Reduce disambiguation prompts by auto-selecting shows when there's a clear fuzzy match; improve dialog UX by ranking options by similarity score.
+- **Where:** `org.tvrenamer.model.ShowSelectionEvaluator`, `org.tvrenamer.model.ShowStore`, `org.tvrenamer.view.BatchShowDisambiguationDialog`, `org.tvrenamer.view.ResultsTable`
+- **What we did:**
+  - **Levenshtein distance algorithm:** Added `levenshteinDistance()` for edit distance calculation and `similarity()` for normalized 0.0–1.0 scoring.
+  - **ScoredOption class:** New class pairing `ShowOption` with its similarity score, implementing `Comparable` for sorting.
+  - **Fuzzy auto-selection (TB7):** After existing tie-breakers, score all candidates. Auto-select if best score ≥ 80% AND gap to second-best ≥ 10%.
+  - **Improved disambiguation dialog:** Options sorted by score (best first). Top option marked "★ Recommended (X%)" if score ≥ 70%. Scores ≥ 50% shown as percentages.
+  - **Alias support:** Fuzzy scoring also checks show aliases and uses the best score.
+  - **Test coverage:** Added 5 new test cases for fuzzy matching behavior.
+- **Notes:**
+  - Thresholds: 80% + 10% gap for auto-select, 70% for "Recommended" label.
+  - Tagged as "Heuristics+" (`git tag Heuristics+`) for rollback capability.
+
+### 36) Fix action button incrementing Processed counter for already-moved files
+- **Why:** After moving files, clicking the action button again would increment the "Processed" counter even though nothing was being processed.
+- **Where:** `org.tvrenamer.view.ResultsTable`
+- **What we did:**
+  - Added check for `tvrenamer.moveCompleted` flag in `renameFiles()`: rows that have already been successfully processed are now skipped.
+  - The flag was already being set to `Boolean.TRUE` after successful moves; we now read it before adding rows to `pendingMoves`.
+- **Notes:**
+  - Prevents spurious counter increments when re-clicking the action button.
+  - Rows remain checked but are correctly skipped on subsequent clicks.
+
 ---
 
 ## Related records
