@@ -53,7 +53,11 @@ public class FilenameParser {
     // strip away ".Season02" and be left with just "MyShow".
     private static final String EXCESS_SEASON = "[^A-Za-z]Season[ _-]?\\d\\d?";
 
-    private static final String RESOLUTION_REGEX = "\\D(\\d+[pk]).*";
+    // Match standard display resolutions: 480p through 4320p (3-4 digits + p)
+    // and compact notations like 4k/8k (1 digit + k).  The previous broad
+    // pattern (\d+[pk]) caused false positives on BBC programme IDs (e.g.
+    // "p032kjnx" → "032k").
+    private static final String RESOLUTION_REGEX = "\\D(\\d{3,4}p|\\d[kK]).*";
 
     private static final String[] REGEX = {
         // --- Multi-episode (single file) patterns ---
@@ -75,6 +79,9 @@ public class FilenameParser {
         "(.+?[^a-zA-Z0-9]\\D*?)[sS](\\d\\d*)[eE](\\d\\d*).*",
         // this one matches Season-XX-Episode-XX:
         "(.+?[^a-zA-Z0-9]\\D*?)Season[- ](\\d\\d*)[- ]?Episode[- ](\\d\\d*).*",
+        // BBC-style: Show_Series_X_-_YY.Title (uses "_Series_" as anchor;
+        // everything before it is the show name):
+        "(.+)_Series_(\\d\\d*)_-_(\\d\\d*)\\..*",
         // this one matches sXX.eXX:
         "(.+[^a-zA-Z0-9]\\D*?)[sS](\\d\\d*)\\D*?[eE](\\d\\d*).*",
         // this one matches SSxEE, with an optional leading "S"

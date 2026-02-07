@@ -1429,6 +1429,103 @@ public class FilenameParserTest {
         );
     }
 
+    @BeforeAll
+    public static void setupValuesBBCSeries() {
+        // BBC-style: Show_Series_X_-_YY._Title_PID_quality
+        // The "_Series_" keyword is the anchor; everything before it is the show name.
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_1_-_04._Long_Days_Short_Nights_Part_2_p032kjnx_original"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("1")
+                .episodeNumString("04")
+                .build()
+        );
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_6_-_02._Fallout_Part_2_p02mb2lc_editorial"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("6")
+                .episodeNumString("02")
+                .build()
+        );
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_4_-_03._A_Kind_of_Justice_Part_2_p036g84b_original"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("4")
+                .episodeNumString("03")
+                .build()
+        );
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_3_-_08._Brothers_in_Arms_Part_2_p032kjwd_editorial"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("3")
+                .episodeNumString("08")
+                .build()
+        );
+        // Cases that previously failed — PIDs with digits that confused generic patterns
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_2_-_01._Blood_Sweat_and_Tears_Part_1_p02zy1cj_original"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("2")
+                .episodeNumString("01")
+                .build()
+        );
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_10_-_10._Schism_Part_2_b007ch75_original"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("10")
+                .episodeNumString("10")
+                .build()
+        );
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_1_-_02._Buried_Lies_Part_2_p032kjns_technical"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("1")
+                .episodeNumString("02")
+                .build()
+        );
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_3_-_05._Divided_Loyalties_Part_1_p032kjw6_original"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("3")
+                .episodeNumString("05")
+                .build()
+        );
+        values.add(
+            new EpisodeTestData.Builder()
+                .inputFilename(
+                    "Silent_Witness_Series_5_-_02._The_World_Cruise_Part_2_p032kkwj_original"
+                )
+                .filenameShow("Silent_Witness")
+                .seasonNumString("5")
+                .episodeNumString("02")
+                .build()
+        );
+    }
+
     @Test
     public void testParseFileName() {
         for (EpisodeTestData testInput : values) {
