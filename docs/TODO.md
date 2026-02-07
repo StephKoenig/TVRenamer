@@ -22,17 +22,6 @@ This document consolidates "future work" notes from the codebase. Notes are grou
 - Likely UI location:
   - unified "Show Matching Rules" editor alongside Overrides and Disambiguations
 
-### More robust filename → episode inference
-**Context:** Current inference is primarily based on placement (season/episode numbering in the chosen ordering). Comments note that richer metadata could improve inference.
-
-- Source:
-  - `org.tvrenamer.model.Show` — notes that future enhancements could use other meta-information to determine which episode a filename refers to, beyond placement.
-
-**Potential follow-ups:**
-- Use episode titles parsed from filename as a secondary disambiguator.
-- When both season/episode and date patterns exist, cross-check them.
-- If provider offers absolute ordering or aired date ordering, optionally use it to break ties.
-
 ---
 
 ## Code Reliability & Maintenance
@@ -77,22 +66,6 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 - Decide a consistent canonical form for paths (absolute+normalized vs real path)
 - Be careful with UNC/SMB edge cases where "real path" may fail or be slow
 - Add tests for path normalization behavior on Windows
-
-### Enforce / normalize destination directory path expectations
-**Context:** Destination directory is described as "must be absolute path", but enforcement is unclear.
-
-- Source:
-  - `org.tvrenamer.model.UserPreferences` — `setDestinationDirectory(...)`
-  - Notes:
-    - enforce absolute?
-    - convert to absolute then compare?
-    - what happens if destination validation fails?
-
-**Potential follow-ups:**
-- Normalize destination paths when saving:
-  - store canonical absolute/normalized path string
-- Improve validation feedback in Preferences (already improved, but could expand)
-- Consider expanding path validation to support environment variables or `~` expansion (if desired)
 
 ### Parsing fallbacks and "should never happen" paths
 **Context:** Parser code contains "this should never happen" style comments indicating areas where behavior could be tightened or more explicitly treated as errors.
