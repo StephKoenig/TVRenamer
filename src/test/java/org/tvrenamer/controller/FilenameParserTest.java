@@ -1431,7 +1431,7 @@ public class FilenameParserTest {
 
     @BeforeAll
     public static void setupValuesUnderscoreSeries() {
-        // Show_Series_X_-_YY._Title_PID_quality
+        // Show_Series_X_-_YY._Title_ID_quality
         // The "_Series_" keyword is the anchor; everything before it is the show name.
         values.add(
             new EpisodeTestData.Builder()
