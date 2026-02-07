@@ -1430,8 +1430,8 @@ public class FilenameParserTest {
     }
 
     @BeforeAll
-    public static void setupValuesBBCSeries() {
-        // BBC-style: Show_Series_X_-_YY._Title_PID_quality
+    public static void setupValuesUnderscoreSeries() {
+        // Show_Series_X_-_YY._Title_PID_quality
         // The "_Series_" keyword is the anchor; everything before it is the show name.
         values.add(
             new EpisodeTestData.Builder()
