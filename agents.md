@@ -89,6 +89,7 @@ When to run packaging tasks (`shadowJar` / `createExe`):
 - Run packaging when you change **UI behavior**, **SWT/layout**, **startup/Launcher**, **resources/icons**, **gradle packaging config**, or anything that might behave differently when launched as an EXE vs from your IDE.
 - Prefer running packaging before pushing changes that affect end-user flows, so CI artifacts are likely to work first try.
 - For small internal refactors, `./gradlew build` is usually sufficient; defer packaging until requested or before release.
+- **Important:** `./gradlew build` alone does NOT rebuild the fat JAR or EXE. If you need to manually test UI changes, you must run `./gradlew build shadowJar createExe` (or `./gradlew clean build shadowJar createExe`) to produce updated artifacts. Running an older EXE/JAR after code changes will not reflect your edits.
 
 Artifacts:
 - JARs: `build/libs/`
@@ -127,9 +128,8 @@ Preferred loop:
 2. Run a local compile after each change (default):
    - `./gradlew build` (minimum)
    - `./gradlew test` when appropriate
-3. Run `./gradlew clean ...` when requested during the session (or when locks/outputs make it necessary):
-   - `./gradlew clean build`
-   - `./gradlew clean build shadowJar createExe` for full packaging parity
+3. Run `./gradlew clean build shadowJar createExe` when requested during the session
+   - If a lockout make it nedessary then just `./gradlew build shadowJar createExe`
 4. Only then commit/push.
 
 ### Clean build checkpoints

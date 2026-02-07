@@ -270,6 +270,10 @@ class PreferencesDialog extends Dialog {
     private TabFolder tabFolder;
     private Shell preferencesShell;
 
+    // Optional initial state applied when opening with a specific tab and pre-filled text.
+    private int initialTabIndex = -1;
+    private String initialOverrideFromText = null;
+
     private final Shell parent;
     private final StatusLabel statusLabel;
 
@@ -2259,11 +2263,25 @@ class PreferencesDialog extends Dialog {
 
         createContents();
 
+        // Apply initial state if the dialog was opened with pre-filled data.
+        if (initialTabIndex >= 0
+                && initialTabIndex < tabFolder.getItemCount()) {
+            tabFolder.setSelection(initialTabIndex);
+        }
+        if (initialOverrideFromText != null
+                && !initialOverrideFromText.isEmpty()
+                && overridesFromText != null) {
+            overridesFromText.setText(initialOverrideFromText);
+            if (overridesToText != null) {
+                overridesToText.setFocus();
+            }
+        }
+
         preferencesShell.pack();
 
-        // Position relative to the parent (main window) so it doesn't appear in an OS-random place.
-        // This is best-effort and intentionally does not attempt to reposition OS-native dialogs.
-        DialogPositioning.positionDialog(preferencesShell, parent);
+        // Center over the parent (main window) so it doesn't appear in an OS-random place.
+        // Zero offset for exact centering; clamped to parent's monitor work area.
+        DialogPositioning.positionDialog(preferencesShell, parent, 0, 0);
 
         preferencesShell.open();
         Display display = parent.getDisplay();
@@ -2272,6 +2290,22 @@ class PreferencesDialog extends Dialog {
                 display.sleep();
             }
         }
+    }
+
+    /**
+     * Opens the preferences dialog, auto-selecting the given tab and
+     * optionally pre-filling the "Extracted show" override text field.
+     *
+     * @param tabIndex
+     *     the zero-based tab index to select (0 = General, 1 = Rename, 2 = Matching)
+     * @param overrideFromText
+     *     if non-null/non-empty, pre-fills the "Extracted show" text field
+     *     on the Matching tab
+     */
+    public void open(final int tabIndex, final String overrideFromText) {
+        this.initialTabIndex = tabIndex;
+        this.initialOverrideFromText = overrideFromText;
+        open();
     }
 
     /**

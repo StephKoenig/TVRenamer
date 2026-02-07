@@ -670,6 +670,17 @@ public class FileEpisode {
         return currentPathMatchesTemplate;
     }
 
+    /**
+     * Returns whether the show lookup failed (the provider could not find
+     * a show matching the extracted/overridden show name, or the lookup
+     * timed out).
+     *
+     * @return true if this episode's show was not found; false otherwise
+     */
+    public boolean isShowUnfound() {
+        return seriesStatus == SeriesStatus.UNFOUND;
+    }
+
     private String getShowNamePlaceholder() {
         return "<" + actualShow.getName() + ">";
     }
@@ -703,17 +714,12 @@ public class FileEpisode {
 
     private String getNoShowPlaceholder() {
         ShowName showName = ShowName.lookupShowName(filenameShow);
-        return (
-            BROKEN_PLACEHOLDER_FILENAME +
-            " for \"" +
-            showName.getQueryString() +
-            "\""
-        );
+        return "No info for \"" + showName.getQueryString() + "\"";
     }
 
     private String getTimeoutPlaceholder() {
         ShowName showName = ShowName.lookupShowName(filenameShow);
-        return TIMEOUT_DOWNLOADING + " \"" + showName.getQueryString() + "\"";
+        return "Timed out looking up \"" + showName.getQueryString() + "\"";
     }
 
     /**

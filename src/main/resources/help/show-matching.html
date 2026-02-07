@@ -31,12 +31,16 @@
 
     <h3>Adding an Override</h3>
     <ol>
-        <li>Open <strong>Preferences</strong></li>
-        <li>Find the "Show Overrides" section</li>
-        <li>Click "Add Override"</li>
-        <li>Enter the extracted name (as it appears in your filenames)</li>
-        <li>Enter the override (what to search for on TheTVDB)</li>
+        <li>Open <strong>Preferences</strong> &rarr; <strong>Matching</strong> tab</li>
+        <li>In the <strong>Overrides</strong> section, enter the extracted name and the replacement</li>
+        <li>Click <strong>Add / Update</strong>, then <strong>Save</strong></li>
     </ol>
+
+    <div class="tip">
+        <strong>Shortcut:</strong> When a show can't be found, the Proposed File Path column shows a
+        clickable <em>"click to set Hint"</em> link. Clicking it opens Preferences directly on the
+        Matching tab with the show name already filled in &mdash; just type the correct name and save.
+    </div>
 
     <h3>Override Examples</h3>
     <table>
@@ -66,9 +70,10 @@
     <p>When TheTVDB returns multiple shows matching your search, TVRenamer prompts you to choose the correct one.</p>
 
     <h3>Disambiguation Dialog</h3>
-    <p>The dialog shows:</p>
+    <p>The dialog shows candidate shows sorted by match confidence:</p>
     <ul>
-        <li><strong>Show name</strong> - The official title</li>
+        <li><strong>Show name</strong> - The official title. The best match is marked with
+            <strong>&starf; Recommended</strong> and a similarity percentage when confidence is high.</li>
         <li><strong>Year</strong> - First aired year (helps distinguish reboots)</li>
         <li><strong>TVDB ID</strong> - Unique identifier</li>
         <li><strong>Aliases</strong> - Alternative names</li>
@@ -90,15 +95,22 @@
         <li>Only one show matches the search</li>
         <li>One show is an exact (case-insensitive) match for the query</li>
         <li>You have a remembered disambiguation for that query</li>
+        <li>Fuzzy matching finds a strong candidate (&ge;80% similarity with a clear lead over other options)</li>
     </ul>
+    <p>Fuzzy matching uses edit-distance comparison, so minor typos or small naming variations
+       (e.g., "Gane of Thrones" vs "Game of Thrones") are resolved automatically.</p>
 
     <h2>Troubleshooting Match Issues</h2>
 
     <h3>Show Not Found</h3>
+    <p>When a show can't be found, the Proposed File Path column displays a
+       <em>"click to set Hint"</em> link. Click it to jump straight to the
+       Preferences Matching tab with the show name pre-filled, then type the
+       correct TheTVDB name and save.</p>
+    <p>Other things to try:</p>
     <ul>
         <li>Check the spelling in your filename</li>
-        <li>Add an override with the correct TheTVDB name</li>
-        <li>Search TheTVDB directly to verify the show exists</li>
+        <li>Search <a href="https://thetvdb.com">TheTVDB</a> directly to verify the show exists and find its exact name</li>
     </ul>
 
     <h3>Wrong Show Selected</h3>

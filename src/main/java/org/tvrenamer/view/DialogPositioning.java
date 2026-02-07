@@ -65,11 +65,23 @@ public final class DialogPositioning {
             anchorBounds = safeBounds(parentShell);
         }
 
+        // Prefer the parent's monitor for clamping so the dialog stays on the
+        // same screen as the main window (the dialog shell hasn't been positioned
+        // yet, so its default monitor may be the primary display).
         Monitor mon = null;
-        try {
-            mon = dialogShell.getMonitor();
-        } catch (Throwable ignored) {
-            mon = null;
+        if (parentShell != null && !parentShell.isDisposed()) {
+            try {
+                mon = parentShell.getMonitor();
+            } catch (Throwable ignored) {
+                mon = null;
+            }
+        }
+        if (mon == null) {
+            try {
+                mon = dialogShell.getMonitor();
+            } catch (Throwable ignored) {
+                mon = null;
+            }
         }
         Rectangle workArea = (mon != null) ? safeWorkArea(mon) : null;
 

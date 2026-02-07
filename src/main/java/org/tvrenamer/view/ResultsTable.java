@@ -334,14 +334,50 @@ public final class ResultsTable
         NEW_FILENAME_FIELD.setEditor(item, editor, combo);
     }
 
-    private void deleteItemCombo(final TableItem item) {
+    private void deleteItemControl(final TableItem item) {
         final Object itemData = item.getData();
         if (itemData != null) {
-            final Control oldCombo = (Control) itemData;
-            if (!oldCombo.isDisposed()) {
-                oldCombo.dispose();
+            final Control oldControl = (Control) itemData;
+            if (!oldControl.isDisposed()) {
+                oldControl.dispose();
             }
         }
+    }
+
+    /**
+     * Embeds a clickable Link widget in the "Proposed File Path" cell for rows
+     * where the show was not found. Clicking the link opens Preferences with the
+     * Matching tab selected and the extracted show name pre-filled.
+     */
+    private void setUnfoundShowLink(
+        final TableItem item,
+        final FileEpisode ep,
+        final String displayText
+    ) {
+        if (swtTable.isDisposed() || item.isDisposed()) {
+            return;
+        }
+        final Link link = new Link(swtTable, SWT.NONE);
+        link.setText(displayText + " \u2014 <a>click to set Hint</a>");
+        link.setToolTipText(
+            "Opens Preferences \u2192 Matching to add a show name override"
+        );
+
+        link.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(SelectionEvent e) {
+                String extractedShow = ep.getExtractedFilenameShow();
+                PreferencesDialog preferencesDialog =
+                    new PreferencesDialog(shell);
+                preferencesDialog.open(2, extractedShow);
+            }
+        });
+
+        item.setData(link);
+
+        final TableEditor editor = new TableEditor(swtTable);
+        editor.grabHorizontal = true;
+        NEW_FILENAME_FIELD.setEditor(item, editor, link);
     }
 
     /**
@@ -365,7 +401,7 @@ public final class ResultsTable
         if (swtTable.isDisposed() || item.isDisposed()) {
             return;
         }
-        deleteItemCombo(item);
+        deleteItemControl(item);
 
         int nOptions = ep.optionCount();
         if (nOptions > 1) {
@@ -373,8 +409,13 @@ public final class ResultsTable
         } else if (nOptions == 1) {
             NEW_FILENAME_FIELD.setCellText(item, ep.getReplacementText());
         } else {
-            NEW_FILENAME_FIELD.setCellText(item, ep.getReplacementText());
+            String displayText = ep.getReplacementText();
+            NEW_FILENAME_FIELD.setCellText(item, displayText);
             item.setChecked(false);
+
+            if (ep.isShowUnfound()) {
+                setUnfoundShowLink(item, ep, displayText);
+            }
         }
     }
 
@@ -1241,7 +1282,7 @@ public final class ResultsTable
                 }
 
                 // Dispose any existing combo editor control (if present)
-                deleteItemCombo(item);
+                deleteItemControl(item);
                 item.setData(null);
 
                 // Recompute proposed destination/editor from the model
@@ -1427,7 +1468,7 @@ public final class ResultsTable
     }
 
     private void deleteTableItem(final TableItem item) {
-        deleteItemCombo(item);
+        deleteItemControl(item);
         episodeMap.remove(CURRENT_FILE_FIELD.getCellText(item));
         item.dispose();
 

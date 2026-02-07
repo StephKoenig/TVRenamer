@@ -14,13 +14,13 @@ public class ComboField extends TextField {
     private String itemDestDisplayedText(final TableItem item) {
         synchronized (item) {
             final Object data = item.getData();
-            if (data == null) {
-                return getCellText(item);
+            if (data instanceof Combo combo) {
+                final int selected = combo.getSelectionIndex();
+                final String[] options = combo.getItems();
+                return options[selected];
             }
-            final Combo combo = (Combo) data;
-            final int selected = combo.getSelectionIndex();
-            final String[] options = combo.getItems();
-            return options[selected];
+            // For non-Combo controls (e.g., Link) or null data, fall back to cell text.
+            return getCellText(item);
         }
     }
 
