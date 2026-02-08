@@ -15,8 +15,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.tvrenamer.controller.FilenameParser;
 import org.tvrenamer.controller.util.StringUtils;
@@ -1030,6 +1033,104 @@ public class FileEpisode {
             if (title.equals(actualEpisodes.get(i).getTitle())) {
                 return i;
             }
+        }
+        return -1;
+    }
+
+    // Common codec, source, and audio tags found in filenames — used to strip
+    // non-title text when extracting episode title for fuzzy matching.
+    private static final Pattern CODEC_SOURCE_TAGS = Pattern.compile(
+        "(?i)\\b(WEBRip|WEB[.-]?DL|WEB|BluRay|BRRip|BDRip|HDTV|DVDRip"
+        + "|x264|x265|H\\.?264|H\\.?265|HEVC|AVC|AAC|AC3|DTS"
+        + "|PROPER|REPACK|INTERNAL|AMZN|NF|HULU|DSNP|10bit)\\b"
+    );
+
+    /**
+     * Extract title-like text from the original filename.
+     *
+     * <p>Strips the show name, season/episode pattern, resolution, and common
+     * codec/source tags — leaving just the episode title portion.  For example,
+     * {@code CHiPs.S03E18.Off.Road.1080p.WEBRip} yields {@code "Off Road"}.
+     *
+     * @return the extracted title text, or null if nothing useful remains
+     */
+    String extractTitleTextFromFilename() {
+        if (originalBasename == null || placement == null) {
+            return null;
+        }
+
+        // Build a regex for the S##E## pattern (case-insensitive) and find
+        // where the title text starts (everything after the season/episode tag).
+        String sePattern = "[sS]0*" + placement.season + "[eE]0*" + placement.episode;
+        Matcher seMatcher = Pattern.compile(sePattern).matcher(originalBasename);
+        String afterSE;
+        if (seMatcher.find()) {
+            afterSE = originalBasename.substring(seMatcher.end());
+        } else {
+            // Try alternate patterns: SSxEE, SSEE (4 digits)
+            String altPattern = "\\b0*" + placement.season + "[x.]0*" + placement.episode + "\\b";
+            Matcher altMatcher = Pattern.compile(altPattern).matcher(originalBasename);
+            if (altMatcher.find()) {
+                afterSE = originalBasename.substring(altMatcher.end());
+            } else {
+                return null;
+            }
+        }
+
+        // Strip resolution and everything after it (resolution is usually followed
+        // by codec/source junk).
+        if (filenameResolution != null && !filenameResolution.isEmpty()) {
+            int resIdx = afterSE.toLowerCase(Locale.ROOT)
+                .indexOf(filenameResolution.toLowerCase(Locale.ROOT));
+            if (resIdx >= 0) {
+                afterSE = afterSE.substring(0, resIdx);
+            }
+        }
+
+        // Strip any remaining codec/source tags.
+        afterSE = CODEC_SOURCE_TAGS.matcher(afterSE).replaceAll("");
+
+        // Normalize separators: dots, underscores, hyphens → spaces.
+        String title = afterSE.replaceAll("[._-]+", " ").replaceAll("\\s+", " ").trim();
+
+        return title.isEmpty() ? null : title;
+    }
+
+    /**
+     * Attempt to fuzzy-match the filename's embedded title text against the
+     * two episode title options, returning the index of the best match.
+     *
+     * <p>Only operates on episodes with exactly 2 options (the ambiguous case).
+     * Uses Levenshtein-based similarity scoring from
+     * {@link ShowSelectionEvaluator#similarity}.
+     *
+     * @return 0 or 1 if a clear winner is found, or -1 if no confident pick
+     */
+    public int fuzzyPreSelectEpisode() {
+        if (actualEpisodes == null || actualEpisodes.size() != 2) {
+            return -1;
+        }
+
+        String text = extractTitleTextFromFilename();
+        if (text == null || text.isBlank()) {
+            return -1;
+        }
+
+        double score0 = ShowSelectionEvaluator.similarity(
+            text, actualEpisodes.get(0).getTitle());
+        double score1 = ShowSelectionEvaluator.similarity(
+            text, actualEpisodes.get(1).getTitle());
+
+        logger.fine("Fuzzy episode pre-select for '" + text + "': "
+            + "'" + actualEpisodes.get(0).getTitle() + "'=" + score0 + ", "
+            + "'" + actualEpisodes.get(1).getTitle() + "'=" + score1);
+
+        double best = Math.max(score0, score1);
+        double gap = Math.abs(score0 - score1);
+
+        // Require a minimum score and a clear gap between the two options.
+        if (best >= 0.6 && gap >= 0.15) {
+            return (score0 > score1) ? 0 : 1;
         }
         return -1;
     }

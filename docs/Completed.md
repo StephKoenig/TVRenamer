@@ -486,6 +486,35 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - The manifest workaround is safe since TVRenamer builds exclusively for Windows x86_64.
   - Once the upstream fix lands (treating missing manifest as allowed), the workaround attributes can be removed.
 
+### 38) Episode chain propagation for ambiguous episode titles
+- **Why:** When consecutive episodes share overlapping title options (air vs DVD ordering), the user had to manually select the correct title for every ambiguous episode. Chain propagation cascades the selection: picking one title automatically pre-selects the alternative for adjacent episodes.
+- **Where:** `FileEpisode.java` (title introspection), `ResultsTable.java` (propagation logic + Combo listener)
+- **What we did:**
+  - Added `getEpisodeTitle(int)` and `indexOfEpisodeTitle(String)` to `FileEpisode` for title access.
+  - Added `propagateEpisodeChain()` recursive method to `ResultsTable` with `Set<FileEpisode> visited` for loop prevention and `propagatingChain` flag for Combo re-entry prevention.
+  - Updated the Combo `ModifyListener` to trigger propagation when a 2-option episode is selected.
+- **Notes:** See `docs/Episode Chain Spec.md` for the full algorithm and edge cases.
+
+### 39) Fuzzy pre-selection of episode titles from filename
+- **Why:** When a filename contains episode title text (e.g. `CHiPs.S03E18.Off.Road.1080p.WEBRip.mkv`), the correct Combo option can be pre-selected automatically by fuzzy-matching "Off Road" against the two episode title choices — eliminating manual selection in most cases.
+- **Where:** `FileEpisode.java` (extraction + scoring), `ResultsTable.java` (hook into Combo setup), `ShowSelectionEvaluator.java` (visibility change)
+- **What we did:**
+  - Added `extractTitleTextFromFilename()` to `FileEpisode`: strips show name, S##E## pattern, resolution, and codec/source tags from the filename, leaving the title portion.
+  - Added `fuzzyPreSelectEpisode()` to `FileEpisode`: scores extracted text against each option using Levenshtein similarity (min score 0.6, min gap 0.15).
+  - Made `ShowSelectionEvaluator.similarity()` package-private so `FileEpisode` can call it.
+  - Hooked into `ResultsTable.setComboBoxProposedDest()` to run fuzzy pre-selection before the Combo is shown, then chain-propagate the pick.
+- **Notes:** Phase 2 of `docs/Episode Chain Spec.md`. Thresholds (0.6 score, 0.15 gap) are conservative and may be tuned with real data.
+
+### 40) Combo widget visual artifact fix (Clear Completed)
+- **Why:** When "Clear Completed" removed rows, Combo widgets on remaining rows didn't reposition in sync — causing visible ghosting/overlap.
+- **Where:** `ResultsTable.java` — Clear Completed handler
+- **What we did:** Wrapped the deletion loop in `swtTable.setRedraw(false)` / `swtTable.setRedraw(true)` to batch all removals into a single repaint.
+
+### 41) Dedupe safety gate — only scan for duplicates when moving video files
+- **Why:** Moving subtitle/metadata files (e.g. `.srt`) triggered the duplicate video scan, which surfaced the actual video files as "duplicates" — risking accidental deletion.
+- **Where:** `FileMover.java` (`finishMove`)
+- **What we did:** Added `FileUtilities.hasVideoExtension()` guard to the existing `isCleanupDuplicateVideoFiles()` check. Non-video moves now skip the duplicate scan entirely.
+
 ---
 
 ## Related records
@@ -496,3 +525,4 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - `docs/Unified Evaluator Spec.md`
   - `docs/Unifying Matches Spec.md`
   - `docs/Strings Spec.md`
+  - `docs/Episode Chain Spec.md`

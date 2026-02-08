@@ -333,6 +333,30 @@ public final class ResultsTable
         }
         options.forEach(combo::add);
         combo.setText(defaultOption);
+
+        // Fuzzy pre-selection: if the filename contains title text that matches
+        // one option significantly better than the other, pre-select it and
+        // cascade through the chain.
+        if (ep.optionCount() == 2) {
+            int fuzzyPick = ep.fuzzyPreSelectEpisode();
+            if (fuzzyPick >= 0 && fuzzyPick != ep.getChosenEpisode()) {
+                ep.setChosenEpisode(fuzzyPick);
+                combo.select(fuzzyPick);
+
+                String title = ep.getEpisodeTitle(fuzzyPick);
+                if (title != null) {
+                    propagatingChain = true;
+                    try {
+                        Set<FileEpisode> visited = new HashSet<>();
+                        visited.add(ep);
+                        propagateEpisodeChain(ep, title, visited);
+                    } finally {
+                        propagatingChain = false;
+                    }
+                }
+            }
+        }
+
         combo.addModifyListener(e -> {
             int idx = combo.getSelectionIndex();
             ep.setChosenEpisode(idx);
@@ -2036,13 +2060,20 @@ public final class ResultsTable
                         return;
                     }
 
-                    for (final TableItem item : swtTable.getItems()) {
-                        Object completed = item.getData(
-                            "tvrenamer.moveCompleted"
-                        );
-                        if (Boolean.TRUE.equals(completed)) {
-                            deleteTableItem(item);
+                    // Batch removals so TableEditor-hosted Combos reposition
+                    // in a single repaint instead of showing stale positions.
+                    swtTable.setRedraw(false);
+                    try {
+                        for (final TableItem item : swtTable.getItems()) {
+                            Object completed = item.getData(
+                                "tvrenamer.moveCompleted"
+                            );
+                            if (Boolean.TRUE.equals(completed)) {
+                                deleteTableItem(item);
+                            }
                         }
+                    } finally {
+                        swtTable.setRedraw(true);
                     }
 
                     updateClearCompletedButtonEnabled();

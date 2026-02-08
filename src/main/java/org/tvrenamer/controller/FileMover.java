@@ -305,7 +305,11 @@ public class FileMover implements Callable<Boolean> {
 
         // Optional: find duplicate video files in the destination directory.
         // They'll be shown to the user for confirmation after all moves complete.
-        if (userPrefs.isCleanupDuplicateVideoFiles()) {
+        // Only scan when moving video files — moving subtitles/metadata should not
+        // trigger the duplicate scan (which would surface the video file itself).
+        String destFilename = actualDest.getFileName().toString();
+        if (userPrefs.isCleanupDuplicateVideoFiles()
+                && FileUtilities.hasVideoExtension(destFilename)) {
             Path destDir = actualDest.getParent();
             if (destDir != null) {
                 // Get season/episode for fuzzy matching

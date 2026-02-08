@@ -108,9 +108,71 @@ User clicks Combo for ep18 → selects "Crash Diet"
 | User changes mind | Re-selecting triggers fresh propagation from that point |
 | Files loaded after initial propagation | No retroactive propagation; chain runs at selection time |
 
-## Files Modified
+## Files Modified (Phase 1 — Chain Propagation)
 
 | File | Change |
 |------|--------|
 | `FileEpisode.java` | Add `getEpisodeTitle(int)` and `indexOfEpisodeTitle(String)` |
 | `ResultsTable.java` | Add `propagatingChain` flag, `propagateEpisodeChain()` method, update Combo listener |
+
+---
+
+## Phase 2 — Fuzzy Pre-Selection from Filename
+
+### Problem
+
+Chain propagation solves cascading once the user picks an option, but it doesn't help
+with the **initial** selection. Many filenames already contain the episode title:
+
+```
+CHiPs.S03E18.Off.Road.1080p.WEBRip.mkv
+```
+
+The two Combo options might be "Off Road" and "Kidnap". We can fuzzy-match the
+filename text against the options to pre-select the right one automatically.
+
+### Algorithm
+
+When episode options are loaded and `optionCount() == 2`:
+
+1. Extract title-like text from the filename: strip the show name, `S##E##`,
+   resolution, codec tags, and extension — leaving tokens like `Off.Road`.
+2. Normalize: replace dots/underscores with spaces, collapse whitespace.
+3. Score each option's episode title against the extracted text using the existing
+   `ShowSelectionEvaluator.similarity()` (Levenshtein-based, 0.0–1.0).
+4. If best score >= 0.6 AND gap to second-best >= 0.15, pre-select the winner.
+5. Run chain propagation from the pre-selected choice to cascade.
+
+### Where it hooks in
+
+The natural point is `FileEpisode.listingsComplete()` — after `actualEpisodes` is
+populated and `buildReplacementTextOptions()` is called. If fuzzy matching picks
+an option, set `chosenEpisode` before the Combo is created. The chain propagation
+would then run from `setProposedDestColumn()` in ResultsTable (after the Combo is
+wired up).
+
+Alternatively, do the fuzzy pre-selection in `ResultsTable.setComboBoxProposedDest()`
+just before creating the Combo — this keeps all selection logic in one place and
+gives immediate access to trigger propagation.
+
+### Existing code to reuse
+
+- `ShowSelectionEvaluator.similarity()` — Levenshtein distance scoring (0.0–1.0)
+- `FilenameParser` — already strips show name and S##E## from filenames; the
+  remaining text after `placement` is extracted could be reused
+- `FileEpisode.getEpisodeTitle(int)` and `indexOfEpisodeTitle(String)` — added
+  in Phase 1
+
+### Files to modify
+
+| File | Change |
+|------|--------|
+| `FileEpisode.java` | Add method to extract title-like text from original filename |
+| `ResultsTable.java` | Call fuzzy pre-selection before Combo creation, then propagate |
+
+### Thresholds
+
+- **Minimum score**: 0.6 (same ballpark as show fuzzy matching at 0.8, but lower
+  because filename text is often abbreviated/truncated)
+- **Minimum gap**: 0.15 (prevents false positives when both options score similarly)
+- These should be tuned empirically with real filenames
