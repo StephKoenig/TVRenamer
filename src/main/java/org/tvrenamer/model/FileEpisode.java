@@ -1004,6 +1004,37 @@ public class FileEpisode {
     }
 
     /**
+     * Returns the episode title for the given option index.
+     *
+     * @param index the option index
+     * @return the title, or null if unavailable
+     */
+    public String getEpisodeTitle(final int index) {
+        if (actualEpisodes == null || index < 0 || index >= actualEpisodes.size()) {
+            return null;
+        }
+        return actualEpisodes.get(index).getTitle();
+    }
+
+    /**
+     * Returns the option index whose episode title matches, or -1 if not found.
+     *
+     * @param title the title to search for
+     * @return the index (0-based), or -1 if no match
+     */
+    public int indexOfEpisodeTitle(final String title) {
+        if (actualEpisodes == null || title == null) {
+            return -1;
+        }
+        for (int i = 0; i < actualEpisodes.size(); i++) {
+            if (title.equals(actualEpisodes.get(i).getTitle())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Get the TV show that this file episode has been matched to.
      *
      * @return the matched Show, or null if not yet matched

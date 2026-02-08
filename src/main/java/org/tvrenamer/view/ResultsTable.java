@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -115,6 +116,9 @@ public final class ResultsTable
     private Button actionButton;
     private ProgressBar totalProgressBar;
     private TaskItem taskItem = null;
+
+    // Guard flag to prevent Combo ModifyListener re-entry during chain propagation.
+    private boolean propagatingChain = false;
 
     // Session-only override for "move selected" (does not persist to preferences).
     // null means "no override; follow preferences".
@@ -329,14 +333,86 @@ public final class ResultsTable
         }
         options.forEach(combo::add);
         combo.setText(defaultOption);
-        combo.addModifyListener(e ->
-            ep.setChosenEpisode(combo.getSelectionIndex())
-        );
+        combo.addModifyListener(e -> {
+            int idx = combo.getSelectionIndex();
+            ep.setChosenEpisode(idx);
+            if (!propagatingChain) {
+                String title = ep.getEpisodeTitle(idx);
+                if (title != null && ep.optionCount() == 2) {
+                    propagatingChain = true;
+                    try {
+                        Set<FileEpisode> visited = new HashSet<>();
+                        visited.add(ep);
+                        propagateEpisodeChain(ep, title, visited);
+                    } finally {
+                        propagatingChain = false;
+                    }
+                }
+            }
+        });
         item.setData(combo);
 
         final TableEditor editor = new TableEditor(swtTable);
         editor.grabHorizontal = true;
         NEW_FILENAME_FIELD.setEditor(item, editor, combo);
+    }
+
+    /**
+     * When the user selects an episode title from a 2-option Combo, propagate
+     * the constraint to other episodes of the same show that share the selected
+     * title.  See docs/Episode Chain Spec.md.
+     */
+    private void propagateEpisodeChain(
+        final FileEpisode sourceEp,
+        final String selectedTitle,
+        final Set<FileEpisode> visited
+    ) {
+        if (swtTable.isDisposed()) {
+            return;
+        }
+        for (final TableItem item : swtTable.getItems()) {
+            if (item.isDisposed()) {
+                continue;
+            }
+            final Object data = item.getData(EPISODE_DATA_KEY);
+            if (!(data instanceof FileEpisode otherEp)) {
+                continue;
+            }
+            if (otherEp == sourceEp || visited.contains(otherEp)) {
+                continue;
+            }
+            if (otherEp.optionCount() != 2) {
+                continue;
+            }
+            if (otherEp.getActualShow() != sourceEp.getActualShow()) {
+                continue;
+            }
+
+            int titleIndex = otherEp.indexOfEpisodeTitle(selectedTitle);
+            if (titleIndex < 0) {
+                continue;
+            }
+
+            int otherIndex = 1 - titleIndex;
+            if (otherEp.getChosenEpisode() == otherIndex) {
+                continue;
+            }
+
+            otherEp.setChosenEpisode(otherIndex);
+            visited.add(otherEp);
+
+            // Update the Combo widget to reflect the new selection.
+            final Object widgetData = item.getData();
+            if (widgetData instanceof Combo combo && !combo.isDisposed()) {
+                combo.select(otherIndex);
+            }
+
+            // Cascade: the newly selected title may chain to yet another episode.
+            String newTitle = otherEp.getEpisodeTitle(otherIndex);
+            if (newTitle != null) {
+                propagateEpisodeChain(otherEp, newTitle, visited);
+            }
+        }
     }
 
     private void deleteItemControl(final TableItem item) {
