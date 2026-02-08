@@ -537,37 +537,13 @@ public class FileUtilities {
      *    return false.
      */
     public static boolean checkForCreatableDirectory(final Path path) {
-        // We want to know whether the destination directory could be created.
-        // Historically this used Files.isWritable(...) on an existing ancestor, but that can return
-        // false negatives on SMB/UNC shares. Prefer a direct "write probe" instead.
         Path ancestor = existingAncestor(path);
         if (ancestor == null) {
             return false;
         }
-        if (!Files.isDirectory(ancestor)) {
-            return false;
-        }
-
-        Path probe = null;
-        try {
-            probe = Files.createTempFile(ancestor, ".tvrenamer-probe", ".tmp");
-            return true;
-        } catch (IOException | SecurityException ex) {
-            logger.log(Level.WARNING, "cannot write file to " + ancestor, ex);
-            return false;
-        } finally {
-            if (probe != null) {
-                try {
-                    Files.deleteIfExists(probe);
-                } catch (IOException cleanup) {
-                    logger.log(
-                        Level.FINE,
-                        "unable to delete probe file " + probe,
-                        cleanup
-                    );
-                }
-            }
-        }
+        // Only check existence and directory-ness; skip Files.isWritable() which
+        // returns false negatives on SMB/UNC shares.
+        return Files.isDirectory(ancestor);
     }
 
     /**
@@ -607,28 +583,9 @@ public class FileUtilities {
             return false;
         }
 
-        // On some SMB/UNC shares, Files.isWritable() can return false even when writes are allowed.
-        // Use a direct write probe instead of relying on the heuristic.
-        Path probe = null;
-        try {
-            probe = Files.createTempFile(destDir, ".tvrenamer-probe", ".tmp");
-        } catch (IOException | SecurityException ex) {
-            logger.log(Level.WARNING, "cannot write file to " + destDir, ex);
-            return false;
-        } finally {
-            if (probe != null) {
-                try {
-                    Files.deleteIfExists(probe);
-                } catch (IOException cleanup) {
-                    logger.log(
-                        Level.FINE,
-                        "unable to delete probe file " + probe,
-                        cleanup
-                    );
-                }
-            }
-        }
-
+        // Skip explicit writability checks — Files.isWritable() returns false negatives
+        // on SMB/UNC shares, and probe files litter NAS recycle bins.  If the directory
+        // isn't actually writable the move will fail with a clear OS-level error.
         return true;
     }
 
