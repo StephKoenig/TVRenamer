@@ -36,12 +36,14 @@
     </ul>
 
     <h3>Cleanup Duplicates</h3>
-    <p>After moving a file, optionally delete other video files that represent the same episode:</p>
+    <p>After moving a video file, optionally scan for other video files that represent the same episode:</p>
     <ul>
         <li>Matches files with same base name or same season/episode numbers</li>
         <li>Only deletes video files (preserves subtitle files)</li>
         <li>Shows a confirmation dialog before deletion</li>
         <li>Uses fuzzy matching (e.g., "S01E02" and "1x02" are recognized as the same episode)</li>
+        <li>Only triggers when moving video files &mdash; moving subtitles or metadata files
+            does not trigger the duplicate scan</li>
     </ul>
 
     <h2>Rename Format</h2>

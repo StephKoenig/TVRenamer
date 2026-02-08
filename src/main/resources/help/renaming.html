@@ -120,6 +120,25 @@
         <strong>Warning:</strong> The overwrite option will permanently replace existing files. Use with caution.
     </div>
 
+    <h2>Ambiguous Episode Titles</h2>
+    <p>Some shows have different episode titles between aired and DVD orderings. When an
+       episode number matches titles from both orderings, TVRenamer shows a dropdown with
+       both options so you can choose the correct one.</p>
+
+    <h3>Automatic Title Selection</h3>
+    <p>TVRenamer can often pick the right title automatically:</p>
+    <ul>
+        <li><strong>Fuzzy matching from filename:</strong> If the filename contains the episode
+            title (e.g., <code>CHiPs.S03E18.Off.Road.1080p.mkv</code>), TVRenamer extracts
+            "Off Road" and matches it against the options to pre-select the best one.</li>
+        <li><strong>Chain propagation:</strong> When you select a title for one episode,
+            TVRenamer automatically cascades the choice through related episodes. For example,
+            if episodes 18&ndash;20 share overlapping titles, selecting one determines the rest
+            of the chain.</li>
+    </ul>
+    <p>Automatic selections are non-destructive &mdash; the dropdown keeps both options and you
+       can override any choice, which re-triggers propagation from that point.</p>
+
     <h2>Episode Ordering</h2>
     <p>TheTVDB provides multiple episode orderings:</p>
     <ul>
