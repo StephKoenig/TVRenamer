@@ -26,33 +26,16 @@ This document consolidates "future work" notes from the codebase. Notes are grou
 
 ## Code Reliability & Maintenance
 
-### SWT upgrade guardrail: document and investigate SWT 3.130+ native-load incompatibility
-**Why:** Enables future SWT upgrades without breaking Windows startup.
-**Where:** Dependency management + docs
-**Effort:** Small/Medium
+### SWT upgrade guardrail: monitor upstream fat-JAR manifest fix
+**Status:** Resolved — upgraded to SWT 3.132.0 (see `docs/Completed.md` #37).
 
-**Investigation Results:**
-Tested multiple SWT versions with Gradle 9.3.1 and Shadow 9.3.1 on Java 21:
+The root cause was commit `360a2702a7` (SWT PR #2054) adding a mandatory `isLoadable()` check
+that reads `SWT-OS`/`SWT-Arch` from the JAR manifest — attributes lost when Shadow merges JARs.
+Workaround: inject those attributes in `build.gradle` `shadowJar` manifest.
 
-| Version | Result |
-|---------|--------|
-| 3.129.0 | ✅ Works |
-| 3.130.0 | ❌ Fails |
-| 3.131.0 | ❌ Fails |
-| 3.132.0 | ❌ Fails |
-
-All failing versions show:
-```
-Libraries for platform win32 cannot be loaded because of incompatible environment
-```
-
-**Findings:**
-- Issue started at SWT 3.130.0 (not related to Gradle/Shadow versions)
-- Appears to be a change in how SWT handles native library loading when packaged in a fat/shadow JAR
-- Not related to Java version (tested on Java 21)
-- No release notes available on GitHub for SWT 3.130+
-
-**Staying on SWT 3.129.0** until Eclipse fixes this upstream or a workaround is found.
+**Remaining:** Monitor upstream issue [#2928](https://github.com/eclipse-platform/eclipse.platform.swt/issues/2928)
+for a proper fix (treating missing manifest as allowed). Once fixed, the manifest attributes
+in `build.gradle` can be removed — they're harmless but unnecessary after that.
 
 ### Episode DB path canonicalization
 **Context:** EpisodeDb can detect two strings refer to the same file; it currently chooses not to update the stored key/path even if it knows they match.
@@ -105,11 +88,11 @@ Libraries for platform win32 cannot be loaded because of incompatible environmen
 
 ---
 
-## Dependency Status (January 2026)
+## Dependency Status (February 2026)
 
 | Dependency | Version | Latest Available | Status |
 |------------|---------|------------------|--------|
-| SWT | 3.129.0 | 3.131.0 | ❌ Blocked (see above) |
+| SWT | 3.132.0 | 3.132.0 | ✅ Latest (fat-JAR workaround applied) |
 | XStream | 1.4.21 | 1.4.21 | ✅ Latest |
 | Commons Codec | 1.21.0 | 1.21.0 | ✅ Updated |
 | OkHttp | 5.3.2 | 5.3.2 | ✅ Updated |

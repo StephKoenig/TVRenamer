@@ -472,6 +472,20 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - Prevents spurious counter increments when re-clicking the action button.
   - Rows remain checked but are correctly skipped on subsequent clicks.
 
+### 37) Fix SWT 3.130+ fat-JAR incompatibility and upgrade to 3.132.0
+- **Why:** SWT 3.130+ added a mandatory `isLoadable()` check (commit `360a2702a7`, PR #2054) that reads `SWT-OS` and `SWT-Arch` from the JAR manifest at startup. In a Shadow/fat JAR the original SWT manifest is replaced by the application's manifest, so these attributes are missing. The check fails and SWT calls `System.exit(1)` with: *"Libraries for platform win32 cannot be loaded because of incompatible environment"*.
+- **Where:** `build.gradle` (shadowJar manifest), `gradle/libs.versions.toml` (version bump), dependency lockfiles
+- **What we did:**
+  - **Root cause identified:** The `Library.isLoadable()` method (called from `C.java` static initializer) opens a `JarURLConnection` to read the main manifest attributes `SWT-OS` and `SWT-Arch`. When these are `null` (as in a merged fat JAR), the equality check against the runtime OS/arch fails.
+  - **Workaround applied:** Added `SWT-OS: win32` and `SWT-Arch: x86_64` manifest attributes to both `shadowJar` and `shadowJarVersioned` tasks in `build.gradle`. This makes the `isLoadable()` check pass.
+  - **Upgraded SWT** from 3.129.0 to 3.132.0 (latest on Maven Central).
+  - **Updated dependency lockfiles** via `./gradlew dependencies --write-locks`.
+  - **Verified:** `./gradlew clean build shadowJar createExe` passes; fat JAR manifest confirmed to contain the attributes.
+- **Notes:**
+  - Upstream issue: [eclipse-platform/eclipse.platform.swt#2928](https://github.com/eclipse-platform/eclipse.platform.swt/issues/2928) (open, no fix merged yet).
+  - The manifest workaround is safe since TVRenamer builds exclusively for Windows x86_64.
+  - Once the upstream fix lands (treating missing manifest as allowed), the workaround attributes can be removed.
+
 ---
 
 ## Related records

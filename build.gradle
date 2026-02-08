@@ -275,6 +275,18 @@ shadowJar {
     // Keep merge behavior for service files.
     mergeServiceFiles()
 
+    // SWT 3.130+ added a mandatory isLoadable() check at startup that reads SWT-OS
+    // and SWT-Arch from the JAR manifest.  In a fat JAR the original SWT manifest is
+    // replaced, so these attributes are lost and SWT calls System.exit(1).
+    // Adding them here keeps the check happy.
+    // Upstream issue: https://github.com/eclipse-platform/eclipse.platform.swt/issues/2928
+    manifest {
+        attributes(
+            'SWT-OS': 'win32',
+            'SWT-Arch': 'x86_64'
+        )
+    }
+
     dependsOn(tasks.named('generateBuildMetadataFiles'))
 
     // Force the generated build metadata files into the JAR root.
@@ -301,6 +313,14 @@ tasks.register('shadowJarVersioned', com.github.jengelman.gradle.plugins.shadow.
     from(sourceSets.main.output)
     configurations = [project.configurations.runtimeClasspath]
     mergeServiceFiles()
+
+    // Same SWT manifest workaround as shadowJar (see comment there).
+    manifest {
+        attributes(
+            'SWT-OS': 'win32',
+            'SWT-Arch': 'x86_64'
+        )
+    }
 
     dependsOn(tasks.named('generateBuildMetadataFiles'))
 
