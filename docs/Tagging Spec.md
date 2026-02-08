@@ -56,12 +56,12 @@ We write multiple atoms for broad compatibility across media managers (Plex, Kod
 
 | Atom Code | Constant | Type | Description | Example Value | Used By |
 |-----------|----------|------|-------------|---------------|---------|
-| `tvsh` | `ATOM_TVSH` | String | TV Show name | "Breaking Bad" | iTunes, Plex, Kodi |
-| `©alb` | `ATOM_ALB` | String | Album (= show name) | "Breaking Bad" | Plex, VLC, generic players |
+| `tvsh` | `ATOM_TVSH` | String | TV Show name | "Solar Drift" | iTunes, Plex, Kodi |
+| `©alb` | `ATOM_ALB` | String | Album (= show name) | "Solar Drift" | Plex, VLC, generic players |
 | `tvsn` | `ATOM_TVSN` | Integer | Season number | 1 | iTunes, Plex, Kodi |
 | `tves` | `ATOM_TVES` | Integer | Episode number | 1 | iTunes, Plex, Kodi |
 | `tven` | `ATOM_TVEN` | String | Episode title | "Pilot" | iTunes, Plex |
-| `©nam` | `ATOM_NAM` | String | Title (filename w/o ext) | "Breaking.Bad.S01E01" | VLC, generic players |
+| `©nam` | `ATOM_NAM` | String | Title (filename w/o ext) | "Solar.Drift.S01E01" | VLC, generic players |
 | `©day` | `ATOM_DAY` | String | Air date (ISO-8601) | "2008-01-20" | iTunes, Plex |
 | `stik` | `ATOM_STIK` | Integer | Media kind (10=TV) | 10 | iTunes, Apple TV |
 
@@ -148,8 +148,8 @@ For broad media manager compatibility, we'll write tags at multiple target level
 
 | Tag Name | Description | Example | Used By |
 |----------|-------------|---------|---------|
-| `TITLE` | Series/collection name | "Breaking Bad" | Plex, Kodi, Jellyfin |
-| `COLLECTION` | Alternate series name | "Breaking Bad" | Kodi, Emby |
+| `TITLE` | Series/collection name | "Solar Drift" | Plex, Kodi, Jellyfin |
+| `COLLECTION` | Alternate series name | "Solar Drift" | Kodi, Emby |
 | `CONTENT_TYPE` | Media type identifier | "TV Show" | Kodi |
 | `TOTAL_PARTS` | Total seasons (if known) | "5" | Some players |
 
@@ -222,11 +222,11 @@ For broad media manager compatibility, we'll write tags at multiple target level
     </Targets>
     <Simple>
       <Name>TITLE</Name>
-      <String>Breaking Bad</String>
+      <String>Solar Drift</String>
     </Simple>
     <Simple>
       <Name>COLLECTION</Name>
-      <String>Breaking Bad</String>
+      <String>Solar Drift</String>
     </Simple>
     <Simple>
       <Name>CONTENT_TYPE</Name>

@@ -93,13 +93,13 @@ import org.tvrenamer.controller.TheTVDBProvider;
  * tell them apart.  But it's a safe assumption that won't happen.<p>
  *
  * On the other hand, we likely DO have issues involving the non-uniqueness of a title like
- * "Archer" or "The Office".  The fact that The TVDB assigns unique names to these series
+ * "Archer" or "The Bullpen".  The fact that The TVDB assigns unique names to these series
  * does not necessarily help us much in doing the (2) -&gt;(3a) mapping.<p>
  *
  * What we might want to do in the future is make it potentially a many-to-many relation,
  * and say that calling mapStringToShow() does not necessarily pin down the exact series the file
  * refers to.  We might be able to figure it out later, based on additional information.
- * For example, if we're looking at "The Office, Season 8", we know it has to be the US
+ * For example, if we're looking at "The Bullpen, Season 8", we know it has to be the US
  * version, because the UK version didn't do that many seasons.  Or, if the actual episode
  * name is already embedded in the filename, we could try to match that up with the information
  * we get about episode listings.<p>

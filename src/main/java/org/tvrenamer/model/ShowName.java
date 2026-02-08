@@ -13,34 +13,34 @@ import org.tvrenamer.controller.util.StringUtils;
  * the name of a show.  Ultimately it will include a reference to the Show object.<p>
  *
  * Some examples may be helpful.  Let's say we have the following files:<ul>
- *   <li>"The Office S01E02 Work Experience.mp4"</li>
- *   <li>"The Office S05E07.mp4"</li>
- *   <li>"the.office.s06e20.mkv"</li>
- *   <li>"the.office.us.s08e11.avi"</li></ul><p>
+ *   <li>"The Bullpen S01E02 Work Experience.mp4"</li>
+ *   <li>"The Bullpen S05E07.mp4"</li>
+ *   <li>"the.bullpen.s06e20.mkv"</li>
+ *   <li>"the.bullpen.us.s08e11.avi"</li></ul><p>
  *
- * These would produce "filenameShow" values of "The Office", "The Office", "the.office",
- * and "the.office.us", respectively.  The first two are identical, and therefore will map
+ * These would produce "filenameShow" values of "The Bullpen", "The Bullpen", "the.bullpen",
+ * and "the.bullpen.us", respectively.  The first two are identical, and therefore will map
  * to the same ShowName object.<p>
  *
  * From the filenameShow, we create a query string, which normalizes the case and punctuation.
- * For the examples given, the query strings would be "the office", "the office", "the office",
- * and "the office us"; that is, the first *three* have the same value.  So even though there's
+ * For the examples given, the query strings would be "the bullpen", "the bullpen", "the bullpen",
+ * and "the bullpen us"; that is, the first *three* have the same value.  So even though there's
  * a separate ShowName object for the third file, it maps to the same QueryString.<p>
  *
  * The QueryString will be sent to the provider, which will potentially give us options for
  * shows it knows about, that match the query string.  We map each query string to a Show.
  * Potentially, multiple query strings can map to the same show.  For example, the strings
- * "the office" and "office" might map to the same show.<p>
+ * "the bullpen" and "bullpen" might map to the same show.<p>
  *
- * This example was chosen because there are, in fact, two distinct shows called "The Office".
- * There are different ways to distinguish them, such as "The Office (US)", "The Office (UK)",
- * "The Office (2005)", etc.  But the filenames may not have these differentiators.<p>
+ * This example was chosen because there could be two distinct shows with the same name.
+ * There are different ways to distinguish them, such as "The Bullpen (US)", "The Bullpen (UK)",
+ * "The Bullpen (2005)", etc.  But the filenames may not have these differentiators.<p>
  *
  * Currently, we pick one Show for a given ShowName, even though in this example, the two
- * files actually do refer to separate shows.  We (as humans) know the first one is the BBC
- * version, because of the episode title; we know the second one is the NBC version, because
- * it is Season 5, and the BBC version didn't run that long.  Currently, this program is
- * not able to make those inferences, but it would be good to add in the future.
+ * files actually do refer to separate shows.  We (as humans) know the first one is the
+ * original version, because of the episode title; we know the second one is the reboot,
+ * because it is Season 5, and the original didn't run that long.  Currently, this program
+ * is not able to make those inferences, but it would be good to add in the future.
  */
 public class ShowName {
 

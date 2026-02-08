@@ -15,7 +15,7 @@ Source of truth:
 
 - **Extracted show name** (`foundName`)
   - The substring extracted from a filename that is believed to be the show name.
-  - Example: from `The.Night.Manager.s01e03.mkv`, this is typically `The.Night.Manager`.
+  - Example: from `The.Quiet.Ones.s01e03.mkv`, this is typically `The.Quiet.Ones`.
 
 - **Override**
   - A user preference mapping from extracted show name → replacement text.
@@ -24,7 +24,7 @@ Source of truth:
 - **Query string** (`queryString`)
   - A normalized form of a show name used as the provider search key and as an internal cache key.
   - Currently computed by `StringUtils.makeQueryString(...)` (lowercase + punctuation normalization).
-  - Example: `The.Night.Manager` → `the night manager`.
+  - Example: `The.Quiet.Ones` → `the quiet ones`.
 
 - **Provider candidates / show options**
   - A list of `ShowOption` values returned by the provider’s search API for a query string.
@@ -48,7 +48,7 @@ Source of truth:
 Normalization at this stage is minimal:
 - `StringUtils.trimFoundShow(...)` removes leading/trailing separators: spaces, `_`, `.`, `-`
 - It does **not** replace internal separators like dots.
-  - So `The.Night.Manager` remains `The.Night.Manager` at this stage.
+  - So `The.Quiet.Ones` remains `The.Quiet.Ones` at this stage.
 
 The `FileEpisode` stores:
 - `episode.setFilenameShow(foundName)` (original extracted name, mostly unchanged)
@@ -77,8 +77,8 @@ This is the key that:
 - is used as the in-memory cache key for `QueryString`
 
 Example:
-- `The.Night.Manager` → `the night manager`
-- `The Night Manager` → `the night manager`
+- `The.Quiet.Ones` → `the quiet ones`
+- `The Quiet Ones` → `the quiet ones`
 
 So dot-separated filenames already query correctly, even when the extracted show name contains dots.
 
@@ -120,8 +120,8 @@ This step is intentionally conservative: it only selects when a candidate matche
 
 Rationale:
 - Avoid unnecessary prompts for dot/underscore-separated filenames, e.g.
-  - `The.Night.Manager.s01e03.mkv`
-  - candidates: `The Night Manager`, `The Night Manager (IN)`, `The Night Manager (CN)`
+  - `The.Quiet.Ones.s01e03.mkv`
+  - candidates: `The Quiet Ones`, `The Quiet Ones (IN)`, `The Quiet Ones (CN)`
   - The first should be selected without prompting because it matches the humanized extracted name.
 
 #### 5.3) If still ambiguous and there are multiple candidates: prompt
@@ -163,7 +163,7 @@ To avoid duplicated logic and “drift” between runtime behavior and Preferenc
 
 The evaluator accepts:
 - `extractedName` (String): the name to match against candidate SeriesName/Aliases.
-  - Runtime: this is the extracted show name (user-facing), e.g. `The.Night.Manager`
+  - Runtime: this is the extracted show name (user-facing), e.g. `The.Quiet.Ones`
   - Override validation: this is the override **replacement text**
 - `options` (`List<ShowOption>`): provider candidates (may be empty)
 - `pinnedId` (String|null): the user’s pinned provider id for this query string, if any
@@ -218,7 +218,7 @@ The evaluator is intentionally conservative and explainable. It uses the followi
 5. **Tie-breakers (deterministic; applied only after exact checks)**
    - **TB1: Prefer base title over parenthetical variants (only when base exists)**
      - If a base-title candidate exists (exactly equal to normalized extracted name) and other candidates are `Base Title (something)` → choose base title (“Preferred base title over parenthetical variants”).
-     - If candidates are only parenthetical variants (e.g., `The Office (US)` vs `The Office (UK)` with no base title) → remain ambiguous (prompt).
+     - If candidates are only parenthetical variants (e.g., `The Bullpen (US)` vs `The Bullpen (UK)` with no base title) → remain ambiguous (prompt).
    - **TB2/TB6: Prefer exact token match over extra tokens**
      - Canonicalize extracted and candidate names using punctuation replacement + lowercase + collapsed spaces.
      - If exactly one candidate’s canonical tokens equal the extracted canonical tokens → choose it (“Preferred exact token match over extra tokens”).
@@ -290,31 +290,31 @@ Status: further tie-breaker work is deferred; track any additional heuristics an
 ## Example scenarios (current intent)
 
 ### Scenario A: Dot-separated filename with clear base match
-Input file: `The.Night.Manager.s01e03.mkv`  
-Extracted: `The.Night.Manager`  
-Normalized compare: `The Night Manager`  
+Input file: `The.Quiet.Ones.s01e03.mkv`  
+Extracted: `The.Quiet.Ones`  
+Normalized compare: `The Quiet Ones`  
 
 Candidates:
-- `The Night Manager`
-- `The Night Manager (IN)`
-- `The Night Manager (CN)`
+- `The Quiet Ones`
+- `The Quiet Ones (IN)`
+- `The Quiet Ones (CN)`
 
 Expected:
-- auto-select `The Night Manager`
+- auto-select `The Quiet Ones`
 - no Select Shows prompt
 
 ### Scenario B: Genuine ambiguity without a strong match
-Extracted: `The Office`  
+Extracted: `The Bullpen`  
 Candidates:
-- `The Office`
-- `The Office (US)` (or similar)
-- `The Office (UK)` (or similar)
+- `The Bullpen`
+- `The Bullpen (US)` (or similar)
+- `The Bullpen (UK)` (or similar)
 
 Expected:
 - prompt unless user pinned a disambiguation for that query string
 
 ### Scenario C: User pinned disambiguation
-Query string: `the office`  
+Query string: `the bullpen`  
 Pinned id: `<provider-id-for-us>`  
 
 Expected:

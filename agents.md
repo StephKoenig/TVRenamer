@@ -145,6 +145,13 @@ This catches issues early and gives the user a testable artifact after each sign
 - Avoid unrelated reformatting.
 - Avoid line-ending churn on Windows.
 
+### No real show names or company names in project text
+In code comments, commit messages, release notes, documentation, and test data descriptions:
+- **Never use real TV show names.** Use plausible fictional names instead (e.g., "Westmark Academy", "Solar Drift", "The Quiet Ones").
+- **Never name real streaming services, studios, or media companies.** Refer generically (e.g., "the listings provider", "media players", "streaming platforms") or use obviously fictional names.
+- **Help pages and user-facing text** should describe features generically (e.g., "your episode files", "your media library") without implying any specific content source.
+- **Why:** TVRenamer is a tool for organising legitimately owned media (DVD and Blu-ray backups, personal recordings, etc.). Referencing real shows or services in project materials could imply or encourage unlawful use.
+
 ---
 
 ## TODO + Completed workflow (docs-driven)

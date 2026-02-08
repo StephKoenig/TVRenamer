@@ -1050,7 +1050,7 @@ public class FileEpisode {
      *
      * <p>Strips the show name, season/episode pattern, resolution, and common
      * codec/source tags — leaving just the episode title portion.  For example,
-     * {@code CHiPs.S03E18.Off.Road.1080p.WEBRip} yields {@code "Off Road"}.
+     * {@code Road.Watch.S03E18.Off.Road.1080p.WEBRip} yields {@code "Off Road"}.
      *
      * @return the extracted title text, or null if nothing useful remains
      */

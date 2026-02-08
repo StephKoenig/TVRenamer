@@ -496,7 +496,7 @@ When you complete an item that was tracked in `docs/TODO.md`:
 - **Notes:** See `docs/Episode Chain Spec.md` for the full algorithm and edge cases.
 
 ### 39) Fuzzy pre-selection of episode titles from filename
-- **Why:** When a filename contains episode title text (e.g. `CHiPs.S03E18.Off.Road.1080p.WEBRip.mkv`), the correct Combo option can be pre-selected automatically by fuzzy-matching "Off Road" against the two episode title choices — eliminating manual selection in most cases.
+- **Why:** When a filename contains episode title text (e.g. `Road.Watch.S03E18.Off.Road.1080p.WEBRip.mkv`), the correct Combo option can be pre-selected automatically by fuzzy-matching "Off Road" against the two episode title choices — eliminating manual selection in most cases.
 - **Where:** `FileEpisode.java` (extraction + scoring), `ResultsTable.java` (hook into Combo setup), `ShowSelectionEvaluator.java` (visibility change)
 - **What we did:**
   - Added `extractTitleTextFromFilename()` to `FileEpisode`: strips show name, S##E## pattern, resolution, and codec/source tags from the filename, leaving the title portion.

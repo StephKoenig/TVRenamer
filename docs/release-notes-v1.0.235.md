@@ -5,7 +5,7 @@ When aired and DVD orderings give different episode titles for the same episode 
 TVRenamer now handles them intelligently:
 
 - **Fuzzy pre-selection from filename:** If the filename contains the episode title
-  (e.g., `CHiPs.S03E18.Off.Road.1080p.WEBRip.mkv`), TVRenamer extracts the title text
+  (e.g., `Road.Watch.S03E18.Off.Road.1080p.WEBRip.mkv`), TVRenamer extracts the title text
   and fuzzy-matches it against the two options to automatically pre-select the correct one.
 - **Chain propagation:** Selecting (or auto-selecting) a title for one episode automatically
   cascades through adjacent episodes that share overlapping title options. For example,
@@ -19,9 +19,8 @@ clickable *"click to set Hint"* link that jumps directly to the Preferences Matc
 with the show name pre-filled — just type the correct name and save. Unfound shows whose
 override changed are automatically retried.
 
-### BBC-style filename pattern support
-Added recognition of `Show_Series_X_-_YY.Title` filename patterns commonly used by
-BBC content. Also tightened the resolution regex to avoid false positives on programme IDs.
+### Show_Series_X_-_YY.Title filename pattern support
+Added recognition of `Show_Series_X_-_YY.Title` filename patterns commonly used by some content generators. Also tightened the resolution regex to avoid false positives on programme IDs.
 
 ### SWT upgraded to 3.132.0
 Updated the SWT UI toolkit from 3.129.0 to 3.132.0 (latest), bringing platform and

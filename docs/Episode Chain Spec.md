@@ -125,7 +125,7 @@ Chain propagation solves cascading once the user picks an option, but it doesn't
 with the **initial** selection. Many filenames already contain the episode title:
 
 ```
-CHiPs.S03E18.Off.Road.1080p.WEBRip.mkv
+Road.Watch.S03E18.Off.Road.1080p.WEBRip.mkv
 ```
 
 The two Combo options might be "Off Road" and "Kidnap". We can fuzzy-match the
