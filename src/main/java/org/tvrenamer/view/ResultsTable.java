@@ -61,6 +61,7 @@ import org.tvrenamer.model.FailedShow;
 import org.tvrenamer.model.FileEpisode;
 import org.tvrenamer.model.Series;
 import org.tvrenamer.model.Show;
+import org.tvrenamer.model.ShowName;
 import org.tvrenamer.model.ShowStore;
 import org.tvrenamer.model.UserPreference;
 import org.tvrenamer.model.UserPreferences;
@@ -94,6 +95,10 @@ public final class ResultsTable
     // code recomputes the proposed destination text.
     private static final String SELECT_SHOW_PENDING_KEY =
         "tvrenamer.selectShowPending";
+
+    // Per-row reference to the FileEpisode, stored via setData(String, Object)
+    // so it is independent of the unnamed setData(Object) used for Combo/Link widgets.
+    private static final String EPISODE_DATA_KEY = "tvrenamer.episode";
 
     private final UIStarter ui;
     private final Shell shell;
@@ -564,6 +569,7 @@ public final class ResultsTable
         // will
         // automatically be activated.
         item.setChecked(false);
+        item.setData(EPISODE_DATA_KEY, episode);
         CURRENT_FILE_FIELD.setCellText(item, episode.getFilepath());
         setProposedDestColumn(item, episode);
         STATUS_FIELD.setCellImage(item, DOWNLOADING);
@@ -1496,6 +1502,77 @@ public final class ResultsTable
         // so it applies consistently across all delete paths.
     }
 
+    /**
+     * Re-lookup unfound shows whose effective show name changed due to an
+     * override update.  Called when the SHOW_NAME_OVERRIDES preference fires.
+     */
+    private void retryUnfoundShowsAfterOverrideChange() {
+        if (swtTable.isDisposed()) {
+            return;
+        }
+        for (final TableItem item : swtTable.getItems()) {
+            if (item.isDisposed()) {
+                continue;
+            }
+            final Object data = item.getData(EPISODE_DATA_KEY);
+            if (!(data instanceof FileEpisode ep)) {
+                continue;
+            }
+            if (!ep.isShowUnfound()) {
+                continue;
+            }
+
+            String extractedName = ep.getExtractedFilenameShow();
+            String newName = prefs.resolveShowName(extractedName);
+            if (newName.equals(ep.getFilenameShow())) {
+                // Override didn't change this episode's lookup name.
+                continue;
+            }
+
+            ep.setFilenameShow(newName);
+            ShowName.mapShowName(newName);
+            STATUS_FIELD.setCellImage(item, DOWNLOADING);
+
+            ShowStore.mapStringToShow(
+                newName,
+                new ShowInformationListener() {
+                    @Override
+                    public void downloadSucceeded(Show show) {
+                        ep.setEpisodeShow(show);
+                        display.asyncExec(() -> {
+                            if (tableContainsTableItem(item)) {
+                                setProposedDestColumn(item, ep);
+                                STATUS_FIELD.setCellImage(item, ADDED);
+                                item.setText(
+                                    STATUS_FIELD.column.id,
+                                    EMPTY_STRING
+                                );
+                            }
+                        });
+                        if (show.isValidSeries()) {
+                            getSeriesListings(
+                                show.asSeries(), item, ep
+                            );
+                        }
+                    }
+
+                    @Override
+                    public void downloadFailed(FailedShow failedShow) {
+                        ep.setFailedShow(failedShow);
+                        tableItemFailed(item, ep);
+                    }
+
+                    @Override
+                    public void apiHasBeenDeprecated() {
+                        noteApiFailure();
+                        ep.setApiDiscontinued();
+                        tableItemFailed(item, ep);
+                    }
+                }
+            );
+        }
+    }
+
     private void updateUserPreferences(final UserPreference userPref) {
         logger.fine("Preference change event: " + userPref);
 
@@ -1517,13 +1594,15 @@ public final class ResultsTable
             case THEME_MODE:
                 Fields.setThemeMode(prefs.getThemeMode());
                 break;
+            case SHOW_NAME_OVERRIDES:
+                retryUnfoundShowsAfterOverrideChange();
+                break;
             case IGNORE_REGEX:
             case PRELOAD_FOLDER:
             case ADD_SUBDIRS:
             case REMOVE_EMPTY:
             case DELETE_ROWS:
             case UPDATE_CHECK:
-            case SHOW_NAME_OVERRIDES:
             case PREFER_DVD_ORDER:
             case FILE_MTIME_POLICY:
             case OVERWRITE_DESTINATION:
