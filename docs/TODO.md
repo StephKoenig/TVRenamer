@@ -23,7 +23,7 @@ This document consolidates "future work" notes from the codebase. Notes are grou
   - unified "Show Matching Rules" editor alongside Overrides and Disambiguations
 
 ### Dedupe QOL: dialog improvements
-**Why:** Two improvements to the duplicate file cleanup dialog:
+**Why:** Improvements to the duplicate file cleanup dialog:
 
 **1. Show file size and date in the dedupe dialog**
 Currently the dialog only shows Filename and Folder columns. Adding file size and last-modified
@@ -113,7 +113,7 @@ in `build.gradle` can be removed — they're harmless but unnecessary after that
 | XStream | 1.4.21 | 1.4.21 | ✅ Latest |
 | Commons Codec | 1.21.0 | 1.21.0 | ✅ Updated |
 | OkHttp | 5.3.2 | 5.3.2 | ✅ Updated |
-| mp4parser | 1.9.56 | 1.9.56 | ✅ New (metadata tagging) |
+| AtomicParsley / ffmpeg | external | — | External tool for MP4 tagging (replaces mp4parser) |
 | JUnit | 5.11.4 | 5.11.4 | ✅ Updated (JUnit 5/Jupiter) |
 | Gradle | 9.3.1 | 9.3.1 | ✅ Updated |
 | Shadow Plugin | 9.3.1 | 9.3.1 | ✅ Updated |

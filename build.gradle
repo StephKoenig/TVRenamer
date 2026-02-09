@@ -83,9 +83,6 @@ dependencies {
     // Networking
     implementation(libs.okhttp)
 
-    // Metadata tagging
-    implementation(libs.mp4parser)
-
     // Testing
     testImplementation(libs.junit5Jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

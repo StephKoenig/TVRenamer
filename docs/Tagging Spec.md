@@ -34,7 +34,7 @@ TVRenamer can optionally write TV episode metadata directly into video files. Th
 |-------|----------|---------|
 | `VideoMetadataTagger` | `controller/metadata/` | Interface for format-specific taggers |
 | `MetadataTaggingController` | `controller/metadata/` | Orchestrates tagging, selects tagger by extension |
-| `Mp4MetadataTagger` | `controller/metadata/` | MP4/M4V/MOV implementation using mp4parser |
+| `Mp4MetadataTagger` | `controller/metadata/` | MP4/M4V/MOV implementation using AtomicParsley (preferred) or ffmpeg |
 
 ---
 
@@ -45,8 +45,9 @@ TVRenamer can optionally write TV episode metadata directly into video files. Th
 - `.m4v`
 - `.mov`
 
-### Library
-- **mp4parser** (org.mp4parser:isoparser) - Pure Java ISO Base Media File Format parser
+### External Tools
+- **AtomicParsley** (preferred) — surgical iTunes atom edits, doesn't rewrite media data
+- **ffmpeg** (fallback) — full container rewrite with `-c copy`, ubiquitous
 
 ### Atoms Written
 
@@ -401,6 +402,6 @@ Legend: ✅ Supported | ⚠️ Partial | ❌ Not applicable
 - [Matroska Tags Specification](https://www.matroska.org/technical/tagging.html)
 - [Matroska Tag Names](https://www.matroska.org/technical/elements.html)
 - [MKVToolNix Documentation](https://mkvtoolnix.download/docs.html)
-- [mp4parser Library](https://github.com/sannies/mp4parser)
+- [AtomicParsley](https://github.com/wez/atomicparsley)
 - [Plex Metadata Agents](https://support.plex.tv/articles/200241558-agents/)
 - [Kodi NFO/Tag Support](https://kodi.wiki/view/NFO_files)

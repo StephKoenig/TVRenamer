@@ -20,10 +20,11 @@ import org.eclipse.swt.widgets.TableItem;
 /**
  * Modal dialog to confirm deletion of duplicate video files found after moves.
  *
- * <p>Displays a list of duplicate files with checkboxes. Files are checked by default
- * (meaning they will be deleted). Users can uncheck files they want to keep.
+ * <p>Displays a list of duplicate files with checkboxes. Files are unchecked by default
+ * for safety — the user must actively select files before deletion is possible.
  *
- * <p>Returns the list of files to delete when OK is clicked, or null if cancelled.
+ * <p>Returns the list of files to delete when the user clicks Delete Selected,
+ * or null if cancelled.
  */
 public final class DuplicateCleanupDialog extends Dialog {
 
@@ -110,7 +111,7 @@ public final class DuplicateCleanupDialog extends Dialog {
         Label instructionLabel = new Label(dialogShell, SWT.WRAP);
         instructionLabel.setText(
             "The following duplicate video files were found in the destination folder(s). " +
-            "Checked files will be deleted. Uncheck any files you want to keep."
+            "Select the files you want to delete."
         );
         GridData instructionData = new GridData(SWT.FILL, SWT.TOP, true, false);
         instructionData.widthHint = MIN_WIDTH - 40;
@@ -142,7 +143,7 @@ public final class DuplicateCleanupDialog extends Dialog {
         // Populate table.
         for (Path path : duplicates) {
             TableItem item = new TableItem(table, SWT.NONE);
-            item.setChecked(true); // Default to delete.
+            item.setChecked(false); // Unchecked by default for safety.
             item.setData(path);
 
             String filename = (path.getFileName() != null)
@@ -161,52 +162,69 @@ public final class DuplicateCleanupDialog extends Dialog {
         summaryLabel.setText(duplicates.size() + " duplicate file(s) found");
         summaryLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
-        // Button composite.
+        // Button composite — create widgets in visual order (SWT lays out by creation order).
         Composite buttonComposite = new Composite(dialogShell, SWT.NONE);
-        buttonComposite.setLayout(new GridLayout(4, false));
+        buttonComposite.setLayout(new GridLayout(5, false));
         buttonComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         ThemeManager.applyPalette(buttonComposite, themePalette);
 
-        // Select All button.
         Button selectAllButton = new Button(buttonComposite, SWT.PUSH);
         selectAllButton.setText("Select All");
+
+        Button selectNoneButton = new Button(buttonComposite, SWT.PUSH);
+        selectNoneButton.setText("Select None");
+
+        Label spacer = new Label(buttonComposite, SWT.NONE);
+        spacer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+
+        Button deleteButton = new Button(buttonComposite, SWT.PUSH);
+        deleteButton.setText("Delete Selected");
+        deleteButton.setEnabled(false);
+
+        Button cancelButton = new Button(buttonComposite, SWT.PUSH);
+        cancelButton.setText(CANCEL_LABEL);
+
+        // Helper to sync the Delete button's enabled state with checkbox state.
+        Runnable syncDeleteEnabled = () -> {
+            boolean anyChecked = false;
+            for (TableItem item : table.getItems()) {
+                if (item.getChecked()) {
+                    anyChecked = true;
+                    break;
+                }
+            }
+            deleteButton.setEnabled(anyChecked);
+        };
+
+        // Wire listeners.
         selectAllButton.addListener(SWT.Selection, e -> {
             for (TableItem item : table.getItems()) {
                 item.setChecked(true);
             }
+            syncDeleteEnabled.run();
         });
 
-        // Select None button.
-        Button selectNoneButton = new Button(buttonComposite, SWT.PUSH);
-        selectNoneButton.setText("Select None");
         selectNoneButton.addListener(SWT.Selection, e -> {
             for (TableItem item : table.getItems()) {
                 item.setChecked(false);
             }
+            syncDeleteEnabled.run();
         });
 
-        // Spacer.
-        Label spacer = new Label(buttonComposite, SWT.NONE);
-        spacer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        table.addListener(SWT.Selection, e -> syncDeleteEnabled.run());
 
-        // Delete button.
-        Button deleteButton = new Button(buttonComposite, SWT.PUSH);
-        deleteButton.setText("Delete Selected");
         deleteButton.addListener(SWT.Selection, e -> {
             result = collectCheckedPaths();
             dialogShell.close();
         });
 
-        // Cancel button.
-        Button cancelButton = new Button(buttonComposite, SWT.PUSH);
-        cancelButton.setText(CANCEL_LABEL);
         cancelButton.addListener(SWT.Selection, e -> {
             result = null;
             dialogShell.close();
         });
 
-        // Default button.
-        dialogShell.setDefaultButton(deleteButton);
+        // Default button — Cancel is safe (Enter dismisses without deleting).
+        dialogShell.setDefaultButton(cancelButton);
     }
 
     private List<Path> collectCheckedPaths() {

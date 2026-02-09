@@ -707,12 +707,14 @@ public class FileUtilities {
      *
      * @param movedFile the file that was just moved (used as reference)
      * @param destDir the destination directory to scan
+     * @param movedShowName normalised show name of the moved file (may be null)
      * @param seasonEp the [season, episode] array for fuzzy matching (may be null)
      * @return list of duplicate file paths found (never null)
      */
     public static java.util.List<Path> findDuplicateVideoFiles(
         Path movedFile,
         Path destDir,
+        String movedShowName,
         int[] seasonEp
     ) {
         java.util.List<Path> duplicates = new java.util.ArrayList<>();
@@ -762,14 +764,24 @@ public class FileUtilities {
                     }
                 }
 
-                // Check 2: Fuzzy match - same season/episode identity
+                // Check 2: Fuzzy match - same season/episode identity AND similar show name
                 if (!isDuplicate && seasonEp != null && seasonEp.length >= 2) {
-                    int[] candSeasonEp = org.tvrenamer.controller.FilenameParser
-                        .extractSeasonEpisode(candidateName);
-                    if (candSeasonEp != null
-                        && candSeasonEp[0] == seasonEp[0]
-                        && candSeasonEp[1] == seasonEp[1]) {
-                        isDuplicate = true;
+                    var candIdentity = org.tvrenamer.controller.FilenameParser
+                        .extractShowAndSeasonEpisode(candidateName);
+                    if (candIdentity != null
+                        && candIdentity.season() == seasonEp[0]
+                        && candIdentity.episode() == seasonEp[1]) {
+                        if (movedShowName != null && !movedShowName.isBlank()) {
+                            // Require show name similarity to avoid cross-show false positives
+                            double sim = org.tvrenamer.model.ShowSelectionEvaluator
+                                .similarity(movedShowName, candIdentity.normalizedShowName());
+                            if (sim >= 0.5) {
+                                isDuplicate = true;
+                            }
+                        } else {
+                            // No show name available — fall back to season/episode only
+                            isDuplicate = true;
+                        }
                     }
                 }
 

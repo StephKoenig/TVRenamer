@@ -175,8 +175,10 @@ public class Constants {
         "files after moving. This enables media players to display\n" +
         "episode information.\n\n" +
         "Supported formats:\n" +
-        "• MP4/M4V/MOV - Built-in support (iTunes-style atoms)\n" +
-        "• MKV/WebM - Requires MKVToolNix installed (uses mkvpropedit)";
+        "• MP4/M4V/MOV - Requires AtomicParsley or ffmpeg\n" +
+        "• MKV/WebM - Requires MKVToolNix (mkvpropedit)\n\n" +
+        "If the required tool is not installed, those files\n" +
+        "are silently skipped.";
     public static final String RENAME_TOKEN_TEXT = "Rename Tokens [?]";
     public static final String RENAME_FORMAT_TEXT = "Rename Format [?]";
     public static final String RENAME_SELECTED_TOOLTIP =

@@ -24,7 +24,7 @@
     <h2>Supported Formats</h2>
 
     <h3>MP4 / M4V / MOV</h3>
-    <p><strong>Built-in support</strong> - No additional software required.</p>
+    <p><strong>Requires AtomicParsley or ffmpeg</strong> - TVRenamer will use whichever is available (preferring AtomicParsley).</p>
     <p>Uses iTunes-style metadata atoms, compatible with:</p>
     <ul>
         <li>Plex, Jellyfin, Emby, Kodi</li>
@@ -32,6 +32,15 @@
         <li>VLC, Infuse</li>
         <li>Most modern media players</li>
     </ul>
+
+    <h4>Installing AtomicParsley (recommended)</h4>
+    <ol>
+        <li><strong>Windows:</strong> Download from <a href="https://github.com/wez/atomicparsley/releases" target="_blank">github.com/wez/atomicparsley</a> and place the <code>.exe</code> somewhere in your PATH or alongside TVRenamer</li>
+        <li><strong>macOS:</strong> <code>brew install atomicparsley</code></li>
+    </ol>
+
+    <h4>Using ffmpeg instead</h4>
+    <p>If AtomicParsley is not found, TVRenamer falls back to ffmpeg (which must be in your PATH). ffmpeg is a valid alternative but AtomicParsley is preferred as it performs more efficient, surgical metadata edits.</p>
 
     <h3>MKV / WebM</h3>
     <p><strong>Requires MKVToolNix</strong> - Free, open-source software.</p>
@@ -45,7 +54,7 @@
     <p>TVRenamer automatically detects MKVToolNix if installed in the default location or if <code>mkvpropedit</code> is in your PATH.</p>
 
     <div class="note">
-        <strong>Note:</strong> If MKVToolNix is not installed, MKV files are silently skipped (not an error). MP4 tagging still works.
+        <strong>Note:</strong> If the required external tool is not installed for a format, those files are silently skipped (not an error).
     </div>
 
     <h2>What Metadata is Written</h2>
@@ -153,6 +162,7 @@
 
     <h3>MP4 files not being tagged</h3>
     <ul>
+        <li>Verify AtomicParsley or ffmpeg is installed and in your PATH</li>
         <li>Ensure the file is a valid MP4 container (not just renamed)</li>
         <li>Check TVRenamer logs for errors (<code>-Dtvrenamer.debug=true</code>)</li>
     </ul>

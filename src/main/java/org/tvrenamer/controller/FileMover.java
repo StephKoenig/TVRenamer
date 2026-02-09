@@ -15,6 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.tvrenamer.controller.metadata.MetadataTaggingController;
 import org.tvrenamer.controller.util.FileUtilities;
+import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.FileEpisode;
 import org.tvrenamer.model.MoveObserver;
 import org.tvrenamer.model.UserPreferences;
@@ -312,7 +313,12 @@ public class FileMover implements Callable<Boolean> {
                 && FileUtilities.hasVideoExtension(destFilename)) {
             Path destDir = actualDest.getParent();
             if (destDir != null) {
-                // Get season/episode for fuzzy matching
+                // Get show name and season/episode for fuzzy matching
+                String showName = null;
+                var actualShow = episode.getActualShow();
+                if (actualShow != null) {
+                    showName = StringUtils.makeQueryString(actualShow.getName());
+                }
                 int[] seasonEp = null;
                 var placement = episode.getEpisodePlacement();
                 if (placement != null) {
@@ -321,6 +327,7 @@ public class FileMover implements Callable<Boolean> {
                 List<Path> dups = FileUtilities.findDuplicateVideoFiles(
                     actualDest,
                     destDir,
+                    showName,
                     seasonEp
                 );
                 if (!dups.isEmpty()) {

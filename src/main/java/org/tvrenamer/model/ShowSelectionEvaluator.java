@@ -203,7 +203,7 @@ public final class ShowSelectionEvaluator {
      *
      * @return 1.0 for identical strings, 0.0 for completely different strings
      */
-    static double similarity(String s1, String s2) {
+    public static double similarity(String s1, String s2) {
         if (s1 == null || s2 == null) {
             return 0.0;
         }

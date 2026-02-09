@@ -371,4 +371,47 @@ public class FilenameParser {
         }
         return null;
     }
+
+    /**
+     * Lightweight identity extracted from a filename: normalised show name plus
+     * season/episode numbers.  Used for duplicate detection where we need to
+     * compare show identity, not just episode numbers.
+     */
+    public record ParsedFileIdentity(String normalizedShowName, int season, int episode) {}
+
+    /**
+     * Extract the show name, season and episode from a filename.
+     *
+     * <p>Like {@link #extractSeasonEpisode(String)} but also captures the show
+     * name portion and normalises it for comparison.
+     *
+     * @param filename the filename to parse (just the name, not full path)
+     * @return a {@link ParsedFileIdentity}, or null if not parsed
+     */
+    public static ParsedFileIdentity extractShowAndSeasonEpisode(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+
+        for (Pattern pattern : COMPILED_REGEX) {
+            Matcher matcher = pattern.matcher(filename);
+            if (matcher.matches()) {
+                int groupCount = matcher.groupCount();
+                if (groupCount >= 3) {
+                    try {
+                        String showPart = StringUtils.trimFoundShow(matcher.group(1));
+                        String normalizedShow = StringUtils.makeQueryString(showPart);
+                        int season = Integer.parseInt(matcher.group(2));
+                        int episode = Integer.parseInt(matcher.group(3));
+                        if (normalizedShow != null && !normalizedShow.isBlank()) {
+                            return new ParsedFileIdentity(normalizedShow, season, episode);
+                        }
+                    } catch (NumberFormatException ignored) {
+                        // Try next pattern
+                    }
+                }
+            }
+        }
+        return null;
+    }
 }
