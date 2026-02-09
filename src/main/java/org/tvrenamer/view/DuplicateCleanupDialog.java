@@ -2,16 +2,26 @@ package org.tvrenamer.view;
 
 import static org.tvrenamer.model.util.Constants.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.program.Program;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Dialog;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -28,9 +38,14 @@ import org.eclipse.swt.widgets.TableItem;
  */
 public final class DuplicateCleanupDialog extends Dialog {
 
+    private static final Logger logger = Logger.getLogger(DuplicateCleanupDialog.class.getName());
+
     private static final String TITLE = "Duplicate Files Found";
-    private static final int MIN_WIDTH = 600;
+    private static final int MIN_WIDTH = 750;
     private static final int MIN_HEIGHT = 300;
+
+    private static final DateTimeFormatter DATE_FMT =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final Shell parent;
     private final List<Path> duplicates;
@@ -131,14 +146,22 @@ public final class DuplicateCleanupDialog extends Dialog {
         table.setHeaderBackground(themePalette.getTableHeaderBackground());
         table.setHeaderForeground(themePalette.getTableHeaderForeground());
 
-        // Columns: checkbox (implicit), filename, folder.
+        // Columns: checkbox (implicit), filename, folder, size, modified.
         TableColumn filenameColumn = new TableColumn(table, SWT.NONE);
         filenameColumn.setText("Filename");
-        filenameColumn.setWidth(250);
+        filenameColumn.setWidth(220);
 
         TableColumn folderColumn = new TableColumn(table, SWT.NONE);
         folderColumn.setText("Folder");
-        folderColumn.setWidth(300);
+        folderColumn.setWidth(250);
+
+        TableColumn sizeColumn = new TableColumn(table, SWT.RIGHT);
+        sizeColumn.setText("Size");
+        sizeColumn.setWidth(80);
+
+        TableColumn modifiedColumn = new TableColumn(table, SWT.NONE);
+        modifiedColumn.setText("Modified");
+        modifiedColumn.setWidth(130);
 
         // Populate table.
         for (Path path : duplicates) {
@@ -155,7 +178,38 @@ public final class DuplicateCleanupDialog extends Dialog {
 
             item.setText(0, filename);
             item.setText(1, folder);
+
+            try {
+                long bytes = Files.size(path);
+                item.setText(2, formatFileSize(bytes));
+
+                FileTime mtime = Files.getLastModifiedTime(path);
+                item.setText(3, mtime.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .format(DATE_FMT));
+            } catch (IOException e) {
+                logger.log(Level.FINE, "Could not read file attributes: " + path, e);
+            }
         }
+
+        // Right-click context menu: Open Folder.
+        Menu contextMenu = new Menu(table);
+        table.setMenu(contextMenu);
+
+        MenuItem openFolderItem = new MenuItem(contextMenu, SWT.PUSH);
+        openFolderItem.setText("Open Folder");
+        openFolderItem.addListener(SWT.Selection, e -> {
+            TableItem[] selection = table.getSelection();
+            if (selection.length > 0) {
+                Object data = selection[0].getData();
+                if (data instanceof Path path) {
+                    Path parent = path.getParent();
+                    if (parent != null) {
+                        Program.launch(parent.toString());
+                    }
+                }
+            }
+        });
 
         // Summary label.
         Label summaryLabel = new Label(dialogShell, SWT.NONE);
@@ -238,5 +292,18 @@ public final class DuplicateCleanupDialog extends Dialog {
             }
         }
         return checked;
+    }
+
+    private static String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+        if (bytes < 1024 * 1024) {
+            return String.format("%.1f KB", bytes / 1024.0);
+        }
+        if (bytes < 1024L * 1024 * 1024) {
+            return String.format("%.1f MB", bytes / (1024.0 * 1024));
+        }
+        return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
     }
 }
