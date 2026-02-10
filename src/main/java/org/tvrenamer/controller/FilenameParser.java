@@ -1,6 +1,7 @@
 package org.tvrenamer.controller;
 
 import java.nio.file.Path;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -315,7 +316,7 @@ public class FilenameParser {
         }
 
         final String pName = justNamePath.toString();
-        logger.fine("pName = " + pName);
+        logger.log(Level.FINE, () -> "pName = " + pName);
         if (pName.matches(FILENAME_BEGINS_WITH_SEASON)) {
             Path parent = filePath.getParent();
             String parentName = extractParentName(parent);
@@ -327,14 +328,15 @@ public class FilenameParser {
                 parent = parent.getParent();
                 parentName = extractParentName(parent);
             }
-            logger.fine(
+            final String resolvedParent = parentName;
+            logger.log(Level.FINE, () ->
                 "appending parent directory '" +
-                    parentName +
+                    resolvedParent +
                     "' to filename '" +
                     pName +
                     "'"
             );
-            return parentName + " " + pName;
+            return resolvedParent + " " + pName;
         }
         return pName;
     }

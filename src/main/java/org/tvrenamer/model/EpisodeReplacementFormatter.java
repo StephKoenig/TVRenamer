@@ -101,7 +101,8 @@ public final class EpisodeReplacementFormatter {
         String episodeTitle = episode.getTitle();
 
         if (episodeTitle.length() > MAX_TITLE_LENGTH) {
-            logger.fine("truncating episode title: " + episodeTitle);
+            final String fullTitle = episodeTitle;
+            logger.log(Level.FINE, () -> "truncating episode title: " + fullTitle);
             episodeTitle = episodeTitle.substring(0, MAX_TITLE_LENGTH);
         }
 

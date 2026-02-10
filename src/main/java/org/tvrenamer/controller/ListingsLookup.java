@@ -76,7 +76,7 @@ public class ListingsLookup {
         };
         try {
             Future<Boolean> future = THREAD_POOL.submit(listingsFetcher);
-            logger.fine("successfully submitted task " + future);
+            logger.log(Level.FINE, () -> "successfully submitted task " + future);
         } catch (RejectedExecutionException e) {
             String name;
             try {

@@ -24,6 +24,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.tvrenamer.controller.util.FileUtilities;
+import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.ProgressUpdater;
 import org.tvrenamer.model.UserPreferences;
 
@@ -312,11 +313,7 @@ public class MoveRunner implements Runnable {
         if (filename == null) {
             return "";
         }
-        int dot = filename.lastIndexOf('.');
-        if (dot <= 0) {
-            return filename;
-        }
-        return filename.substring(0, dot);
+        return StringUtils.getBaseName(filename);
     }
 
     /**
@@ -470,7 +467,7 @@ public class MoveRunner implements Runnable {
             futures.add(EXECUTOR.submit(move));
         }
         numMoves = episodes.size();
-        logger.fine("have " + numMoves + " files to move");
+        logger.log(Level.FINE, () -> "have " + numMoves + " files to move");
     }
 
     /**

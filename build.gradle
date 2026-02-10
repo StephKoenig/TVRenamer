@@ -46,7 +46,6 @@ spotbugs {
 }
 
 // Run SpotBugs only for main sources by default (developers can run test analysis explicitly).
-// Run SpotBugs only for main sources by default (developers can run test analysis explicitly).
 // Some projects may not define SpotBugs tasks for custom test source sets, so guard with findByName.
 def spotbugsTestTask = tasks.findByName('spotbugsTest')
 if (spotbugsTestTask != null) {
@@ -191,114 +190,49 @@ def generatedVersionFile = layout.buildDirectory.file("generated/version/tvrenam
 def generatedBuildDateFile = layout.buildDirectory.file("generated/version/tvrenamer.builddate")
 def generatedCommitFile = layout.buildDirectory.file("generated/version/tvrenamer.commit")
 
-tasks.named('processResources') {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+// Shared SWT manifest attributes required for fat-JAR compatibility (SWT 3.130+).
+// Upstream issue: https://github.com/eclipse-platform/eclipse.platform.swt/issues/2928
+def swtManifestAttributes = ['SWT-OS': 'win32', 'SWT-Arch': 'x86_64']
 
-    // Ensure generated build metadata replaces any static resources.
-    exclude("tvrenamer.version")
-    exclude("tvrenamer.builddate")
-    exclude("tvrenamer.commit")
+// Shared closure: adds generated build metadata files into a CopySpec-aware task.
+def addBuildMetadata = { task ->
+    task.dependsOn(tasks.named('generateBuildMetadataFiles'))
+    task.from(generatedVersionFile) { into ""; rename { "tvrenamer.version" } }
+    task.from(generatedBuildDateFile) { into ""; rename { "tvrenamer.builddate" } }
+    task.from(generatedCommitFile) { into ""; rename { "tvrenamer.commit" } }
+}
 
-    dependsOn(tasks.named('generateBuildMetadataFiles'))
-
-    // Add the generated metadata files into the root of the resources output.
-    from(generatedVersionFile) {
-        into ""
-        rename { "tvrenamer.version" }
-    }
-    from(generatedBuildDateFile) {
-        into ""
-        rename { "tvrenamer.builddate" }
-    }
-    from(generatedCommitFile) {
-        into ""
-        rename { "tvrenamer.commit" }
-    }
-
-    // Workaround: ensure the files are present in build/resources/main even if Gradle's
-    // CopySpec input isn't picked up as expected on some environments.
-    doLast {
+// Shared closure: configures a processResources-style task with metadata exclusions + workaround copy.
+def configureResourceProcessing = { task, String resourceSubdir ->
+    task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    task.exclude("tvrenamer.version")
+    task.exclude("tvrenamer.builddate")
+    task.exclude("tvrenamer.commit")
+    addBuildMetadata(task)
+    task.doLast {
         copy {
             from(generatedVersionFile)
             from(generatedBuildDateFile)
             from(generatedCommitFile)
-            into(layout.buildDirectory.dir("resources/main").get().asFile)
+            into(layout.buildDirectory.dir("resources/${resourceSubdir}").get().asFile)
         }
     }
 }
 
+tasks.named('processResources') {
+    configureResourceProcessing(it, "main")
+}
+
 tasks.named('processTestResources') {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    // Tests also need build metadata on the classpath to avoid static init failures.
-    // Ensure we use the generated metadata and do not rely on any source files.
-    exclude("tvrenamer.version")
-    exclude("tvrenamer.builddate")
-    exclude("tvrenamer.commit")
-
-    dependsOn(tasks.named('generateBuildMetadataFiles'))
-
-    from(generatedVersionFile) {
-        into ""
-        rename { "tvrenamer.version" }
-    }
-    from(generatedBuildDateFile) {
-        into ""
-        rename { "tvrenamer.builddate" }
-    }
-    from(generatedCommitFile) {
-        into ""
-        rename { "tvrenamer.commit" }
-    }
-
-    // Workaround: ensure the files are present in build/resources/test even if Gradle's
-    // CopySpec input isn't picked up as expected on some environments.
-    doLast {
-        copy {
-            from(generatedVersionFile)
-            from(generatedBuildDateFile)
-            from(generatedCommitFile)
-            into(layout.buildDirectory.dir("resources/test").get().asFile)
-        }
-    }
+    configureResourceProcessing(it, "test")
 }
 
 // Shadow plugin configuration for integrated JAR with all dependencies
 shadowJar {
-    // Produce a stable artifact name for easier manual testing/scripts.
-    // We keep the integrated "fat jar" behavior, but avoid version/classifier in the filename.
     archiveFileName.set("tvrenamer.jar")
-
-    // Keep merge behavior for service files.
     mergeServiceFiles()
-
-    // SWT 3.130+ added a mandatory isLoadable() check at startup that reads SWT-OS
-    // and SWT-Arch from the JAR manifest.  In a fat JAR the original SWT manifest is
-    // replaced, so these attributes are lost and SWT calls System.exit(1).
-    // Adding them here keeps the check happy.
-    // Upstream issue: https://github.com/eclipse-platform/eclipse.platform.swt/issues/2928
-    manifest {
-        attributes(
-            'SWT-OS': 'win32',
-            'SWT-Arch': 'x86_64'
-        )
-    }
-
-    dependsOn(tasks.named('generateBuildMetadataFiles'))
-
-    // Force the generated build metadata files into the JAR root.
-    from(layout.buildDirectory.file("generated/version/tvrenamer.version")) {
-        into ""
-        rename { "tvrenamer.version" }
-    }
-    from(layout.buildDirectory.file("generated/version/tvrenamer.builddate")) {
-        into ""
-        rename { "tvrenamer.builddate" }
-    }
-    from(layout.buildDirectory.file("generated/version/tvrenamer.commit")) {
-        into ""
-        rename { "tvrenamer.commit" }
-    }
+    manifest { attributes(swtManifestAttributes) }
+    addBuildMetadata(it)
 }
 
 // Also produce a versioned copy of the fat jar for releases/users who want side-by-side versions.
@@ -306,35 +240,12 @@ tasks.register('shadowJarVersioned', com.github.jengelman.gradle.plugins.shadow.
     group = 'build'
     description = 'Build a versioned fat jar alongside tvrenamer.jar.'
 
-    // Match shadowJar behavior.
     from(sourceSets.main.output)
     configurations = [project.configurations.runtimeClasspath]
     mergeServiceFiles()
+    manifest { attributes(swtManifestAttributes) }
+    addBuildMetadata(it)
 
-    // Same SWT manifest workaround as shadowJar (see comment there).
-    manifest {
-        attributes(
-            'SWT-OS': 'win32',
-            'SWT-Arch': 'x86_64'
-        )
-    }
-
-    dependsOn(tasks.named('generateBuildMetadataFiles'))
-
-    from(layout.buildDirectory.file("generated/version/tvrenamer.version")) {
-        into ""
-        rename { "tvrenamer.version" }
-    }
-    from(layout.buildDirectory.file("generated/version/tvrenamer.builddate")) {
-        into ""
-        rename { "tvrenamer.builddate" }
-    }
-    from(layout.buildDirectory.file("generated/version/tvrenamer.commit")) {
-        into ""
-        rename { "tvrenamer.commit" }
-    }
-
-    // Versioned filename uses the embedded version scheme (1.0.<commitCount>).
     archiveFileName.set("tvrenamer-${computeBuildNumber()}.jar")
     destinationDirectory.set(layout.buildDirectory.dir("libs"))
 }

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -146,7 +147,7 @@ public class Show extends ShowOption {
         if (placement == null) {
             // Note, in this case, the Episode will continue to exist in the list of
             // episodes, but will not be added to the index for this ordering.
-            logger.fine("episode \"" + episode.getTitle() + "\" of show " + name
+            logger.log(Level.FINE, () -> "episode \"" + episode.getTitle() + "\" of show " + name
                         + " lacks placement information for "
                         + (useDvd ? "DVD ordering" : "air ordering"));
         } else {
@@ -286,7 +287,7 @@ public class Show extends ShowOption {
     public Episode getEpisode(EpisodePlacement placement) {
         Season season = seasons.get(placement.season);
         if (season == null) {
-            logger.fine("no season " + placement.season + " found for show " + name);
+            logger.log(Level.FINE, () -> "no season " + placement.season + " found for show " + name);
             return null;
         }
         Episode episode;
@@ -297,7 +298,7 @@ public class Show extends ShowOption {
             logger.warning("could not get episode of " + name + " for season "
                            + placement.season + ", episode " + placement.episode);
         } else {
-            logger.fine("for season " + placement.season + ", episode " + placement.episode
+            logger.log(Level.FINE, () -> "for season " + placement.season + ", episode " + placement.episode
                         + " with ID " + episode.getEpisodeId()
                         + ", found " + episode);
         }
@@ -311,14 +312,14 @@ public class Show extends ShowOption {
      *
      * @param placement
      *           the placement of the episode to return
-     * @return the episodes indexed at the given season and episode of this show.
-     *    Null if no such episode was found.
+     * @return the episodes indexed at the given season and episode of this show;
+     *    an empty list if no such episode was found (never null).
      */
     public List<Episode> getEpisodes(final EpisodePlacement placement) {
         Season season = seasons.get(placement.season);
         if (season == null) {
             logger.warning("no season " + placement.season + " found for show " + name);
-            return null;
+            return List.of();
         }
         List<Episode> rval;
         synchronized (this) {

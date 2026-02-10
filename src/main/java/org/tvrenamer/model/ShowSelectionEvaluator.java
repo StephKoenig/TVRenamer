@@ -233,11 +233,9 @@ public final class ShowSelectionEvaluator {
      *   <li>If candidate Alias matches extracted name or normalized extracted name → RESOLVED</li>
      *   <li>Tie-breakers (deterministic; spec-driven)</li>
      *   <li>If exactly one candidate → RESOLVED</li>
+     *   <li>Fuzzy string matching with threshold and gap</li>
      *   <li>Otherwise → AMBIGUOUS</li>
      * </ol>
-     *
-     * <p>Note: This intentionally does not implement fuzzy matching. Tie-breakers should be
-     * deterministic and spec-driven.
      */
     public static Decision evaluate(
         final String extractedName,
@@ -248,124 +246,135 @@ public final class ShowSelectionEvaluator {
             return Decision.notFound("No matches");
         }
 
+        Decision d;
+
         // 1) Pinned id wins if it exists in the current candidate set.
-        if (pinnedId != null && !pinnedId.isBlank()) {
-            for (ShowOption opt : options) {
-                if (opt == null) {
-                    continue;
-                }
-                String id = opt.getIdString();
-                if (id != null && pinnedId.equals(id)) {
-                    return Decision.resolved(opt, "Resolved via pinned ID");
-                }
-            }
+        d = tryPinnedId(options, pinnedId);
+        if (d != null) {
+            return d;
         }
 
+        // Pre-compute normalized forms used by subsequent steps.
         final String extracted = safeTrim(extractedName);
+        final String extractedNormalized = safeNormalize(extracted);
 
-        String extractedNormalized = null;
-        if (extracted != null && !extracted.isBlank()) {
-            // Normalization used ONLY for comparison; do not mutate the caller's extracted string.
-            try {
-                extractedNormalized = StringUtils.replacePunctuation(extracted);
-            } catch (Exception ignored) {
-                // Broad catch intentional: utility method may throw various exceptions; graceful fallback.
-                extractedNormalized = null;
-            }
-            extractedNormalized = safeTrim(extractedNormalized);
+        // 2) Exact SeriesName match (raw/normalized).
+        d = tryExactNameMatch(options, extracted, extractedNormalized);
+        if (d != null) {
+            return d;
         }
-        final String extractedNormalizedFinal = extractedNormalized;
 
-        // Helper: does a candidate name match extracted (raw or normalized)?
-        final java.util.function.Predicate<String> matchesExtracted =
-            (String candidateName) -> {
-                if (candidateName == null) {
-                    return false;
-                }
-                if (extracted != null && !extracted.isBlank()) {
-                    if (candidateName.equalsIgnoreCase(extracted)) {
-                        return true;
-                    }
-                }
-                if (
-                    extractedNormalizedFinal != null &&
-                    !extractedNormalizedFinal.isBlank()
-                ) {
-                    if (
-                        candidateName.equalsIgnoreCase(extractedNormalizedFinal)
-                    ) {
-                        return true;
-                    }
-                }
-                return false;
-            };
+        // 3) Exact alias match (raw/normalized).
+        d = tryExactAliasMatch(options, extracted, extractedNormalized);
+        if (d != null) {
+            return d;
+        }
 
-        // Helper: tokenize for strict token-set comparisons.
-        final java.util.function.Function<String, String> canonicalTokens =
-            (String s) -> {
-                if (s == null) {
-                    return "";
-                }
-                String norm;
-                try {
-                    norm = StringUtils.replacePunctuation(s);
-                } catch (Exception ignored) {
-                    // Broad catch intentional: utility method may throw various exceptions; graceful fallback.
-                    norm = s;
-                }
-                norm = safeTrim(norm);
-                if (norm == null || norm.isBlank()) {
-                    return "";
-                }
-                // Lowercase with Locale.ROOT (deterministic) and collapse spaces; keep token order.
-                return norm.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
-            };
+        // TB1: Prefer base title over parenthetical variants.
+        d = tryBaseTitleOverVariants(options, extracted, extractedNormalized);
+        if (d != null) {
+            return d;
+        }
 
-        final String extractedTokens = canonicalTokens.apply(extracted);
-        final String extractedNormalizedTokens = canonicalTokens.apply(
-            extractedNormalizedFinal
-        );
+        // TB2/TB6: Strict token-set match.
+        d = tryTokenSetMatch(options, extracted, extractedNormalized);
+        if (d != null) {
+            return d;
+        }
 
-        // 2) Exact SeriesName match (raw/normalized) wins, even if other candidates exist.
+        // TB3: Year tolerance (±1).
+        d = tryYearTolerance(options, extracted, extractedNormalized);
+        if (d != null) {
+            return d;
+        }
+
+        // 4) Single option resolves uniquely.
+        if (options.size() == 1 && options.get(0) != null) {
+            return Decision.resolved(options.get(0), "Resolves uniquely");
+        }
+
+        // TB7: Fuzzy string matching, or fall through to AMBIGUOUS.
+        return fuzzyMatchOrAmbiguous(options, extracted, extractedNormalized);
+    }
+
+    // ---- Decomposed decision steps ----
+
+    /** Try to resolve via a pinned provider id. */
+    private static Decision tryPinnedId(
+        final List<ShowOption> options,
+        final String pinnedId
+    ) {
+        if (pinnedId == null || pinnedId.isBlank()) {
+            return null;
+        }
         for (ShowOption opt : options) {
             if (opt == null) {
                 continue;
             }
-            String name = opt.getName();
-            if (matchesExtracted.test(name)) {
+            String id = opt.getIdString();
+            if (id != null && pinnedId.equals(id)) {
+                return Decision.resolved(opt, "Resolved via pinned ID");
+            }
+        }
+        return null;
+    }
+
+    /** Try to resolve via exact SeriesName match (raw or normalized). */
+    private static Decision tryExactNameMatch(
+        final List<ShowOption> options,
+        final String extracted,
+        final String extractedNormalized
+    ) {
+        for (ShowOption opt : options) {
+            if (opt == null) {
+                continue;
+            }
+            if (matchesExtracted(opt.getName(), extracted, extractedNormalized)) {
                 return Decision.resolved(opt, "Resolves via exact name match");
             }
         }
+        return null;
+    }
 
-        // 3) Exact alias match (raw/normalized) wins.
+    /** Try to resolve via exact alias match (raw or normalized). */
+    private static Decision tryExactAliasMatch(
+        final List<ShowOption> options,
+        final String extracted,
+        final String extractedNormalized
+    ) {
         for (ShowOption opt : options) {
             if (opt == null) {
                 continue;
             }
-            List<String> aliases = null;
-            try {
-                aliases = opt.getAliasNames();
-            } catch (Exception ignored) {
-                // Broad catch intentional: defensive for external data; graceful fallback.
-                aliases = null;
-            }
-            if (aliases == null || aliases.isEmpty()) {
+            List<String> aliases = safeAliases(opt);
+            if (aliases.isEmpty()) {
                 continue;
             }
             for (String a : aliases) {
-                if (matchesExtracted.test(a)) {
-                    return Decision.resolved(
-                        opt,
-                        "Resolves via exact alias match"
-                    );
+                if (matchesExtracted(a, extracted, extractedNormalized)) {
+                    return Decision.resolved(opt, "Resolves via exact alias match");
                 }
             }
         }
+        return null;
+    }
 
-        // --- Tie-breakers (only after exact name/alias and pinned-id checks) ---
+    /**
+     * Prefer base title when other candidates are only parenthetical variants.
+     * Example: "The Night Manager" beats "The Night Manager (IN)" and "(CN)".
+     */
+    private static Decision tryBaseTitleOverVariants(
+        final List<ShowOption> options,
+        final String extracted,
+        final String extractedNormalized
+    ) {
+        String compareName = (extractedNormalized != null && !extractedNormalized.isBlank())
+            ? extractedNormalized
+            : extracted;
+        if (compareName == null || compareName.isBlank()) {
+            return null;
+        }
 
-        // TB1: Prefer base title when it exists and other candidates are only parenthetical variants.
-        // Example: "The Night Manager" beats "The Night Manager (IN)" and "(CN)".
         ShowOption baseTitle = null;
         int baseTitleCount = 0;
         for (ShowOption opt : options) {
@@ -373,167 +382,133 @@ public final class ShowSelectionEvaluator {
                 continue;
             }
             String name = safeTrim(opt.getName());
-            if (name == null || name.isBlank()) {
-                continue;
-            }
-            if (
-                extractedNormalizedFinal != null &&
-                !extractedNormalizedFinal.isBlank()
-            ) {
-                if (name.equalsIgnoreCase(extractedNormalizedFinal)) {
-                    baseTitle = opt;
-                    baseTitleCount++;
-                }
-            } else if (extracted != null && !extracted.isBlank()) {
-                if (name.equalsIgnoreCase(extracted)) {
-                    baseTitle = opt;
-                    baseTitleCount++;
-                }
+            if (name != null && name.equalsIgnoreCase(compareName)) {
+                baseTitle = opt;
+                baseTitleCount++;
             }
         }
-        if (baseTitleCount == 1 && baseTitle != null) {
-            boolean hasParentheticalVariants = false;
-            String baseName = safeTrim(baseTitle.getName());
-            for (ShowOption opt : options) {
-                if (opt == null) {
-                    continue;
-                }
-                String name = safeTrim(opt.getName());
-                if (name == null || name.isBlank() || baseName == null) {
-                    continue;
-                }
-                if (name.equalsIgnoreCase(baseName)) {
-                    continue;
-                }
-                // Variant if it starts with base + " (" and ends with ")"
-                if (
-                    name.regionMatches(
-                        true,
-                        0,
-                        baseName,
-                        0,
-                        baseName.length()
-                    ) &&
-                    name.length() > baseName.length() + 3 &&
-                    name.charAt(baseName.length()) == ' ' &&
-                    name.charAt(baseName.length() + 1) == '(' &&
-                    name.endsWith(")")
-                ) {
-                    hasParentheticalVariants = true;
-                }
+        if (baseTitleCount != 1 || baseTitle == null) {
+            return null;
+        }
+
+        String baseName = safeTrim(baseTitle.getName());
+        if (baseName == null) {
+            return null;
+        }
+        for (ShowOption opt : options) {
+            if (opt == null) {
+                continue;
             }
-            if (hasParentheticalVariants) {
+            String name = safeTrim(opt.getName());
+            if (name == null || name.isBlank() || name.equalsIgnoreCase(baseName)) {
+                continue;
+            }
+            if (isParentheticalVariant(name, baseName)) {
                 return Decision.resolved(
                     baseTitle,
                     "Preferred base title over parenthetical variants"
                 );
             }
         }
+        return null;
+    }
 
-        // TB2/TB6: Strict token-set match: prefer candidate whose canonical tokens equal extracted tokens.
-        // This favors less-decorated names when one matches exactly and others have extra tokens.
-        ShowOption tokenExact = null;
-        int tokenExactCount = 0;
-        String tokenBasis = !extractedNormalizedTokens.isBlank()
-            ? extractedNormalizedTokens
-            : extractedTokens;
-        if (!tokenBasis.isBlank()) {
-            for (ShowOption opt : options) {
-                if (opt == null) {
-                    continue;
-                }
-                String candTokens = canonicalTokens.apply(opt.getName());
-                if (!candTokens.isBlank() && candTokens.equals(tokenBasis)) {
-                    tokenExact = opt;
-                    tokenExactCount++;
-                }
-            }
-            if (tokenExactCount == 1 && tokenExact != null) {
-                return Decision.resolved(
-                    tokenExact,
-                    "Preferred exact token match over extra tokens"
-                );
-            }
+    /** Check if {@code name} is {@code baseName} followed by " (...)". */
+    private static boolean isParentheticalVariant(String name, String baseName) {
+        return name.regionMatches(true, 0, baseName, 0, baseName.length())
+            && name.length() > baseName.length() + 3
+            && name.charAt(baseName.length()) == ' '
+            && name.charAt(baseName.length() + 1) == '('
+            && name.endsWith(")");
+    }
+
+    /** Prefer candidate whose canonical tokens exactly equal the extracted tokens. */
+    private static Decision tryTokenSetMatch(
+        final List<ShowOption> options,
+        final String extracted,
+        final String extractedNormalized
+    ) {
+        String extractedTokens = canonicalTokens(extracted);
+        String normalizedTokens = canonicalTokens(extractedNormalized);
+        String tokenBasis = !normalizedTokens.isBlank() ? normalizedTokens : extractedTokens;
+        if (tokenBasis.isBlank()) {
+            return null;
         }
 
-        // TB3: Year tolerance (±1) if extracted contains a year token and SeriesName wasn't an exact match.
+        ShowOption tokenExact = null;
+        int count = 0;
+        for (ShowOption opt : options) {
+            if (opt == null) {
+                continue;
+            }
+            String candTokens = canonicalTokens(opt.getName());
+            if (!candTokens.isBlank() && candTokens.equals(tokenBasis)) {
+                tokenExact = opt;
+                count++;
+            }
+        }
+        if (count == 1 && tokenExact != null) {
+            return Decision.resolved(tokenExact, "Preferred exact token match over extra tokens");
+        }
+        return null;
+    }
+
+    /** Resolve via FirstAiredYear (±1) if extracted contains a year token. */
+    private static Decision tryYearTolerance(
+        final List<ShowOption> options,
+        final String extracted,
+        final String extractedNormalized
+    ) {
         Integer extractedYear = parseYearFromText(extracted);
         if (extractedYear == null) {
-            extractedYear = parseYearFromText(extractedNormalizedFinal);
+            extractedYear = parseYearFromText(extractedNormalized);
         }
-        if (extractedYear != null) {
-            ShowOption yearHit = null;
-            int yearHitCount = 0;
-            for (ShowOption opt : options) {
-                if (opt == null) {
-                    continue;
-                }
-                Integer y = null;
-                try {
-                    y = opt.getFirstAiredYear();
-                } catch (Exception ignored) {
-                    // Broad catch intentional: defensive for external data; graceful fallback.
-                    y = null;
-                }
-                if (y == null) {
-                    continue;
-                }
-                if (Math.abs(y - extractedYear) <= 1) {
-                    yearHit = opt;
-                    yearHitCount++;
-                }
-            }
-            if (yearHitCount == 1 && yearHit != null) {
-                return Decision.resolved(
-                    yearHit,
-                    "Resolved via FirstAiredYear (±1) match"
-                );
-            }
+        if (extractedYear == null) {
+            return null;
         }
 
-        // 4) Single option resolves uniquely.
-        if (options.size() == 1) {
-            ShowOption only = options.get(0);
-            if (only != null) {
-                return Decision.resolved(only, "Resolves uniquely");
+        ShowOption yearHit = null;
+        int count = 0;
+        for (ShowOption opt : options) {
+            if (opt == null) {
+                continue;
+            }
+            Integer y = safeFirstAiredYear(opt);
+            if (y != null && Math.abs(y - extractedYear) <= 1) {
+                yearHit = opt;
+                count++;
             }
         }
+        if (count == 1 && yearHit != null) {
+            return Decision.resolved(yearHit, "Resolved via FirstAiredYear (±1) match");
+        }
+        return null;
+    }
 
-        // TB7: Fuzzy string matching
-        // Score all candidates by similarity to extracted name, sorted best-first.
-        // Auto-select if best score >= threshold AND gap to second-best >= min gap.
+    /**
+     * Score all candidates by fuzzy similarity. Auto-select if the best score
+     * exceeds the threshold with sufficient gap to the runner-up; otherwise AMBIGUOUS.
+     */
+    private static Decision fuzzyMatchOrAmbiguous(
+        final List<ShowOption> options,
+        final String extracted,
+        final String extractedNormalized
+    ) {
         final String compareText = (extracted != null && !extracted.isBlank())
             ? extracted
-            : extractedNormalizedFinal;
+            : extractedNormalized;
 
         List<ScoredOption> scored = new java.util.ArrayList<>();
         for (ShowOption opt : options) {
             if (opt == null) {
                 continue;
             }
-            String name = opt.getName();
-            double score = similarity(compareText, name);
-
-            // Also check aliases and use best score
-            List<String> aliases = null;
-            try {
-                aliases = opt.getAliasNames();
-            } catch (Exception ignored) {
-                aliases = null;
-            }
-            if (aliases != null) {
-                for (String alias : aliases) {
-                    double aliasScore = similarity(compareText, alias);
-                    if (aliasScore > score) {
-                        score = aliasScore;
-                    }
-                }
-            }
+            double score = bestScore(opt, compareText);
             scored.add(new ScoredOption(opt, score));
         }
         java.util.Collections.sort(scored);
 
-        if (scored.size() >= 1) {
+        if (!scored.isEmpty()) {
             double bestScore = scored.get(0).getScore();
             double secondScore = scored.size() > 1 ? scored.get(1).getScore() : 0.0;
 
@@ -547,8 +522,87 @@ public final class ShowSelectionEvaluator {
             }
         }
 
-        // 5) Still ambiguous - return with scored options for UI ranking.
         return Decision.ambiguous("Still ambiguous (would prompt)", scored);
+    }
+
+    // ---- Shared helpers ----
+
+    /** Best similarity score for a candidate (name + aliases). */
+    private static double bestScore(ShowOption opt, String compareText) {
+        double score = similarity(compareText, opt.getName());
+        for (String alias : safeAliases(opt)) {
+            double aliasScore = similarity(compareText, alias);
+            if (aliasScore > score) {
+                score = aliasScore;
+            }
+        }
+        return score;
+    }
+
+    /** Does a candidate name match extracted (raw or normalized, case-insensitive)? */
+    private static boolean matchesExtracted(
+        String candidateName,
+        String extracted,
+        String extractedNormalized
+    ) {
+        if (candidateName == null) {
+            return false;
+        }
+        if (extracted != null && !extracted.isBlank()
+                && candidateName.equalsIgnoreCase(extracted)) {
+            return true;
+        }
+        return extractedNormalized != null && !extractedNormalized.isBlank()
+            && candidateName.equalsIgnoreCase(extractedNormalized);
+    }
+
+    /** Normalize a string for comparison: replace punctuation and trim. */
+    private static String safeNormalize(String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        try {
+            return safeTrim(StringUtils.replacePunctuation(s));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /** Canonicalize for token-set comparison: normalize, lowercase, collapse spaces. */
+    private static String canonicalTokens(String s) {
+        if (s == null) {
+            return "";
+        }
+        String norm;
+        try {
+            norm = StringUtils.replacePunctuation(s);
+        } catch (Exception ignored) {
+            norm = s;
+        }
+        norm = safeTrim(norm);
+        if (norm == null || norm.isBlank()) {
+            return "";
+        }
+        return norm.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+    }
+
+    /** Safely get aliases from a ShowOption. */
+    private static List<String> safeAliases(ShowOption opt) {
+        try {
+            List<String> aliases = opt.getAliasNames();
+            return (aliases != null) ? aliases : List.of();
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    /** Safely get FirstAiredYear from a ShowOption. */
+    private static Integer safeFirstAiredYear(ShowOption opt) {
+        try {
+            return opt.getFirstAiredYear();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static Integer parseYearFromText(final String s) {

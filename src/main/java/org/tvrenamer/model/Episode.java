@@ -5,6 +5,7 @@ import org.tvrenamer.controller.util.StringUtils;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Episode {
@@ -64,7 +65,7 @@ public class Episode {
                          + info.dvdSeason + ")");
             dvdPlacement = null;
         } else if (dvdEpisodeNumber == null) {
-            logger.fine("episode \"" + title + "\" does not have an integer DVD episode number ("
+            logger.log(Level.FINE, () -> "episode \"" + title + "\" does not have an integer DVD episode number ("
                         + info.dvdEpisodeNumber + ")");
             dvdPlacement = null;
         } else {

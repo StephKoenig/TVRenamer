@@ -38,8 +38,6 @@ import org.eclipse.swt.widgets.TableItem;
  */
 public final class DuplicateCleanupDialog extends Dialog {
 
-    private static final Logger logger = Logger.getLogger(DuplicateCleanupDialog.class.getName());
-
     private static final String TITLE = "Duplicate Files Found";
     private static final int MIN_WIDTH = 750;
     private static final int MIN_HEIGHT = 300;
@@ -50,8 +48,36 @@ public final class DuplicateCleanupDialog extends Dialog {
     private final Shell parent;
     private final List<Path> duplicates;
 
+    /** Pre-computed file metadata so I/O happens before the dialog is painted. */
+    private record FileInfo(Path path, String filename, String folder,
+                            String sizeStr, String modifiedStr) {
+
+        static FileInfo of(Path path) {
+            String filename = (path.getFileName() != null)
+                ? path.getFileName().toString()
+                : path.toString();
+            String folder = (path.getParent() != null)
+                ? path.getParent().toString()
+                : "";
+            String sizeStr = "";
+            String modifiedStr = "";
+            try {
+                sizeStr = formatFileSize(Files.size(path));
+                FileTime mtime = Files.getLastModifiedTime(path);
+                modifiedStr = mtime.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .format(DATE_FMT);
+            } catch (IOException e) {
+                Logger.getLogger(DuplicateCleanupDialog.class.getName())
+                    .log(Level.FINE, "Could not read file attributes: " + path, e);
+            }
+            return new FileInfo(path, filename, folder, sizeStr, modifiedStr);
+        }
+    }
+
     private Shell dialogShell;
     private Table table;
+    private List<FileInfo> fileInfos;
     private List<Path> result = null;
 
     /**
@@ -64,6 +90,12 @@ public final class DuplicateCleanupDialog extends Dialog {
         super(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL | SWT.RESIZE);
         this.parent = parent;
         this.duplicates = (duplicates == null) ? new ArrayList<>() : new ArrayList<>(duplicates);
+
+        // Pre-compute file metadata (I/O) before the dialog UI is built.
+        this.fileInfos = new ArrayList<>(this.duplicates.size());
+        for (Path p : this.duplicates) {
+            fileInfos.add(FileInfo.of(p));
+        }
     }
 
     /**
@@ -95,26 +127,11 @@ public final class DuplicateCleanupDialog extends Dialog {
             Math.max(dialogShell.getSize().y, MIN_HEIGHT)
         );
 
-        // Center on parent.
-        int parentX = parent.getBounds().x;
-        int parentY = parent.getBounds().y;
-        int parentWidth = parent.getBounds().width;
-        int parentHeight = parent.getBounds().height;
-        int dialogWidth = dialogShell.getSize().x;
-        int dialogHeight = dialogShell.getSize().y;
-        dialogShell.setLocation(
-            parentX + (parentWidth - dialogWidth) / 2,
-            parentY + (parentHeight - dialogHeight) / 2
-        );
+        // Position centered over parent with multi-monitor clamping.
+        DialogPositioning.positionDialog(dialogShell, parent);
 
         dialogShell.open();
-
-        // Event loop.
-        while (!dialogShell.isDisposed()) {
-            if (!dialogShell.getDisplay().readAndDispatch()) {
-                dialogShell.getDisplay().sleep();
-            }
-        }
+        DialogHelper.runModalLoop(dialogShell);
 
         return result;
     }
@@ -163,33 +180,16 @@ public final class DuplicateCleanupDialog extends Dialog {
         modifiedColumn.setText("Modified");
         modifiedColumn.setWidth(130);
 
-        // Populate table.
-        for (Path path : duplicates) {
+        // Populate table from pre-computed file info (no I/O during UI construction).
+        for (FileInfo info : fileInfos) {
             TableItem item = new TableItem(table, SWT.NONE);
             item.setChecked(false); // Unchecked by default for safety.
-            item.setData(path);
+            item.setData(info.path());
 
-            String filename = (path.getFileName() != null)
-                ? path.getFileName().toString()
-                : path.toString();
-            String folder = (path.getParent() != null)
-                ? path.getParent().toString()
-                : "";
-
-            item.setText(0, filename);
-            item.setText(1, folder);
-
-            try {
-                long bytes = Files.size(path);
-                item.setText(2, formatFileSize(bytes));
-
-                FileTime mtime = Files.getLastModifiedTime(path);
-                item.setText(3, mtime.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .format(DATE_FMT));
-            } catch (IOException e) {
-                logger.log(Level.FINE, "Could not read file attributes: " + path, e);
-            }
+            item.setText(0, info.filename());
+            item.setText(1, info.folder());
+            item.setText(2, info.sizeStr());
+            item.setText(3, info.modifiedStr());
         }
 
         // Right-click context menu: Open Folder.

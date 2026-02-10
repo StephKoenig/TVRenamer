@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -83,14 +82,17 @@ public class UserPreferences {
 
     // Show name overrides: exact match with case-insensitive comparison at lookup time.
     // Stored in prefs.xml to avoid a separate overrides.xml file.
-    private final Map<String, String> showNameOverrides = new LinkedHashMap<>();
+    // Uses ConcurrentHashMap for safe iteration while other threads may update.
+    private final Map<String, String> showNameOverrides =
+        new java.util.concurrent.ConcurrentHashMap<>();
 
     // Show disambiguation overrides: map a provider query string (normalized) to a chosen
     // provider series ID (e.g., TVDB seriesid). This allows us to persist user selections
     // when a provider search returns multiple close matches (e.g., "Star" vs "Star (2024)").
     // Stored in prefs.xml alongside other preferences.
+    // Uses ConcurrentHashMap for safe iteration while other threads may update.
     private final Map<String, String> showDisambiguationOverrides =
-        new LinkedHashMap<>();
+        new java.util.concurrent.ConcurrentHashMap<>();
 
     private transient boolean destDirProblem = false;
 
@@ -399,8 +401,8 @@ public class UserPreferences {
      * Deal with legacy files and set up
      */
     private static void initialize() {
-        logger.fine(
-            "configuration directory = " +
+        logger.log(Level.FINE,
+            () -> "configuration directory = " +
                 CONFIGURATION_DIRECTORY.toAbsolutePath()
         );
 
@@ -502,7 +504,8 @@ public class UserPreferences {
                 "Successfully read preferences from: " +
                     PREFERENCES_FILE.toAbsolutePath()
             );
-            logger.fine("Successfully read preferences: " + prefs.toString());
+            final UserPreferences logPrefs = prefs;
+            logger.log(Level.FINE, () -> "Successfully read preferences: " + logPrefs.toString());
         } else {
             prefs = new UserPreferences();
         }

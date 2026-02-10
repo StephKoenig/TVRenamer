@@ -1,22 +1,20 @@
 package org.tvrenamer.controller.metadata;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.tvrenamer.controller.util.ExternalToolDetector;
+import org.tvrenamer.controller.util.ProcessRunner;
+import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.Episode;
 import org.tvrenamer.model.EpisodePlacement;
 import org.tvrenamer.model.FileEpisode;
@@ -64,7 +62,7 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
         ensureDetected();
 
         if (detectedTool == Tool.NONE) {
-            logger.fine("No MP4 tagging tool found - skipping " + videoFile);
+            logger.log(Level.FINE, () -> "No MP4 tagging tool found - skipping " + videoFile);
             return true; // Not an error, just skip
         }
 
@@ -97,12 +95,11 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
 
         // Filename without extension for the title/display name
         String filename = videoFile.getFileName().toString();
-        int dotIndex = filename.lastIndexOf('.');
-        String filenameNoExt = (dotIndex > 0) ? filename.substring(0, dotIndex) : filename;
+        String filenameNoExt = StringUtils.getBaseName(filename);
 
         String airDateStr = (airDate != null) ? airDate.toString() : null;
 
-        logger.fine("Tagging MP4 " + filename + " with: " +
+        logger.log(Level.FINE, () -> "Tagging MP4 " + filename + " with: " +
             "show=" + showName + ", S" + season + "E" + episodeNum +
             ", title=" + episodeTitle + ", tool=" + detectedTool);
 
@@ -162,12 +159,8 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
         // ffmpeg cannot edit in place; write to temp then replace.
         Path tempFile = null;
         try {
-            String ext = "";
             String name = videoFile.getFileName().toString();
-            int dot = name.lastIndexOf('.');
-            if (dot > 0) {
-                ext = name.substring(dot);
-            }
+            String ext = StringUtils.getExtension(name);
             tempFile = Files.createTempFile(videoFile.getParent(), ".tvr-tag-", ext);
 
             List<String> cmd = new ArrayList<>();
@@ -221,48 +214,17 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
         cmd.add(key + "=" + value);
     }
 
-    // ---- Process execution (shared) ----
-
     private boolean runProcess(List<String> command, Path videoFile) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(command);
-            pb.redirectErrorStream(true);
-
-            Process process = pb.start();
-
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
+        ProcessRunner.Result result = ProcessRunner.run(command, PROCESS_TIMEOUT_SECONDS);
+        if (!result.success()) {
+            if (result.exitCode() == -1) {
+                logger.warning(detectedTool + " timed out or failed to run for: " + videoFile);
+            } else {
+                logger.warning(detectedTool + " failed (exit " + result.exitCode() + ") for: "
+                    + videoFile + "\nOutput: " + result.output());
             }
-
-            boolean finished = process.waitFor(PROCESS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-                logger.warning(detectedTool + " timed out for: " + videoFile);
-                return false;
-            }
-
-            int exitCode = process.exitValue();
-            if (exitCode != 0) {
-                logger.warning(detectedTool + " failed (exit " + exitCode + ") for: "
-                    + videoFile + "\nOutput: " + output);
-                return false;
-            }
-
-            return true;
-
-        } catch (IOException e) {
-            logger.log(Level.WARNING, "Failed to run " + detectedTool + " for: " + videoFile, e);
-            return false;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.warning(detectedTool + " interrupted for: " + videoFile);
-            return false;
         }
+        return result.success();
     }
 
     // ---- Tool detection ----
@@ -302,90 +264,31 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
     }
 
     private static String detectAtomicParsley() {
-        // Try PATH (binary may be named AtomicParsley or atomicparsley)
-        for (String name : new String[] { "AtomicParsley", "atomicparsley" }) {
-            if (isExecutableInPath(name)) {
-                return name;
-            }
-        }
-
-        // Windows common locations
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
-            String[] paths = {
+        return ExternalToolDetector.detect(
+            new String[] { "AtomicParsley", "atomicparsley" },
+            new String[] {
                 "C:\\Program Files\\AtomicParsley\\AtomicParsley.exe",
                 "C:\\Program Files (x86)\\AtomicParsley\\AtomicParsley.exe"
-            };
-            for (String path : paths) {
-                if (Files.isExecutable(Paths.get(path))) {
-                    return path;
-                }
-            }
-        }
-
-        // macOS Homebrew
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
-            for (String path : new String[] {
+            },
+            new String[] {
                 "/usr/local/bin/AtomicParsley",
                 "/opt/homebrew/bin/AtomicParsley"
-            }) {
-                if (Files.isExecutable(Paths.get(path))) {
-                    return path;
-                }
             }
-        }
-
-        return "";
+        );
     }
 
     private static String detectFfmpeg() {
-        if (isExecutableInPath("ffmpeg")) {
-            return "ffmpeg";
-        }
-
-        // Windows common locations
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
-            String[] paths = {
+        return ExternalToolDetector.detect(
+            new String[] { "ffmpeg" },
+            new String[] {
                 "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
                 "C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe"
-            };
-            for (String path : paths) {
-                if (Files.isExecutable(Paths.get(path))) {
-                    return path;
-                }
-            }
-        }
-
-        // macOS Homebrew
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
-            for (String path : new String[] {
+            },
+            new String[] {
                 "/usr/local/bin/ffmpeg",
                 "/opt/homebrew/bin/ffmpeg"
-            }) {
-                if (Files.isExecutable(Paths.get(path))) {
-                    return path;
-                }
             }
-        }
-
-        return "";
-    }
-
-    private static boolean isExecutableInPath(String executable) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(executable, "--version");
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            // Drain output to avoid blocking
-            process.getInputStream().readAllBytes();
-            boolean finished = process.waitFor(5, TimeUnit.SECONDS);
-            if (finished && process.exitValue() == 0) {
-                return true;
-            }
-            process.destroyForcibly();
-        } catch (IOException | InterruptedException e) {
-            // Not found or not executable
-        }
-        return false;
+        );
     }
 
     /**

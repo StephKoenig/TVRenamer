@@ -3,6 +3,7 @@ package org.tvrenamer.model;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -49,13 +50,11 @@ class Season {
      */
     public Episode get(int episodeNum, boolean preferDvd) {
         EpisodeOptions options = episodes.get(episodeNum);
-        Episode found = null;
+        Episode found = (options != null) ? options.get(preferDvd) : null;
 
-        if (options != null) {
-            found = options.get(preferDvd);
-        }
-        logger.fine("for season " + seasonNum + ", episode " + episodeNum
-                    + ", found " + found);
+        final Episode logFound = found;
+        logger.log(Level.FINE, () -> "for season " + seasonNum + ", episode " + episodeNum
+                    + ", found " + logFound);
         return found;
     }
 
@@ -66,12 +65,12 @@ class Season {
      *           whether the caller prefers the DVD ordering, or over-the-air ordering
      * @param episodeNum
      *           the episode number, within this Season, of the episode to return
-     * @return the Episodes that match the request criteria, or null if none does
+     * @return the Episodes that match the request criteria; empty list if none found (never null)
      */
     public List<Episode> getAll(final boolean preferDvd, final int episodeNum) {
         EpisodeOptions options = episodes.get(episodeNum);
         if (options == null) {
-            return null;
+            return List.of();
         }
 
         return options.getAll(preferDvd);

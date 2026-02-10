@@ -12,7 +12,6 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Dialog;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
@@ -31,6 +30,8 @@ final class AboutDialog extends Dialog {
 
     private final UIStarter ui;
     private Shell aboutShell;
+    private Font titleFont;
+    private Font versionFont;
 
     /**
      * Static inner class to check if there's an update available
@@ -84,18 +85,22 @@ final class AboutDialog extends Dialog {
         // Add the contents of the dialog window
         createContents();
 
+        aboutShell.addListener(SWT.Dispose, e -> {
+            if (titleFont != null && !titleFont.isDisposed()) {
+                titleFont.dispose();
+            }
+            if (versionFont != null && !versionFont.isDisposed()) {
+                versionFont.dispose();
+            }
+        });
+
         aboutShell.pack();
 
         // Position relative to the parent (main window) so it doesn't appear in an OS-random place.
         DialogPositioning.positionDialog(aboutShell, getParent());
 
         aboutShell.open();
-        Display display = getParent().getDisplay();
-        while (!aboutShell.isDisposed()) {
-            if (!display.readAndDispatch()) {
-                display.sleep();
-            }
-        }
+        DialogHelper.runModalLoop(aboutShell);
     }
 
     /**
@@ -128,28 +133,26 @@ final class AboutDialog extends Dialog {
 
         Label applicationLabel = new Label(aboutShell, SWT.NONE);
         FontData defaultFont = ui.getDefaultSystemFont();
-        applicationLabel.setFont(
-            new Font(
-                aboutShell.getDisplay(),
-                defaultFont.getName(),
-                defaultFont.getHeight() + 4,
-                SWT.BOLD
-            )
+        titleFont = new Font(
+            aboutShell.getDisplay(),
+            defaultFont.getName(),
+            defaultFont.getHeight() + 4,
+            SWT.BOLD
         );
+        applicationLabel.setFont(titleFont);
         applicationLabel.setText(APPLICATION_DISPLAY_NAME);
         applicationLabel.setLayoutData(
             new GridData(GridData.BEGINNING, GridData.CENTER, true, true)
         );
 
         Label versionLabel = new Label(aboutShell, SWT.NONE);
-        versionLabel.setFont(
-            new Font(
-                aboutShell.getDisplay(),
-                defaultFont.getName(),
-                defaultFont.getHeight() + 2,
-                SWT.BOLD
-            )
+        versionFont = new Font(
+            aboutShell.getDisplay(),
+            defaultFont.getName(),
+            defaultFont.getHeight() + 2,
+            SWT.BOLD
         );
+        versionLabel.setFont(versionFont);
 
         versionLabel.setText(VERSION_LABEL);
         versionLabel.setLayoutData(

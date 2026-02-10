@@ -379,8 +379,7 @@ public class FileMover implements Callable<Boolean> {
         final Path destPath,
         final boolean tryRename
     ) {
-        logger.fine("Going to move\n  '" + srcPath + "'\n  '" + destPath + "'");
-        episode.setMoving();
+        logger.log(Level.FINE, () -> "Going to move\n  '" + srcPath + "'\n  '" + destPath + "'");
 
         // Capture original mtime before moving. Best-effort: if we can't read it, we fall back
         // to leaving the destination mtime unchanged (for preserve mode) or setting "now"
@@ -389,7 +388,7 @@ public class FileMover implements Callable<Boolean> {
         try {
             originalMtime = Files.getLastModifiedTime(srcPath);
         } catch (Exception e) {
-            logger.fine("Could not read mtime from " + srcPath + ": " + e.getMessage());
+            logger.log(Level.FINE, () -> "Could not read mtime from " + srcPath + ": " + e.getMessage());
         }
 
         // Record whether this move will require copy+delete (used for overall progress reporting).
@@ -496,7 +495,6 @@ public class FileMover implements Callable<Boolean> {
         Path srcPath = episode.getPath();
         if (Files.notExists(srcPath)) {
             logger.info("Path no longer exists: " + srcPath);
-            episode.setNoFile();
             return;
         }
 
@@ -512,8 +510,6 @@ public class FileMover implements Callable<Boolean> {
             );
             return;
         }
-
-        episode.setFileVerified();
 
         Path destDir = destRoot;
         String filename = destBasename + destSuffix;

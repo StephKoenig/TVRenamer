@@ -343,12 +343,12 @@ public class FileEpisode {
         try {
             seasonNum = Integer.parseInt(filenameSeason);
         } catch (NumberFormatException e) {
-            logger.fine("unable to parse season number: " + filenameSeason);
+            logger.log(Level.FINE, () -> "unable to parse season number: " + filenameSeason);
         }
         try {
             episodeNum = Integer.parseInt(filenameEpisode);
         } catch (NumberFormatException e) {
-            logger.fine("unable to parse episode number: " + filenameEpisode);
+            logger.log(Level.FINE, () -> "unable to parse episode number: " + filenameEpisode);
         }
         placement = new EpisodePlacement(seasonNum, episodeNum);
     }
@@ -402,22 +402,6 @@ public class FileEpisode {
 
     public String getFileName() {
         return fileNameString;
-    }
-
-    /**
-     * Updates the status to know that the source file is not found.
-     * (Status tracking removed; method retained for API compatibility.)
-     */
-    public void setNoFile() {
-        // No-op: fileStatus tracking removed
-    }
-
-    /**
-     * Updates the status to know that the source file has been found.
-     * (Status tracking removed; method retained for API compatibility.)
-     */
-    public void setFileVerified() {
-        // No-op: fileStatus tracking removed
     }
 
     private void checkFile(boolean mustExist) {
@@ -607,14 +591,6 @@ public class FileEpisode {
     }
 
     /**
-     * Updates the status to know that the process of moving the file to its
-     * desired name/location has begun, and is not known to have finished.
-     */
-    public void setMoving() {
-        // No-op: fileStatus tracking removed
-    }
-
-    /**
      * Updates the status to know that the source file is already in the
      * directory that the user wants it in, and has the best name that it
      * can be given.
@@ -789,10 +765,8 @@ public class FileEpisode {
         }
 
         actualEpisodes = actualShow.getEpisodes(placement);
-        if ((actualEpisodes != null) && (actualEpisodes.size() == 0)) {
+        if (actualEpisodes.isEmpty()) {
             actualEpisodes = null;
-        }
-        if (actualEpisodes == null) {
             logger.info(
                 "Season #" +
                     placement.season +
@@ -1121,7 +1095,7 @@ public class FileEpisode {
         double score1 = ShowSelectionEvaluator.similarity(
             text, actualEpisodes.get(1).getTitle());
 
-        logger.fine("Fuzzy episode pre-select for '" + text + "': "
+        logger.log(Level.FINE, () -> "Fuzzy episode pre-select for '" + text + "': "
             + "'" + actualEpisodes.get(0).getTitle() + "'=" + score0 + ", "
             + "'" + actualEpisodes.get(1).getTitle() + "'=" + score1);
 

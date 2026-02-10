@@ -32,6 +32,8 @@ import org.tvrenamer.controller.util.StringUtils;
  */
 public class Constants {
 
+    // ---- Application identity ----
+
     public static final String APPLICATION_NAME = "TVRenamer";
     public static final String APPLICATION_DISPLAY_NAME = "TVRenamer (Forked)";
     public static final String ABOUT_LABEL =
@@ -42,6 +44,8 @@ public class Constants {
 
     public static final String VERSION_NUMBER = Environment.readVersionNumber();
     public static final String VERSION_LABEL = "Version: " + VERSION_NUMBER;
+
+    // ---- URLs ----
 
     // Fork URLs (GitHub)
     public static final String TVRENAMER_PROJECT_URL =
@@ -78,6 +82,8 @@ public class Constants {
     public static final String SEND_SUPPORT_EMAIL = "Send support email";
     public static final String SOURCE_CODE_LINK = "Source Code";
 
+    // ---- Resource paths ----
+
     public static final String XML_SUFFIX = ".xml";
     public static final String ICON_PARENT_DIRECTORY = "src/main/resources";
     public static final String APPLICATION_ICON_PATH = "/icons/tvrenamer.png";
@@ -93,6 +99,8 @@ public class Constants {
         }
         return str.toString();
     }
+
+    // ---- Button / dialog labels ----
 
     public static final String QUIT_LABEL = "Quit";
     public static final String CANCEL_LABEL = "Cancel";
@@ -114,6 +122,9 @@ public class Constants {
     public static final String REPLACEMENT_OPTIONS_LIST_ENTRY_REGEX =
         "(.*) :.*";
     public static final String IGNORE_WORDS_SPLIT_REGEX = "\\s*,\\s*";
+
+    // ---- Preferences dialog labels and tooltips ----
+
     public static final String GENERAL_LABEL = "General";
     public static final String RENAMING_LABEL = "Renaming";
     public static final String MOVE_SELECTED_TEXT = "Move Enabled [?]";
@@ -257,6 +268,8 @@ public class Constants {
     public static final String NO_TEXT_AFTER_CLOSING_QUOTE =
         "Cannot insert text after " + "the closing double quote";
 
+    // ---- Update checker messages ----
+
     public static final String UPDATE_TEXT = "Check for Updates...";
     private static final String TO_DOWNLOAD =
         "Please visit " +
@@ -291,6 +304,8 @@ public class Constants {
         TVRENAMER_PROJECT_URL +
         "\nto see when one becomes available.";
 
+    // ---- Provider / parsing error messages ----
+
     public static final String ERROR_PARSING_XML = "Error parsing XML";
     public static final String ERROR_PARSING_NUMBERS =
         ERROR_PARSING_XML + ": a field expected to be a number was not";
@@ -310,11 +325,15 @@ public class Constants {
     public static final String FILE_EPISODE_NEEDS_PATH =
         "cannot create FileEpisode with no path";
 
+    // ---- Default values ----
+
     public static final String DEFAULT_REPLACEMENT_MASK = "%S [%sx%0e] %t";
     public static final String DEFAULT_SEASON_PREFIX = "Season ";
     public static final String DEFAULT_IGNORED_KEYWORD = "sample";
     public static final String DUPLICATES_DIRECTORY = "versions";
     public static final String DEFAULT_LANGUAGE = "en";
+
+    // ---- File system paths ----
 
     private static final String CONFIGURATION_DIRECTORY_NAME = ".tvrenamer";
     private static final String PREFERENCES_FILENAME = "prefs.xml";
@@ -344,7 +363,7 @@ public class Constants {
 
     public static final String EMPTY_STRING = "";
 
-    // FileEpisode constants
+    // ---- FileEpisode constants ----
     /** Sentinel value indicating file size is unknown or unavailable. */
     public static final long NO_FILE_SIZE = -1L;
 

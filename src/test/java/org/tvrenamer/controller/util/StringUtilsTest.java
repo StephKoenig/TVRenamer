@@ -168,8 +168,7 @@ public class StringUtilsTest {
         // Straightforward removal; note does not remove punctuation/separators
         assertEquals("foo..baz", removeLast("foo.bar.baz", "bar"));
 
-        // Implementation detail, but the match is required to be all lower-case,
-        // while the input doesn't
+        // Case-insensitive: match "bar" removes "Bar" from the original
         assertEquals("Foo..Baz", removeLast("Foo.Bar.Baz", "bar"));
 
         // Like the name says, the method only removes the last instance
@@ -181,9 +180,8 @@ public class StringUtilsTest {
         // Doesn't necessarily replace anything
         assertEquals("Foo.Schmar.baz", removeLast("Foo.Schmar.baz", "bar"));
 
-        // This frankly is probably a bug, but this is currently the expected behavior.
-        // If the match is not all lower-case to begin with, nothing will be matched.
-        assertEquals("Foo.Bar.Baz", removeLast("Foo.Bar.Baz", "Bar"));
+        // Case-insensitive: match with mixed case works too
+        assertEquals("Foo..Baz", removeLast("Foo.Bar.Baz", "Bar"));
     }
 
     @Test
@@ -483,5 +481,27 @@ public class StringUtilsTest {
         assertTrimSafe("Dr. Foo's Man-Pig ");
         assertTrimSafe("Dr. Foo's_Man-Pig_");
         assertTrimSafe("  Dr. Foo's_Man-Pig_");
+    }
+
+    @Test
+    public void testEscapeXml() {
+        assertEquals("", escapeXml(null));
+        assertEquals("hello", escapeXml("hello"));
+        assertEquals("&amp;", escapeXml("&"));
+        assertEquals("&lt;tag&gt;", escapeXml("<tag>"));
+        assertEquals("&quot;quoted&quot;", escapeXml("\"quoted\""));
+        assertEquals("it&apos;s", escapeXml("it's"));
+        assertEquals(
+            "Tom &amp; Jerry &lt;2023&gt;",
+            escapeXml("Tom & Jerry <2023>")
+        );
+    }
+
+    @Test
+    public void testGetBaseName() {
+        assertEquals("dexter.407.720p.hdtv.x264-sys", getBaseName("dexter.407.720p.hdtv.x264-sys.mkv"));
+        assertEquals("Supernatural", getBaseName("Supernatural"));
+        assertEquals("test", getBaseName("test.mp4"));
+        assertEquals(".hidden", getBaseName(".hidden"));
     }
 }

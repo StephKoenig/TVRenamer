@@ -22,23 +22,6 @@ This document consolidates "future work" notes from the codebase. Notes are grou
 - Likely UI location:
   - unified "Show Matching Rules" editor alongside Overrides and Disambiguations
 
-### Dedupe QOL: dialog improvements
-**Why:** Improvements to the duplicate file cleanup dialog:
-
-**1. Show file size and date in the dedupe dialog**
-Currently the dialog only shows Filename and Folder columns. Adding file size and last-modified
-date gives the user context to make informed decisions.
-- **Where:** `DuplicateCleanupDialog.java` — add Size and Modified columns, populate via
-  `Files.size()` and `Files.getLastModifiedTime()`.
-- **Effort:** Small
-
-**2. "Open folder" action in the dedupe dialog**
-Allow the user to navigate to the folder containing a listed file — e.g. right-click → "Open in
-Explorer" or a button that opens the parent directory of the selected row.
-- **Where:** `DuplicateCleanupDialog.java` — add context menu or button using
-  `Desktop.getDesktop().open()` or `Program.launch()` on the parent path.
-- **Effort:** Small
-
 ---
 
 ## Code Reliability & Maintenance

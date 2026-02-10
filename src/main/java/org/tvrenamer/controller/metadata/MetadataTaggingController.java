@@ -49,7 +49,7 @@ public class MetadataTaggingController {
 
         for (VideoMetadataTagger tagger : taggers) {
             if (tagger.supportsExtension(extension)) {
-                logger.fine("Tagging " + filename + " with " + tagger.getClass().getSimpleName());
+                logger.log(Level.FINE, () -> "Tagging " + filename + " with " + tagger.getClass().getSimpleName());
                 try {
                     return tagger.tagFile(videoFile, episode);
                 } catch (Exception e) {
@@ -60,7 +60,7 @@ public class MetadataTaggingController {
         }
 
         // No tagger for this format - not an error
-        logger.fine("No metadata tagger available for extension: " + extension);
+        logger.log(Level.FINE, () -> "No metadata tagger available for extension: " + extension);
         return true;
     }
 }

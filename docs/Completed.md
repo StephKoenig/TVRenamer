@@ -515,6 +515,105 @@ When you complete an item that was tracked in `docs/TODO.md`:
 - **Where:** `FileMover.java` (`finishMove`)
 - **What we did:** Added `FileUtilities.hasVideoExtension()` guard to the existing `isCleanupDuplicateVideoFiles()` check. Non-video moves now skip the duplicate scan entirely.
 
+### 42) Dedupe dialog safety defaults
+- **Why:** Files were checked by default and Delete was the default button — an impatient Enter press could delete files without review.
+- **Where:** `DuplicateCleanupDialog.java`
+- **What we did:**
+  - Changed files to unchecked by default (`item.setChecked(false)`).
+  - Made Cancel the default button (Enter dismisses safely).
+  - Disabled the Delete button until at least one file is checked, via a `syncDeleteEnabled` Runnable wired to table selection and Select All/None buttons.
+
+### 43) Show name similarity for fuzzy duplicate matching
+- **Why:** Duplicate detection Check 2 only compared season/episode numbers. In rename-only operations (no move), unrelated files from different shows in the same folder were flagged as duplicates (e.g. `ShowA.S01E01` vs `ShowB.S01E01`).
+- **Where:** `FilenameParser.java`, `ShowSelectionEvaluator.java`, `FileUtilities.java`, `FileMover.java`
+- **What we did:**
+  - Added `ParsedFileIdentity` record and `extractShowAndSeasonEpisode()` to `FilenameParser` for lightweight show name + season/episode extraction from filenames.
+  - Made `ShowSelectionEvaluator.similarity()` public so `FileUtilities` can access it.
+  - Updated `findDuplicateVideoFiles()` to accept a `movedShowName` parameter and require Levenshtein similarity >= 0.5 between show names before flagging a fuzzy duplicate.
+  - Updated `FileMover.finishMove()` to pass the resolved show name.
+
+### 44) MP4 tagger rewrite — external tools replace mp4parser
+- **Why:** The mp4parser library (v1.9.56, unmaintained since ~2017) corrupted MP4 files by rewriting the entire box tree with custom ByteBuffer atom construction. MKV tagging worked fine because it used external `mkvpropedit`.
+- **Where:** `Mp4MetadataTagger.java`, `build.gradle`, `gradle/libs.versions.toml`, `gradle.lockfile`, help pages, `Constants.java`
+- **What we did:**
+  - Rewrote `Mp4MetadataTagger` to use external tools: AtomicParsley (preferred, surgical iTunes atom edits) with ffmpeg fallback (`-c copy` container rewrite).
+  - Cached tool detection with `volatile` + double-checked locking, checking PATH and common OS install locations.
+  - Added `isToolAvailable()` and `getDetectedToolName()` public methods for UI.
+  - Removed mp4parser dependency from version catalog, build script, and lockfile.
+  - Updated help pages, tooltips, and documentation to reflect external tool requirement.
+
+### 45) Dedupe dialog: file size, date, and Open Folder
+- **Why:** The dialog only showed Filename and Folder columns — no context to make informed deletion decisions. Also no way to navigate to a file's location.
+- **Where:** `DuplicateCleanupDialog.java`
+- **What we did:**
+  - Added Size column (human-readable: B/KB/MB/GB) via `Files.size()`.
+  - Added Modified column (yyyy-MM-dd HH:mm) via `Files.getLastModifiedTime()`.
+  - Added right-click "Open Folder" context menu using `Program.launch()` on the parent directory.
+  - Widened dialog minimum width from 600 to 750 to accommodate new columns.
+
+### 46) Codebase quality sweep — 12 improvements across bug fixes, consolidation, modernisation, and safety
+- **Why:** Address findings from a full codebase review; reduce duplication, fix bugs, modernise patterns, improve thread safety, and establish conventions.
+- **Where:** Multiple files across `controller/util/`, `controller/metadata/`, `model/`, `view/`, `build.gradle`
+- **What we did:**
+  - **Bug fix:**
+    - Fixed `StringUtils.removeLast()` case-sensitivity mismatch — was searching lowercased input but not lowercasing the match string, corrupting output when case differed
+  - **New shared utilities:**
+    - Created `ProcessRunner` (`controller/util/`) — shared process execution with timeout, output capture, and proper cleanup in `finally` block. Replaced ~48 duplicated lines in each of Mp4MetadataTagger, MkvMetadataTagger, and ThemeManager
+    - Created `ExternalToolDetector` (`controller/util/`) — shared tool detection checking PATH then platform-specific paths. Replaced ~80 duplicated lines across both taggers
+  - **Consolidation:**
+    - Added `StringUtils.getBaseName()` and replaced 5 duplicate `lastIndexOf('.')` sites in Mp4MetadataTagger, MkvMetadataTagger, MoveRunner, and FileUtilities
+    - Extracted `ensureOnlyOneChecked()` helper in `BatchShowDisambiguationDialog`, replacing duplicate mutex loops
+    - DRY'd `build.gradle`: extracted `swtManifestAttributes` map, `addBuildMetadata` closure, `configureResourceProcessing` closure; fixed duplicate comment
+  - **Modernisation:**
+    - `ThreadLocal` initializers → `ThreadLocal.withInitial()` lambdas
+    - `stringsAreEqual()` → `Objects.equals()`
+    - `isBlank()`/`isNotBlank()` → delegate to `String.isBlank()` with null guard
+    - `makeString()` → `new String(buffer, StandardCharsets.US_ASCII)` (removed deprecated charset string)
+  - **Thread safety:**
+    - Changed `UserPreferences` override maps from `LinkedHashMap` to `ConcurrentHashMap` (prevents `ConcurrentModificationException` during iteration)
+  - **Null-vs-empty convention:**
+    - `EpisodeOptions.getAll()`, `Season.getAll()`, `Show.getEpisodes()` now return `List.of()` instead of null. Updated javadocs: "never null". Simplified caller in `FileEpisode`
+  - **Resource management:**
+    - Added `titleFont`/`versionFont` fields to `AboutDialog`; added `SWT.Dispose` listener for proper font cleanup
+  - **Dead code removal:**
+    - Removed no-op methods `setNoFile()`, `setFileVerified()`, `setMoving()` from `FileEpisode` and their 3 call sites in `FileMover`
+  - **Performance:**
+    - Added per-thread `XPathExpression` cache in `XPathUtilities` to avoid recompiling the same XPath strings repeatedly
+- **Notes:**
+  - 12 of 24 identified items completed; 2 skipped (XML escaping — hand-rolled version is correct; FileUtilities null handling — current behavior is defensively adequate). 10 remain open (see `docs/code improvement opportunities.md`).
+  - All builds and tests pass after changes.
+
+### 47) Codebase quality sweep part 2 — 8 more improvements: decomposition, dialog cleanup, logging, and tests
+- **Why:** Continue addressing findings from the full codebase review; improve maintainability, dialog safety, logging performance, and test coverage.
+- **Where:** Multiple files across `model/`, `controller/`, `view/`, `controller/util/`, `controller/metadata/`, test classes
+- **What we did:**
+  - **Dialog boilerplate (#10):**
+    - Created `DialogHelper.java` with `runModalLoop(Shell)` — replaced identical 5-line SWT event loops in AboutDialog, BatchShowDisambiguationDialog, DuplicateCleanupDialog, and PreferencesDialog
+    - Fixed DuplicateCleanupDialog to use `DialogPositioning.positionDialog()` instead of manual centering (gains multi-monitor clamping)
+  - **File I/O off UI thread (#12):**
+    - Added `FileInfo` record to DuplicateCleanupDialog — pre-computes `Files.size()` and `Files.getLastModifiedTime()` in the constructor before any UI widgets are created
+    - Table population now reads from pre-computed data, not live filesystem calls
+  - **Decompose evaluate() (#16):**
+    - Extracted 8 named methods from the 310-line `ShowSelectionEvaluator.evaluate()`: `tryPinnedId`, `tryExactNameMatch`, `tryExactAliasMatch`, `tryBaseTitleOverVariants`, `tryTokenSetMatch`, `tryYearTolerance`, `fuzzyMatchOrAmbiguous`, plus shared helpers `matchesExtracted`, `safeNormalize`, `canonicalTokens`, `bestScore`, `safeAliases`, `safeFirstAiredYear`, `isParentheticalVariant`
+    - `evaluate()` is now a clean chain of calls, each step independently testable
+  - **Standardise logging (#19):**
+    - Converted 30+ `logger.fine("msg" + x)` calls to `logger.log(Level.FINE, () -> "msg" + x)` in hot-path model and controller files — avoids string concatenation when FINE logging is disabled
+    - Fixed one exception-logging anti-pattern in TheTVDBProvider (was losing stack trace)
+  - **FileUtilities null handling (#20):**
+    - Added null guards with FINE-level logging to `isDirEmpty()` and `rmdir()` — previously would NPE on null input
+  - **XML escaping utility (#21):**
+    - Moved `escapeXml()` from MkvMetadataTagger to `StringUtils.escapeXml()` for shared reuse
+    - MkvMetadataTagger now delegates to the shared method
+  - **Constants organisation (#22):**
+    - Added section divider comments to Constants.java: Application identity, URLs, Resource paths, Button/dialog labels, Preferences dialog labels, Update checker messages, Provider/parsing errors, Default values, File system paths, FileEpisode constants
+  - **Metadata tagger tests (#23):**
+    - Created `ProcessRunnerTest.java` — tests successful/failed commands, output capture, non-zero exit codes, failure sentinel
+    - Created `ExternalToolDetectorTest.java` — tests PATH detection, nonexistent tools, multi-name fallback
+    - Added `escapeXml` and `getBaseName` tests to `StringUtilsTest.java`
+- **Notes:**
+  - 20 of 24 total items now completed. 4 remain open: #7 (FileEpisode thread safety), #14 (tagger interface), #15 (TaggingResult enum), #17 (Java record candidates).
+  - All builds and tests pass after changes.
+
 ---
 
 ## Related records

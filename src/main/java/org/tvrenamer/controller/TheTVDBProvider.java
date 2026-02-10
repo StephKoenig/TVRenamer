@@ -85,7 +85,7 @@ public class TheTVDBProvider {
         String searchURL =
             BASE_SEARCH_URL + StringUtils.encodeUrlQueryParam(queryString);
 
-        logger.fine("About to download search results from " + searchURL);
+        logger.log(Level.FINE, () -> "About to download search results from " + searchURL);
 
         String content = new HttpConnectionHandler().downloadUrl(searchURL);
 
@@ -103,7 +103,7 @@ public class TheTVDBProvider {
         int seriesId = series.getId();
         String seriesURL = BASE_LIST_URL + seriesId + BASE_LIST_FILENAME;
 
-        logger.fine("Downloading episode listing from " + seriesURL);
+        logger.log(Level.FINE, () -> "Downloading episode listing from " + seriesURL);
 
         String content = new HttpConnectionHandler().downloadUrl(seriesURL);
 
@@ -129,7 +129,7 @@ public class TheTVDBProvider {
                         firstAired.substring(0, 4)
                     );
                 } catch (NumberFormatException e) {
-                    logger.fine("Could not parse year from firstAired: " + firstAired);
+                    logger.log(Level.FINE, () -> "Could not parse year from firstAired: " + firstAired);
                 }
             }
 
@@ -349,7 +349,7 @@ public class TheTVDBProvider {
             logger.log(Level.WARNING, nfe.getMessage(), nfe);
             throw new TVRenamerIOException(ERROR_PARSING_NUMBERS, nfe);
         } catch (IOException ioe) {
-            logger.warning(ioe.getMessage());
+            logger.log(Level.WARNING, ioe.getMessage(), ioe);
             throw new TVRenamerIOException(DOWNLOADING_FAILED_MESSAGE, ioe);
         }
     }

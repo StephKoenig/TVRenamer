@@ -2284,12 +2284,7 @@ class PreferencesDialog extends Dialog {
         DialogPositioning.positionDialog(preferencesShell, parent, 0, 0);
 
         preferencesShell.open();
-        Display display = parent.getDisplay();
-        while (!preferencesShell.isDisposed()) {
-            if (!display.readAndDispatch()) {
-                display.sleep();
-            }
-        }
+        DialogHelper.runModalLoop(preferencesShell);
     }
 
     /**

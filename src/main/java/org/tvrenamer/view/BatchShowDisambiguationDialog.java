@@ -147,12 +147,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         // Start in downloading mode; caller will stop it when discovery completes.
         setDownloading(true);
 
-        Display display = parent.getDisplay();
-        while (!dialogShell.isDisposed()) {
-            if (!display.readAndDispatch()) {
-                display.sleep();
-            }
-        }
+        DialogHelper.runModalLoop(dialogShell);
 
         // If dialogShell closed by cancel path or by window X, we return null.
         if (cancelled) {
@@ -338,11 +333,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
             // Enforce at most one checked at a time.
             if (clicked.getChecked()) {
-                for (TableItem ti : rightCandidatesTable.getItems()) {
-                    if (ti != clicked) {
-                        ti.setChecked(false);
-                    }
-                }
+                ensureOnlyOneChecked(clicked);
             }
 
             // Apply/clear selection for the currently selected ambiguous show.
@@ -388,11 +379,7 @@ public final class BatchShowDisambiguationDialog extends Dialog {
                 return;
             }
             ti.setChecked(true);
-            for (TableItem other : rightCandidatesTable.getItems()) {
-                if (other != ti) {
-                    other.setChecked(false);
-                }
-            }
+            ensureOnlyOneChecked(ti);
             applyCurrentSelectionAndAdvance();
         });
     }
@@ -858,6 +845,18 @@ public final class BatchShowDisambiguationDialog extends Dialog {
         };
 
         display.timerExec(0, tick);
+    }
+
+    /**
+     * Ensures at most one checkbox is checked in the right candidates table.
+     * Unchecks every item except the given one.
+     */
+    private void ensureOnlyOneChecked(TableItem checked) {
+        for (TableItem ti : rightCandidatesTable.getItems()) {
+            if (ti != checked) {
+                ti.setChecked(false);
+            }
+        }
     }
 
     private static String safe(final String s) {

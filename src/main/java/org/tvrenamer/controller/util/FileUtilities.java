@@ -443,7 +443,7 @@ public class FileUtilities {
                 }
 
                 if (Thread.currentThread().isInterrupted()) {
-                    logger.fine(
+                    logger.log(Level.FINE, () ->
                         "copyWithUpdates interrupted; stopping copy of " +
                             source
                     );
@@ -598,6 +598,10 @@ public class FileUtilities {
      *    true if the path existed and was an empty directory; false otherwise
      */
     public static boolean isDirEmpty(final Path dir) {
+        if (dir == null) {
+            logger.fine("isDirEmpty called with null path");
+            return false;
+        }
         try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(dir)) {
             return !dirStream.iterator().hasNext();
         } catch (IOException ioe) {
@@ -619,6 +623,10 @@ public class FileUtilities {
      *    true if the path existed and was deleted; false if not
      */
     public static boolean rmdir(final Path dir) {
+        if (dir == null) {
+            logger.fine("rmdir called with null path");
+            return false;
+        }
         if (!Files.isDirectory(dir)) {
             return false;
         }
@@ -724,14 +732,12 @@ public class FileUtilities {
         }
 
         String movedFileName = movedFile.getFileName().toString();
-        // Extract base name without extension
-        int lastDot = movedFileName.lastIndexOf('.');
-        String baseName = (lastDot > 0)
-            ? movedFileName.substring(0, lastDot).toLowerCase(java.util.Locale.ROOT)
-            : null;
-        String movedExt = (lastDot > 0)
-            ? movedFileName.substring(lastDot).toLowerCase(java.util.Locale.ROOT)
-            : "";
+        String movedExt = StringUtils.getExtension(movedFileName)
+            .toLowerCase(java.util.Locale.ROOT);
+        String baseName = movedExt.isEmpty()
+            ? null
+            : StringUtils.getBaseName(movedFileName)
+                .toLowerCase(java.util.Locale.ROOT);
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(destDir)) {
             for (Path candidate : stream) {
@@ -752,15 +758,12 @@ public class FileUtilities {
 
                 // Check 1: Same base name, different extension
                 if (baseName != null) {
-                    int candDot = candidateName.lastIndexOf('.');
-                    if (candDot > 0) {
-                        String candBase = candidateName.substring(0, candDot)
-                            .toLowerCase(java.util.Locale.ROOT);
-                        String candExt = candidateName.substring(candDot)
-                            .toLowerCase(java.util.Locale.ROOT);
-                        if (candBase.equals(baseName) && !candExt.equals(movedExt)) {
-                            isDuplicate = true;
-                        }
+                    String candBase = StringUtils.getBaseName(candidateName)
+                        .toLowerCase(java.util.Locale.ROOT);
+                    String candExt = StringUtils.getExtension(candidateName)
+                        .toLowerCase(java.util.Locale.ROOT);
+                    if (candBase.equals(baseName) && !candExt.equals(movedExt)) {
+                        isDuplicate = true;
                     }
                 }
 
@@ -814,7 +817,7 @@ public class FileUtilities {
             }
             try {
                 Files.delete(file);
-                logger.fine("Deleted: " + file);
+                logger.log(Level.FINE, () -> "Deleted: " + file);
                 deleted++;
             } catch (IOException e) {
                 logger.log(Level.WARNING, "Failed to delete: " + file, e);

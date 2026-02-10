@@ -1,6 +1,5 @@
 package org.tvrenamer.controller.util;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
@@ -8,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class StringUtils {
@@ -37,40 +37,17 @@ public class StringUtils {
         );
     public static final Set<Character> ILLEGAL_CHARACTERS = SANITISE.keySet();
 
-    private static final ThreadLocal<DecimalFormat> DIGITS = new ThreadLocal<
-        DecimalFormat
-    >() {
-        @Override
-        protected DecimalFormat initialValue() {
-            return new DecimalFormat("##0");
-        }
-    };
+    private static final ThreadLocal<DecimalFormat> DIGITS =
+        ThreadLocal.withInitial(() -> new DecimalFormat("##0"));
 
     private static final ThreadLocal<DecimalFormat> TWO_OR_THREE =
-        new ThreadLocal<DecimalFormat>() {
-            @Override
-            protected DecimalFormat initialValue() {
-                return new DecimalFormat("#00");
-            }
-        };
+        ThreadLocal.withInitial(() -> new DecimalFormat("#00"));
 
-    private static final ThreadLocal<DecimalFormat> KB_FORMAT = new ThreadLocal<
-        DecimalFormat
-    >() {
-        @Override
-        protected DecimalFormat initialValue() {
-            return new DecimalFormat("#.# kB");
-        }
-    };
+    private static final ThreadLocal<DecimalFormat> KB_FORMAT =
+        ThreadLocal.withInitial(() -> new DecimalFormat("#.# kB"));
 
-    private static final ThreadLocal<DecimalFormat> MB_FORMAT = new ThreadLocal<
-        DecimalFormat
-    >() {
-        @Override
-        protected DecimalFormat initialValue() {
-            return new DecimalFormat("#.# MB");
-        }
-    };
+    private static final ThreadLocal<DecimalFormat> MB_FORMAT =
+        ThreadLocal.withInitial(() -> new DecimalFormat("#.# MB"));
 
     /**
      * Simply returns the given String rendered in all lower-case letters.<p>
@@ -104,13 +81,7 @@ public class StringUtils {
      *    if there was a problem (such as, not all the bytes are ASCII codes)
      */
     public static String makeString(byte[] buffer) {
-        String rval;
-        try {
-            rval = new String(buffer, "ASCII");
-        } catch (UnsupportedEncodingException uee) {
-            rval = "";
-        }
-        return rval;
+        return new String(buffer, StandardCharsets.US_ASCII);
     }
 
     /**
@@ -169,7 +140,7 @@ public class StringUtils {
      *    a version of input that removes the last instance of match, if match was found
      */
     public static String removeLast(String input, String match) {
-        int idx = toLower(input).lastIndexOf(match);
+        int idx = toLower(input).lastIndexOf(toLower(match));
         if (idx > 0) {
             input =
                 input.substring(0, idx) +
@@ -542,6 +513,41 @@ public class StringUtils {
     }
 
     /**
+     * Given a String representing a filename, return the portion before the
+     * file extension (the last dot and everything after it).<p>
+     *
+     * If the filename has no dot, the entire filename is returned.
+     *
+     * @param filename
+     *            the filename (not a full path) to extract the base name from
+     * @return everything before the last dot, or the whole filename if no dot
+     */
+    public static String getBaseName(String filename) {
+        int dot = filename.lastIndexOf('.');
+        if (dot > 0) {
+            return filename.substring(0, dot);
+        }
+        return filename;
+    }
+
+    /**
+     * Escape the five standard XML special characters.
+     *
+     * @param s the string to escape (may be null)
+     * @return the escaped string, or empty string if null
+     */
+    public static String escapeXml(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    /**
      * Formats the given file size into a nice string (123 Bytes, 10.6 kB, 1.2 MB).<p>
      *
      * Copied from gjt I/O library.
@@ -582,46 +588,27 @@ public class StringUtils {
      * @return true if the strings are equal
      */
     public static boolean stringsAreEqual(String s1, String s2) {
-        if (s1 == null) {
-            return (s2 == null);
-        }
-        return s1.equals(s2);
+        return Objects.equals(s1, s2);
     }
 
     /**
-     * Checks if a String is whitespace, empty ("") or null.<p>
-     *
-     * Copied from
-     * <a href="http://preview.tinyurl.com/lzx3gzj">Apache Commons Lang StringUtils</a>
+     * Checks if a String is whitespace, empty ("") or null.
      *
      * @param str the String to check, may be null
-     * @return <code>true</code> if the String is null, empty or whitespace
+     * @return {@code true} if the String is null, empty or whitespace
      */
     public static boolean isBlank(String str) {
-        int strLen;
-        if (str == null || (strLen = str.length()) == 0) {
-            return true;
-        }
-        for (int i = 0; i < strLen; i++) {
-            //noinspection PointlessBooleanExpression
-            if ((Character.isWhitespace(str.charAt(i)) == false)) {
-                return false;
-            }
-        }
-        return true;
+        return str == null || str.isBlank();
     }
 
     /**
-     * Checks if a String is not empty (""), not null and not whitespace only.<p>
-     *
-     * Copied from
-     * <a href="http://preview.tinyurl.com/kvhh8oa">Apache Commons Lang StringUtils</a>
+     * Checks if a String is not empty (""), not null and not whitespace only.
      *
      * @param str  the String to check, may be null
-     * @return <code>true</code> if the String is not empty and not null and not whitespace
+     * @return {@code true} if the String is not empty and not null and not whitespace
      */
     public static boolean isNotBlank(String str) {
-        return !StringUtils.isBlank(str);
+        return str != null && !str.isBlank();
     }
 
     /**

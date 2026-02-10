@@ -1,19 +1,19 @@
 package org.tvrenamer.controller.metadata;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.tvrenamer.controller.util.ExternalToolDetector;
+import org.tvrenamer.controller.util.ProcessRunner;
+import org.tvrenamer.controller.util.StringUtils;
 import org.tvrenamer.model.Episode;
 import org.tvrenamer.model.EpisodePlacement;
 import org.tvrenamer.model.FileEpisode;
@@ -56,7 +56,7 @@ public class MkvMetadataTagger implements VideoMetadataTagger {
         // Check if mkvpropedit is available
         String mkvpropedit = getMkvpropeditPath();
         if (mkvpropedit == null || mkvpropedit.isEmpty()) {
-            logger.fine("mkvpropedit not found - skipping MKV tagging for " + videoFile);
+            logger.log(Level.FINE, () -> "mkvpropedit not found - skipping MKV tagging for " + videoFile);
             return true; // Not an error, just skip
         }
 
@@ -89,10 +89,9 @@ public class MkvMetadataTagger implements VideoMetadataTagger {
 
         // Get filename without extension for segment title (display name)
         String filename = videoFile.getFileName().toString();
-        int dotIndex = filename.lastIndexOf('.');
-        String filenameNoExt = (dotIndex > 0) ? filename.substring(0, dotIndex) : filename;
+        String filenameNoExt = StringUtils.getBaseName(filename);
 
-        logger.fine("Tagging MKV " + videoFile.getFileName() + " with: " +
+        logger.log(Level.FINE, () -> "Tagging MKV " + videoFile.getFileName() + " with: " +
             "show=" + showName + ", S" + season + "E" + episodeNum +
             ", title=" + episodeTitle + ", segmentTitle=" + filenameNoExt);
 
@@ -105,7 +104,7 @@ public class MkvMetadataTagger implements VideoMetadataTagger {
             boolean success = runMkvpropedit(mkvpropedit, videoFile, tagsFile, filenameNoExt);
 
             if (success) {
-                logger.fine("Successfully tagged MKV: " + videoFile.getFileName());
+                logger.log(Level.FINE, () -> "Successfully tagged MKV: " + videoFile.getFileName());
             }
             return success;
 
@@ -157,57 +156,17 @@ public class MkvMetadataTagger implements VideoMetadataTagger {
      * @return path to mkvpropedit, or empty string if not found
      */
     private static String detectMkvpropedit() {
-        // Try PATH first
-        if (isExecutableInPath("mkvpropedit")) {
-            return "mkvpropedit";
-        }
-
-        // On Windows, check common installation paths
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
-            String[] windowsPaths = {
+        return ExternalToolDetector.detect(
+            new String[] { "mkvpropedit" },
+            new String[] {
                 "C:\\Program Files\\MKVToolNix\\mkvpropedit.exe",
                 "C:\\Program Files (x86)\\MKVToolNix\\mkvpropedit.exe"
-            };
-            for (String path : windowsPaths) {
-                if (Files.isExecutable(Paths.get(path))) {
-                    return path;
-                }
+            },
+            new String[] {
+                "/usr/local/bin/mkvpropedit",
+                "/opt/homebrew/bin/mkvpropedit"
             }
-        }
-
-        // On macOS, check Homebrew
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
-            String homebrewPath = "/usr/local/bin/mkvpropedit";
-            if (Files.isExecutable(Paths.get(homebrewPath))) {
-                return homebrewPath;
-            }
-            // Apple Silicon Homebrew location
-            String armHomebrewPath = "/opt/homebrew/bin/mkvpropedit";
-            if (Files.isExecutable(Paths.get(armHomebrewPath))) {
-                return armHomebrewPath;
-            }
-        }
-
-        return "";
-    }
-
-    /**
-     * Check if an executable is available in PATH by trying to run it.
-     */
-    private static boolean isExecutableInPath(String executable) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(executable, "--version");
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            boolean finished = process.waitFor(5, TimeUnit.SECONDS);
-            if (finished && process.exitValue() == 0) {
-                return true;
-            }
-            process.destroyForcibly();
-        } catch (IOException | InterruptedException e) {
-            // Not found or not executable
-        }
-        return false;
+        );
     }
 
     /**
@@ -297,66 +256,29 @@ public class MkvMetadataTagger implements VideoMetadataTagger {
      */
     private boolean runMkvpropedit(String mkvpropedit, Path videoFile, Path tagsFile,
                                     String segmentTitle) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(
-                mkvpropedit,
-                videoFile.toString(),
-                "--tags", "global:" + tagsFile.toString(),
-                "--edit", "info",
-                "--set", "title=" + segmentTitle
-            );
-            pb.redirectErrorStream(true);
+        List<String> command = List.of(
+            mkvpropedit,
+            videoFile.toString(),
+            "--tags", "global:" + tagsFile.toString(),
+            "--edit", "info",
+            "--set", "title=" + segmentTitle
+        );
 
-            Process process = pb.start();
-
-            // Read output (for logging on failure)
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
+        ProcessRunner.Result result = ProcessRunner.run(command, PROCESS_TIMEOUT_SECONDS);
+        if (!result.success()) {
+            if (result.exitCode() == -1) {
+                logger.warning("mkvpropedit timed out or failed to run for: " + videoFile);
+            } else {
+                logger.warning("mkvpropedit failed (exit " + result.exitCode() + ") for: "
+                    + videoFile + "\nOutput: " + result.output());
             }
-
-            boolean finished = process.waitFor(PROCESS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-                logger.warning("mkvpropedit timed out for: " + videoFile);
-                return false;
-            }
-
-            int exitCode = process.exitValue();
-            if (exitCode != 0) {
-                logger.warning("mkvpropedit failed (exit " + exitCode + ") for: " + videoFile +
-                    "\nOutput: " + output);
-                return false;
-            }
-
-            return true;
-
-        } catch (IOException e) {
-            logger.log(Level.WARNING, "Failed to run mkvpropedit for: " + videoFile, e);
-            return false;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.warning("mkvpropedit interrupted for: " + videoFile);
-            return false;
         }
+        return result.success();
     }
 
-    /**
-     * Escape special XML characters.
-     */
+    /** Delegate to shared XML escaping utility. */
     private static String escapeXml(String s) {
-        if (s == null) {
-            return "";
-        }
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+        return StringUtils.escapeXml(s);
     }
 
     /**

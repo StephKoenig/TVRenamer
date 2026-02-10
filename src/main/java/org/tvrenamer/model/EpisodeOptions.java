@@ -98,8 +98,8 @@ class EpisodeOptions {
      * @return a list of Episodes that possibly match
      */
     public List<Episode> getAll(final boolean preferDvd) {
-        if (episodeList.size() == 0) {
-            return null;
+        if (episodeList.isEmpty()) {
+            return List.of();
         }
 
         return episodeList.stream()

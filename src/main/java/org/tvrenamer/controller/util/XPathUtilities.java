@@ -1,5 +1,8 @@
 package org.tvrenamer.controller.util;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
@@ -22,20 +25,33 @@ public class XPathUtilities {
         () -> XPATH_FACTORY.newXPath()
     );
 
-    private static XPath getXPath() {
-        return XPATH.get();
+    /**
+     * Per-thread cache of compiled XPath expressions. XPath compilation is
+     * expensive and the same expression strings are used repeatedly when
+     * parsing episode data.
+     */
+    private static final ThreadLocal<Map<String, XPathExpression>> EXPR_CACHE =
+        ThreadLocal.withInitial(HashMap::new);
+
+    private static XPathExpression compile(String expression)
+        throws XPathExpressionException {
+        Map<String, XPathExpression> cache = EXPR_CACHE.get();
+        XPathExpression compiled = cache.get(expression);
+        if (compiled == null) {
+            compiled = XPATH.get().compile(expression);
+            cache.put(expression, compiled);
+        }
+        return compiled;
     }
 
     public static NodeList nodeListValue(String name, Node eNode)
         throws XPathExpressionException {
-        XPathExpression expr = getXPath().compile(name);
-        return (NodeList) expr.evaluate(eNode, XPathConstants.NODESET);
+        return (NodeList) compile(name).evaluate(eNode, XPathConstants.NODESET);
     }
 
     public static String nodeTextValue(String name, Node eNode)
         throws XPathExpressionException {
-        XPathExpression expr = getXPath().compile(name);
-        Node node = (Node) expr.evaluate(eNode, XPathConstants.NODE);
+        Node node = (Node) compile(name).evaluate(eNode, XPathConstants.NODE);
         if (node == null) {
             return null;
         }

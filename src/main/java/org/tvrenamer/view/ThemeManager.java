@@ -1,13 +1,10 @@
 package org.tvrenamer.view;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.time.Duration;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.tvrenamer.controller.util.ProcessRunner;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.events.PaintEvent;
@@ -290,14 +287,13 @@ public final class ThemeManager {
     }
 
     private static Boolean readWindowsAppsUseLightTheme() {
-        ProcessBuilder builder = new ProcessBuilder(
+        String output = runCommand(
             "reg",
             "query",
             "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
             "/v",
             "AppsUseLightTheme"
         );
-        String output = runCommand(builder);
         if (output == null) {
             return null;
         }
@@ -325,13 +321,12 @@ public final class ThemeManager {
     }
 
     private static Boolean readMacOsInterfaceStyleDark() {
-        ProcessBuilder builder = new ProcessBuilder(
+        String output = runCommand(
             "defaults",
             "read",
             "-g",
             "AppleInterfaceStyle"
         );
-        String output = runCommand(builder);
         if (output == null) {
             return null;
         }
@@ -359,53 +354,14 @@ public final class ThemeManager {
         return null;
     }
 
-    private static String runCommand(ProcessBuilder builder) {
-        try {
-            Process process = builder.start();
-            boolean finished = process.waitFor(
-                DETECTION_TIMEOUT.toMillis(),
-                TimeUnit.MILLISECONDS
-            );
-            if (!finished) {
-                process.destroyForcibly();
-                logger.fine(
-                    "Theme detection command timed out: " + builder.command()
-                );
-                return null;
-            }
-            if (process.exitValue() != 0) {
-                logger.fine(
-                    "Theme detection command exited with " + process.exitValue()
-                );
-                return null;
-            }
-            try (
-                BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream())
-                )
-            ) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line).append(System.lineSeparator());
-                }
-                return sb.toString().trim();
-            }
-        } catch (IOException | InterruptedException ex) {
-            logger.log(
-                Level.FINE,
-                "Theme detection command failed: " + builder.command(),
-                ex
-            );
-            Thread.currentThread().interrupt();
-            return null;
-        } catch (SecurityException ex) {
-            logger.log(
-                Level.FINE,
-                "Insufficient rights to run theme detection command",
-                ex
-            );
-            return null;
+    private static String runCommand(String... command) {
+        int timeoutSeconds = (int) DETECTION_TIMEOUT.toSeconds();
+        if (timeoutSeconds < 1) {
+            timeoutSeconds = 1;
         }
+        ProcessRunner.Result result = ProcessRunner.run(
+            java.util.List.of(command), timeoutSeconds
+        );
+        return result.success() ? result.output().trim() : null;
     }
 }
