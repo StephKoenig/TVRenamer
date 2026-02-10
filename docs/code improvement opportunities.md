@@ -61,7 +61,7 @@ Findings from a full codebase review (February 2026). Grouped by impact and effo
 
 ## High: Safety & Correctness
 
-### 7. Thread safety in FileEpisode
+### 7. ~~Thread safety in FileEpisode~~ COMPLETED
 **File:** `FileEpisode.java`
 **Issue:** Only some methods are synchronized (`optionCount()`, `buildReplacementTextOptions()`), but related fields (`actualEpisodes`, `replacementOptions`, `replacementText`) are accessed without synchronization from `getEpisodeTitle()`, `indexOfEpisodeTitle()`, `getActualEpisode()`, `getReplacementText()`.
 **Risk:** Data race when listings arrive on background thread while UI reads episode data.
@@ -117,13 +117,13 @@ Findings from a full codebase review (February 2026). Grouped by impact and effo
 
 ## Medium: API & Interface Design
 
-### 14. VideoMetadataTagger interface missing tool availability
+### 14. ~~VideoMetadataTagger interface missing tool availability~~ COMPLETED
 **Files:** `VideoMetadataTagger.java`, `Mp4MetadataTagger.java:396-413`, `MkvMetadataTagger.java:368`
 **Issue:** `isToolAvailable()` and `getDetectedToolName()` are public static on concrete classes but not on the interface. UI must reference concrete types. Methods are also currently unused in the codebase (dead code from incomplete feature).
 **Fix:** Add `isToolAvailable()` and `getToolName()` to interface. Wire into MetadataTaggingController for UI queries.
 **Effort:** Small
 
-### 15. MetadataTaggingController return type too coarse
+### 15. ~~MetadataTaggingController return type too coarse~~ COMPLETED
 **File:** `MetadataTaggingController.java:41-65`
 **Issue:** `tagIfEnabled()` returns `true` for three different scenarios (disabled, unsupported format, success). Caller can't distinguish.
 **Fix:** Return enum `TaggingResult { SUCCESS, DISABLED, UNSUPPORTED, FAILED }`.
@@ -139,7 +139,7 @@ Findings from a full codebase review (February 2026). Grouped by impact and effo
 
 ## Medium: Code Modernisation
 
-### 17. Java record candidates
+### 17. ~~Java record candidates~~ COMPLETED
 **Files:** `EpisodePlacement.java`, `ShowOption.java`, `ShowSelectionEvaluator.Decision`, `ShowSelectionEvaluator.ScoredOption`, `FilenameParser.ParsedFileIdentity` (already a record)
 **Issue:** Several immutable data classes with public final fields or private fields + getters that would be cleaner as Java records (available since Java 14, project targets 17).
 **Candidates:**
@@ -208,17 +208,17 @@ Findings from a full codebase review (February 2026). Grouped by impact and effo
 | 4 | Extension/basename extraction | High | Small | Consolidation | **DONE** |
 | 5 | Modernise JDK-duplicate utils | High | Small | Modernisation | **DONE** |
 | 6 | DRY build.gradle | High | Small | Consolidation | **DONE** |
-| 7 | FileEpisode thread safety | High | Medium | Safety | Open |
+| 7 | FileEpisode thread safety | High | Medium | Safety | **DONE** |
 | 8 | UserPreferences map thread safety | High | Small | Safety | **DONE** |
 | 9 | Null-vs-empty collections | High | Medium | Correctness | **DONE** |
 | 10 | Dialog boilerplate | Medium | Small-Med | Consolidation | **DONE** |
 | 11 | Font disposal | Medium | Tiny | Resource mgmt | **DONE** |
 | 12 | File I/O on UI thread | Medium | Small | Performance | **DONE** |
 | 13 | Checkbox mutex duplication | Medium | Tiny | Consolidation | **DONE** |
-| 14 | Tagger interface + tool availability | Medium | Small | API design | Open |
-| 15 | TaggingResult enum | Medium | Small | API design | Open |
+| 14 | Tagger interface + tool availability | Medium | Small | API design | **DONE** |
+| 15 | TaggingResult enum | Medium | Small | API design | **DONE** |
 | 16 | Decompose evaluate() | Medium | Medium | Maintainability | **DONE** |
-| 17 | Java record candidates | Medium | Small | Modernisation | Open |
+| 17 | Java record candidates | Medium | Small | Modernisation | **DONE** |
 | 18 | Remove dead no-op methods | Medium | Tiny | Cleanup | **DONE** |
 | 19 | Standardise logging | Low | Medium | Consistency | **DONE** |
 | 20 | FileUtilities null handling | Low | Small | Consistency | **DONE** |
@@ -227,4 +227,4 @@ Findings from a full codebase review (February 2026). Grouped by impact and effo
 | 23 | Metadata tagger tests | Low | Med-Large | Test coverage | **DONE** |
 | 24 | XPath caching | Low | Small | Performance | **DONE** |
 
-**20 of 24 items completed. 4 remain open (#7, #14, #15, #17).**
+**All 24 items completed.**

@@ -127,22 +127,7 @@ public final class ShowSelectionEvaluator {
     /**
      * Holds a ShowOption together with its similarity score for ranking.
      */
-    public static final class ScoredOption implements Comparable<ScoredOption> {
-        private final ShowOption option;
-        private final double score;
-
-        public ScoredOption(ShowOption option, double score) {
-            this.option = option;
-            this.score = score;
-        }
-
-        public ShowOption getOption() {
-            return option;
-        }
-
-        public double getScore() {
-            return score;
-        }
+    public record ScoredOption(ShowOption option, double score) implements Comparable<ScoredOption> {
 
         /**
          * @return true if this option's score is high enough to be marked as recommended
@@ -509,13 +494,13 @@ public final class ShowSelectionEvaluator {
         java.util.Collections.sort(scored);
 
         if (!scored.isEmpty()) {
-            double bestScore = scored.get(0).getScore();
-            double secondScore = scored.size() > 1 ? scored.get(1).getScore() : 0.0;
+            double bestScore = scored.get(0).score();
+            double secondScore = scored.size() > 1 ? scored.get(1).score() : 0.0;
 
             if (bestScore >= FUZZY_AUTO_SELECT_MIN_SCORE
                     && (bestScore - secondScore) >= FUZZY_AUTO_SELECT_MIN_GAP) {
                 return Decision.resolved(
-                    scored.get(0).getOption(),
+                    scored.get(0).option(),
                     String.format("Fuzzy match: %.0f%% (gap: %.0f%%)",
                         bestScore * 100, (bestScore - secondScore) * 100)
                 );

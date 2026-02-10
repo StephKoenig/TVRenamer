@@ -88,8 +88,8 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
 
         // Extract metadata
         String showName = show.getName();
-        int season = placement.season;
-        int episodeNum = placement.episode;
+        int season = placement.season();
+        int episodeNum = placement.episode();
         String episodeTitle = ep.getTitle();
         LocalDate airDate = ep.getAirDate();
 
@@ -291,22 +291,14 @@ public class Mp4MetadataTagger implements VideoMetadataTagger {
         );
     }
 
-    /**
-     * Check if an MP4 tagging tool is available on this system.
-     *
-     * @return true if AtomicParsley or ffmpeg is installed and accessible
-     */
-    public static boolean isToolAvailable() {
+    @Override
+    public boolean isToolAvailable() {
         ensureDetected();
         return detectedTool != Tool.NONE;
     }
 
-    /**
-     * Get a description of the detected MP4 tagging tool, for display in UI.
-     *
-     * @return tool name (e.g. "AtomicParsley", "ffmpeg"), or "none" if unavailable
-     */
-    public static String getDetectedToolName() {
+    @Override
+    public String getToolName() {
         ensureDetected();
         return switch (detectedTool) {
             case ATOMIC_PARSLEY -> "AtomicParsley";

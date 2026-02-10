@@ -1543,12 +1543,12 @@ public class FilenameParserTest {
 
             assertEquals(
                 Integer.parseInt(testInput.seasonNumString),
-                retPlacement.season,
+                retPlacement.season(),
                 "On input:<[" + input + "]>, for season,"
             );
             assertEquals(
                 Integer.parseInt(testInput.episodeNumString),
-                retPlacement.episode,
+                retPlacement.episode(),
                 "On input:<[" + input + "]>, for episode,"
             );
             assertEquals(

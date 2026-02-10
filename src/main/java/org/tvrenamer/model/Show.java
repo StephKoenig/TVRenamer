@@ -153,10 +153,10 @@ public class Show extends ShowOption {
         } else {
             // Check to see if there's already an existing episode.  Only applies if we
             // have a valid placement.
-            Season season = seasons.get(placement.season);
+            Season season = seasons.get(placement.season());
             if (season == null) {
-                season = new Season(this, placement.season);
-                seasons.put(placement.season, season);
+                season = new Season(this, placement.season());
+                seasons.put(placement.season(), season);
             }
             season.addEpisode(episode, useDvd);
         }
@@ -285,20 +285,20 @@ public class Show extends ShowOption {
      *    Null if no such episode was found.
      */
     public Episode getEpisode(EpisodePlacement placement) {
-        Season season = seasons.get(placement.season);
+        Season season = seasons.get(placement.season());
         if (season == null) {
-            logger.log(Level.FINE, () -> "no season " + placement.season + " found for show " + name);
+            logger.log(Level.FINE, () -> "no season " + placement.season() + " found for show " + name);
             return null;
         }
         Episode episode;
         synchronized (this) {
-            episode = season.get(placement.episode, preferDvd);
+            episode = season.get(placement.episode(), preferDvd);
         }
         if (episode == null) {
             logger.warning("could not get episode of " + name + " for season "
-                           + placement.season + ", episode " + placement.episode);
+                           + placement.season() + ", episode " + placement.episode());
         } else {
-            logger.log(Level.FINE, () -> "for season " + placement.season + ", episode " + placement.episode
+            logger.log(Level.FINE, () -> "for season " + placement.season() + ", episode " + placement.episode()
                         + " with ID " + episode.getEpisodeId()
                         + ", found " + episode);
         }
@@ -316,14 +316,14 @@ public class Show extends ShowOption {
      *    an empty list if no such episode was found (never null).
      */
     public List<Episode> getEpisodes(final EpisodePlacement placement) {
-        Season season = seasons.get(placement.season);
+        Season season = seasons.get(placement.season());
         if (season == null) {
-            logger.warning("no season " + placement.season + " found for show " + name);
+            logger.warning("no season " + placement.season() + " found for show " + name);
             return List.of();
         }
         List<Episode> rval;
         synchronized (this) {
-            rval = season.getAll(preferDvd, placement.episode);
+            rval = season.getAll(preferDvd, placement.episode());
         }
         return rval;
     }

@@ -97,7 +97,7 @@ class Season {
         }
 
         EpisodePlacement placement = episode.getEpisodePlacement(useDvd);
-        int episodeNum = placement.episode;
+        int episodeNum = placement.episode();
         EpisodeOptions found = episodes.get(episodeNum);
 
         if (found == null) {

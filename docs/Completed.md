@@ -614,6 +614,30 @@ When you complete an item that was tracked in `docs/TODO.md`:
   - 20 of 24 total items now completed. 4 remain open: #7 (FileEpisode thread safety), #14 (tagger interface), #15 (TaggingResult enum), #17 (Java record candidates).
   - All builds and tests pass after changes.
 
+### 48) Codebase quality sweep part 3 — final 4 improvements: thread safety, API design, and Java records
+
+Completes the code improvement opportunities document (all 24 items done).
+
+- **#7 FileEpisode thread safety:** Added `synchronized` to all methods that read or write shared
+  mutable fields (`actualEpisodes`, `replacementText`, `replacementOptions`, `seriesStatus`,
+  `chosenEpisode`, `actualShow`, `baseForRename`). Writers: `setEpisodeShow`, `setFailedShow`,
+  `listingsComplete`, `listingsFailed`, `setApiDiscontinued`. Readers: `getEpisodeTitle`,
+  `indexOfEpisodeTitle`, `getActualEpisode`, `getReplacementText`, `getActualShow`,
+  `setChosenEpisode`, `getChosenEpisode`, `getDestinationBasename`, `fuzzyPreSelectEpisode`,
+  `refreshReplacement`, `getMoveToPath`. Removed redundant inner `synchronized (this)` block
+  in `listingsComplete()`.
+- **#14 Tagger interface tool availability:** Added `isToolAvailable()` and `getToolName()` to
+  `VideoMetadataTagger` interface. Implemented in `Mp4MetadataTagger` and `MkvMetadataTagger`.
+  Added `getToolSummary()` and `isAnyToolAvailable()` to `MetadataTaggingController` for UI queries.
+- **#15 TaggingResult enum:** Replaced `boolean` return from `MetadataTaggingController.tagIfEnabled()`
+  with `TaggingResult` enum (`SUCCESS`, `DISABLED`, `UNSUPPORTED`, `FAILED`). Added `isOk()` convenience
+  method. Updated `FileMover.tagFileIfEnabled()` caller.
+- **#17 Java record candidates:** Converted `EpisodePlacement` from class with public final fields to
+  a Java record. Updated all field access sites (`.season` → `.season()`, `.episode` → `.episode()`)
+  across 10 files. Converted `ShowSelectionEvaluator.ScoredOption` to a record, updated accessor
+  calls (`.getOption()` → `.option()`, `.getScore()` → `.score()`) across 3 files.
+  `ShowOption` and `Decision` were left as classes (subclass hierarchy / complex factory methods).
+
 ---
 
 ## Related records

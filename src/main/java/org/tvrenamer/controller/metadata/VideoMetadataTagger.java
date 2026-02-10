@@ -26,4 +26,18 @@ public interface VideoMetadataTagger {
      * @return true if tagging succeeded, false otherwise
      */
     boolean tagFile(Path videoFile, FileEpisode episode);
+
+    /**
+     * Check if the external tool required by this tagger is available.
+     *
+     * @return true if the tool is installed and accessible
+     */
+    boolean isToolAvailable();
+
+    /**
+     * Get the name of the external tool used by this tagger, for display in UI.
+     *
+     * @return tool name (e.g. "AtomicParsley", "mkvpropedit"), or "none" if unavailable
+     */
+    String getToolName();
 }

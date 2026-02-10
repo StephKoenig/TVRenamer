@@ -3,6 +3,7 @@ package org.tvrenamer.controller.metadata;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,6 +19,23 @@ public class MetadataTaggingController {
 
     private static final Logger logger = Logger.getLogger(MetadataTaggingController.class.getName());
     private static final UserPreferences userPrefs = UserPreferences.getInstance();
+
+    /** Result of a tagging attempt. */
+    public enum TaggingResult {
+        /** Tagging succeeded. */
+        SUCCESS,
+        /** Tagging is disabled in preferences. */
+        DISABLED,
+        /** No tagger supports this file format. */
+        UNSUPPORTED,
+        /** Tagging was attempted but failed. */
+        FAILED;
+
+        /** @return true if tagging succeeded or was intentionally skipped. */
+        public boolean isOk() {
+            return this != FAILED;
+        }
+    }
 
     private final List<VideoMetadataTagger> taggers;
 
@@ -35,13 +53,12 @@ public class MetadataTaggingController {
      *
      * @param videoFile the file to tag
      * @param episode the episode metadata source
-     * @return true if tagging succeeded or was skipped (disabled/unsupported format),
-     *         false only if tagging was attempted and failed
+     * @return a {@link TaggingResult} indicating what happened
      */
-    public boolean tagIfEnabled(Path videoFile, FileEpisode episode) {
+    public TaggingResult tagIfEnabled(Path videoFile, FileEpisode episode) {
         if (!userPrefs.isTagVideoMetadata()) {
             logger.fine("Metadata tagging is disabled");
-            return true; // Disabled, skip silently
+            return TaggingResult.DISABLED;
         }
 
         String filename = videoFile.getFileName().toString();
@@ -51,16 +68,48 @@ public class MetadataTaggingController {
             if (tagger.supportsExtension(extension)) {
                 logger.log(Level.FINE, () -> "Tagging " + filename + " with " + tagger.getClass().getSimpleName());
                 try {
-                    return tagger.tagFile(videoFile, episode);
+                    return tagger.tagFile(videoFile, episode)
+                        ? TaggingResult.SUCCESS
+                        : TaggingResult.FAILED;
                 } catch (Exception e) {
                     logger.log(Level.WARNING, "Exception during metadata tagging for: " + videoFile, e);
-                    return false;
+                    return TaggingResult.FAILED;
                 }
             }
         }
 
         // No tagger for this format - not an error
         logger.log(Level.FINE, () -> "No metadata tagger available for extension: " + extension);
-        return true;
+        return TaggingResult.UNSUPPORTED;
+    }
+
+    /**
+     * Get a summary of available tagging tools, for display in UI.
+     * Example: "MP4: AtomicParsley, MKV: mkvpropedit"
+     *
+     * @return human-readable tool summary
+     */
+    public String getToolSummary() {
+        StringJoiner sj = new StringJoiner(", ");
+        for (VideoMetadataTagger tagger : taggers) {
+            if (tagger.isToolAvailable()) {
+                sj.add(tagger.getToolName());
+            }
+        }
+        return sj.length() == 0 ? "No tagging tools found" : sj.toString();
+    }
+
+    /**
+     * Check if any tagging tool is available on this system.
+     *
+     * @return true if at least one tagger has its external tool installed
+     */
+    public boolean isAnyToolAvailable() {
+        for (VideoMetadataTagger tagger : taggers) {
+            if (tagger.isToolAvailable()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

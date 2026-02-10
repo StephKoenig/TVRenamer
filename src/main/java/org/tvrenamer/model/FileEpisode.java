@@ -584,7 +584,7 @@ public class FileEpisode {
      * This causes it to update its replacementText to notify the user as such.
      *
      */
-    public void setApiDiscontinued() {
+    public synchronized void setApiDiscontinued() {
         parseStatus = ParseStatus.PARSED;
         seriesStatus = SeriesStatus.UNFOUND;
         replacementText = DOWNLOADING_FAILED;
@@ -673,9 +673,9 @@ public class FileEpisode {
             actualShow.getIdString() +
             ">: " +
             " season " +
-            placement.season +
+            placement.season() +
             ", episode " +
-            placement.episode +
+            placement.episode() +
             " not found"
         );
     }
@@ -716,7 +716,7 @@ public class FileEpisode {
      *             if no Show
      *             could be created/found
      */
-    public void setEpisodeShow(Show show) {
+    public synchronized void setEpisodeShow(Show show) {
         actualShow = show;
         if (actualShow == null) {
             seriesStatus = SeriesStatus.UNFOUND;
@@ -735,7 +735,7 @@ public class FileEpisode {
      * @param failedShow
      *                   the FailedShow object that represents the failure
      */
-    public void setFailedShow(FailedShow failedShow) {
+    public synchronized void setFailedShow(FailedShow failedShow) {
         actualShow = null;
         seriesStatus = SeriesStatus.UNFOUND;
         if (failedShow.isTimeout()) {
@@ -749,7 +749,7 @@ public class FileEpisode {
      *
      * @return the number of episode options to offer the user
      */
-    public int listingsComplete() {
+    public synchronized int listingsComplete() {
         chosenEpisode = 0;
         if (actualShow == null) {
             logger.warning("error: should not get listings, do not have show!");
@@ -769,9 +769,9 @@ public class FileEpisode {
             actualEpisodes = null;
             logger.info(
                 "Season #" +
-                    placement.season +
+                    placement.season() +
                     ", Episode #" +
-                    placement.episode +
+                    placement.episode() +
                     " not found for show '" +
                     filenameShow +
                     "'"
@@ -782,15 +782,13 @@ public class FileEpisode {
         }
 
         // Success!!!
-        synchronized (this) {
-            buildReplacementTextOptions();
+        buildReplacementTextOptions();
 
-            if (reasonIgnored != null) {
-                return 0;
-            }
-
-            return replacementOptions.size();
+        if (reasonIgnored != null) {
+            return 0;
         }
+
+        return replacementOptions.size();
     }
 
     /**
@@ -800,7 +798,7 @@ public class FileEpisode {
      *            listings
      *            (could be null)
      */
-    public void listingsFailed(Exception err) {
+    public synchronized void listingsFailed(Exception err) {
         seriesStatus = SeriesStatus.NO_LISTINGS;
         replacementText = getNoListingsPlaceholder();
         if (err != null) {
@@ -825,7 +823,7 @@ public class FileEpisode {
      *         information
      *         we've gathered, and the user's preferences
      */
-    public Path getMoveToPath() {
+    public synchronized Path getMoveToPath() {
         Path destPath = userPrefs.getDestinationDirectory();
         if (destPath == null) {
             return pathObj.toAbsolutePath().getParent();
@@ -839,15 +837,15 @@ public class FileEpisode {
 
                 // Now we might append the "season" directory, if the user requested it in
                 // the preferences. But, only if we actually *have* season information.
-                if (placement.season > Show.NO_SEASON) {
+                if (placement.season() > Show.NO_SEASON) {
                     String seasonPrefix = userPrefs.getSeasonPrefix();
                     // Defect #50: Only add the 'season #' folder if set,
                     // otherwise put files in showname root
                     if (StringUtils.isNotBlank(seasonPrefix)) {
                         String seasonString =
                             userPrefs.isSeasonPrefixLeadingZero()
-                                ? StringUtils.zeroPadTwoDigits(placement.season)
-                                : String.valueOf(placement.season);
+                                ? StringUtils.zeroPadTwoDigits(placement.season())
+                                : String.valueOf(placement.season());
                         destPath = destPath.resolve(
                             seasonPrefix + seasonString
                         );
@@ -952,7 +950,7 @@ public class FileEpisode {
      * @param n
      *          the option chosen
      */
-    public void setChosenEpisode(final int n) {
+    public synchronized void setChosenEpisode(final int n) {
         if (n >= actualEpisodes.size()) {
             logger.warning("no option " + n + " for " + this);
         } else {
@@ -976,7 +974,7 @@ public class FileEpisode {
      * @return
      *         the option currently chosen
      */
-    public int getChosenEpisode() {
+    public synchronized int getChosenEpisode() {
         return chosenEpisode;
     }
 
@@ -986,7 +984,7 @@ public class FileEpisode {
      * @param index the option index
      * @return the title, or null if unavailable
      */
-    public String getEpisodeTitle(final int index) {
+    public synchronized String getEpisodeTitle(final int index) {
         if (actualEpisodes == null || index < 0 || index >= actualEpisodes.size()) {
             return null;
         }
@@ -999,7 +997,7 @@ public class FileEpisode {
      * @param title the title to search for
      * @return the index (0-based), or -1 if no match
      */
-    public int indexOfEpisodeTitle(final String title) {
+    public synchronized int indexOfEpisodeTitle(final String title) {
         if (actualEpisodes == null || title == null) {
             return -1;
         }
@@ -1035,14 +1033,14 @@ public class FileEpisode {
 
         // Build a regex for the S##E## pattern (case-insensitive) and find
         // where the title text starts (everything after the season/episode tag).
-        String sePattern = "[sS]0*" + placement.season + "[eE]0*" + placement.episode;
+        String sePattern = "[sS]0*" + placement.season() + "[eE]0*" + placement.episode();
         Matcher seMatcher = Pattern.compile(sePattern).matcher(originalBasename);
         String afterSE;
         if (seMatcher.find()) {
             afterSE = originalBasename.substring(seMatcher.end());
         } else {
             // Try alternate patterns: SSxEE, SSEE (4 digits)
-            String altPattern = "\\b0*" + placement.season + "[x.]0*" + placement.episode + "\\b";
+            String altPattern = "\\b0*" + placement.season() + "[x.]0*" + placement.episode() + "\\b";
             Matcher altMatcher = Pattern.compile(altPattern).matcher(originalBasename);
             if (altMatcher.find()) {
                 afterSE = originalBasename.substring(altMatcher.end());
@@ -1080,7 +1078,7 @@ public class FileEpisode {
      *
      * @return 0 or 1 if a clear winner is found, or -1 if no confident pick
      */
-    public int fuzzyPreSelectEpisode() {
+    public synchronized int fuzzyPreSelectEpisode() {
         if (actualEpisodes == null || actualEpisodes.size() != 2) {
             return -1;
         }
@@ -1114,7 +1112,7 @@ public class FileEpisode {
      *
      * @return the matched Show, or null if not yet matched
      */
-    public Show getActualShow() {
+    public synchronized Show getActualShow() {
         return actualShow;
     }
 
@@ -1123,7 +1121,7 @@ public class FileEpisode {
      *
      * @return the chosen Episode, or null if not yet determined
      */
-    public Episode getActualEpisode() {
+    public synchronized Episode getActualEpisode() {
         if (actualEpisodes == null || actualEpisodes.isEmpty()) {
             return null;
         }
@@ -1154,7 +1152,7 @@ public class FileEpisode {
      *
      * @return the "basename" of the proposed destination for this file
      */
-    public String getDestinationBasename() {
+    public synchronized String getDestinationBasename() {
         if (userPrefs.isRenameSelected()) {
             if (baseForRename == null) {
                 logger.warning(
@@ -1220,7 +1218,7 @@ public class FileEpisode {
      *
      * @return the new full file path, or user message, for table display
      */
-    public String getReplacementText() {
+    public synchronized String getReplacementText() {
         if (reasonIgnored != null) {
             return "Ignoring file due to \"" + reasonIgnored + "\"";
         }
@@ -1241,7 +1239,7 @@ public class FileEpisode {
      * the output destination folder, etc.
      *
      */
-    public void refreshReplacement() {
+    public synchronized void refreshReplacement() {
         if (seriesStatus == SeriesStatus.GOT_LISTINGS) {
             buildReplacementTextOptions();
         }
@@ -1256,9 +1254,9 @@ public class FileEpisode {
         String plc = (placement == null)
             ? ", no placement"
             : ", season: " +
-              placement.season +
+              placement.season() +
               ", episode: " +
-              placement.episode;
+              placement.episode();
         return val + name + plc + " }";
     }
 }

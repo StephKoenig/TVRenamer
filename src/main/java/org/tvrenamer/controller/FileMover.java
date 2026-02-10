@@ -322,7 +322,7 @@ public class FileMover implements Callable<Boolean> {
                 int[] seasonEp = null;
                 var placement = episode.getEpisodePlacement();
                 if (placement != null) {
-                    seasonEp = new int[] { placement.season, placement.episode };
+                    seasonEp = new int[] { placement.season(), placement.episode() };
                 }
                 List<Path> dups = FileUtilities.findDuplicateVideoFiles(
                     actualDest,
@@ -350,8 +350,8 @@ public class FileMover implements Callable<Boolean> {
         }
         try {
             MetadataTaggingController taggingController = new MetadataTaggingController();
-            boolean tagged = taggingController.tagIfEnabled(videoFile, episode);
-            if (!tagged) {
+            MetadataTaggingController.TaggingResult result = taggingController.tagIfEnabled(videoFile, episode);
+            if (!result.isOk()) {
                 logger.warning("Failed to tag metadata for: " + videoFile);
             }
         } catch (Exception e) {

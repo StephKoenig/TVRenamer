@@ -552,7 +552,7 @@ public class ShowSelectionEvaluatorTest {
             var scoredOptions = decision.getScoredOptions();
             assertTrue(scoredOptions.size() >= 2);
             // First should be "Test Show" with high score
-            assertTrue(scoredOptions.get(0).getScore() >= scoredOptions.get(1).getScore());
+            assertTrue(scoredOptions.get(0).score() >= scoredOptions.get(1).score());
         }
     }
 

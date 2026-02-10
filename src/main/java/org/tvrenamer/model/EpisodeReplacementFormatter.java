@@ -109,12 +109,12 @@ public final class EpisodeReplacementFormatter {
         // Use replace() instead of replaceAll() - tokens are literals, not regex.
         // This avoids regex overhead and the need for Matcher.quoteReplacement().
         String result = replacementTemplate
-            .replace(SEASON_NUM.getToken(), String.valueOf(placement.season))
-            .replace(SEASON_NUM_LEADING_ZERO.getToken(), StringUtils.zeroPadTwoDigits(placement.season))
+            .replace(SEASON_NUM.getToken(), String.valueOf(placement.season()))
+            .replace(SEASON_NUM_LEADING_ZERO.getToken(), StringUtils.zeroPadTwoDigits(placement.season()))
             .replace(EPISODE_NUM.getToken(),
-                formatEpisodeNumber(placement.episode, multiEpisodeEnd, false))
+                formatEpisodeNumber(placement.episode(), multiEpisodeEnd, false))
             .replace(EPISODE_NUM_LEADING_ZERO.getToken(),
-                formatEpisodeNumber(placement.episode, multiEpisodeEnd, true))
+                formatEpisodeNumber(placement.episode(), multiEpisodeEnd, true))
             .replace(SHOW_NAME.getToken(), showName)
             .replace(EPISODE_TITLE.getToken(), episodeTitle)
             .replace(EPISODE_TITLE_NO_SPACES.getToken(), StringUtils.makeDotTitle(episodeTitle))

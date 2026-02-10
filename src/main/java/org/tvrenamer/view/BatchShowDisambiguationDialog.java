@@ -593,11 +593,11 @@ public final class BatchShowDisambiguationDialog extends Dialog {
 
         if (scoredOptions != null && !scoredOptions.isEmpty()) {
             for (ShowSelectionEvaluator.ScoredOption so : scoredOptions) {
-                if (so != null && so.getOption() != null) {
-                    displayOptions.add(so.getOption());
-                    String id = so.getOption().getIdString();
+                if (so != null && so.option() != null) {
+                    displayOptions.add(so.option());
+                    String id = so.option().getIdString();
                     if (id != null) {
-                        scoreMap.put(id, so.getScore());
+                        scoreMap.put(id, so.score());
                     }
                 }
             }

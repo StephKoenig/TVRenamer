@@ -82,8 +82,8 @@ public class MkvMetadataTagger implements VideoMetadataTagger {
 
         // Extract metadata
         String showName = show.getName();
-        int season = placement.season;
-        int episodeNum = placement.episode;
+        int season = placement.season();
+        int episodeNum = placement.episode();
         String episodeTitle = ep.getTitle();
         LocalDate airDate = ep.getAirDate();
 
@@ -281,14 +281,15 @@ public class MkvMetadataTagger implements VideoMetadataTagger {
         return StringUtils.escapeXml(s);
     }
 
-    /**
-     * Check if mkvpropedit is available on this system.
-     * Useful for UI to show/hide MKV tagging options.
-     *
-     * @return true if mkvpropedit is installed and accessible
-     */
-    public static boolean isMkvpropeditAvailable() {
+    @Override
+    public boolean isToolAvailable() {
         String path = getMkvpropeditPath();
         return path != null && !path.isEmpty();
+    }
+
+    @Override
+    public String getToolName() {
+        String path = getMkvpropeditPath();
+        return (path != null && !path.isEmpty()) ? "mkvpropedit" : "none";
     }
 }
