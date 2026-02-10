@@ -21,6 +21,8 @@ launch4j.properties
 
 /tvrenamer.iml
 /.idea/
+/.claude/
+/.vscode/
 
 # Debug file log output (can be written next to the jar/exe or into build outputs during local runs)
 /tvrenamer.log
