@@ -94,14 +94,13 @@ in `build.gradle` can be removed — they're harmless but unnecessary after that
 |------------|---------|------------------|--------|
 | SWT | 3.132.0 | 3.132.0 | ✅ Latest (fat-JAR workaround applied) |
 | XStream | 1.4.21 | 1.4.21 | ✅ Latest |
-| Commons Codec | 1.21.0 | 1.21.0 | ✅ Updated |
-| OkHttp | 5.3.2 | 5.3.2 | ✅ Updated |
+| OkHttp | 5.3.2 | 5.3.2 | ✅ Latest |
 | AtomicParsley / ffmpeg | external | — | External tool for MP4 tagging (replaces mp4parser) |
-| JUnit | 5.11.4 | 5.11.4 | ✅ Updated (JUnit 5/Jupiter) |
-| Gradle | 9.3.1 | 9.3.1 | ✅ Updated |
-| Shadow Plugin | 9.3.1 | 9.3.1 | ✅ Updated |
+| JUnit | 5.14.2 | 5.14.2 | ✅ Latest (JUnit 5/Jupiter) |
+| Gradle | 9.3.1 | 9.3.1 | ✅ Latest |
+| Shadow Plugin | 9.3.1 | 9.3.1 | ✅ Latest |
 | Launch4j Plugin | 4.0.0 | 4.0.0 | ✅ Latest |
-| SpotBugs Plugin | 6.4.8 | 6.4.8 | ✅ Updated |
+| SpotBugs Plugin | 6.4.8 | 6.4.8 | ✅ Latest |
 
 ---
 
