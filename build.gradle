@@ -76,7 +76,6 @@ dependencies {
 
     // Core dependencies - modernized
     implementation(libs.xstream)
-    implementation(libs.commonsCodec)
     // xmlpull is provided transitively via xstream -> mxparser -> xmlpull
 
     // Networking
